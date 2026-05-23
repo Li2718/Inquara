@@ -1,0 +1,26 @@
+{
+  "name": "@inquara/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc --noEmit",
+    "test": "vitest run --root ../.. apps/api/src/test"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/websocket": "^11.0.0",
+    "@inquara/config": "0.0.0",
+    "@inquara/db": "0.0.0",
+    "@inquara/domain": "0.0.0",
+    "fastify": "^5.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 4 completed the database package, Prisma schema, initial migration, and seed.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 5 completed API login, workspace creation, workspace listing, and snapshot loading.
 
 ## Next Step
 
-- Execute Task 5: API Foundation, Auth, And Workspace Snapshots.
+- Execute Task 6: Canvas Commands And Workspace Events.
 
 ## Related Documents
 
@@ -811,7 +811,7 @@ git commit -m "feat: add database schema"
 - Create: `apps/api/src/workspaces/service.ts`
 - Create: `apps/api/src/test/app.test.ts`
 
-- [ ] **Step 1: Create API package**
+- [x] **Step 1: Create API package**
 
 Create `apps/api/package.json`:
 
@@ -892,7 +892,7 @@ export async function buildApp() {
 }
 ```
 
-- [ ] **Step 2: Implement session auth**
+- [x] **Step 2: Implement session auth**
 
 Create `apps/api/src/auth/session.ts` with signed-cookie session helpers:
 
@@ -916,7 +916,7 @@ export function verifySession(value: string | undefined, secret: string): string
 }
 ```
 
-- [ ] **Step 3: Implement workspace service**
+- [x] **Step 3: Implement workspace service**
 
 Create `apps/api/src/workspaces/service.ts` with:
 
@@ -925,7 +925,7 @@ Create `apps/api/src/workspaces/service.ts` with:
 - `createWorkspace(userId, title)`: create workspace and root node.
 - `getWorkspaceSnapshot(userId, workspaceId)`: verify ownership and return workspace, nodes, edges, and messages.
 
-- [ ] **Step 4: Register HTTP routes**
+- [x] **Step 4: Register HTTP routes**
 
 Create routes:
 
@@ -939,7 +939,7 @@ GET /workspaces/:workspaceId/snapshot
 
 For `POST /auth/login`, accept `{ "email": "demo@inquara.local" }`, upsert the user, set `inquara_session`, and return the user.
 
-- [ ] **Step 5: Add API tests**
+- [x] **Step 5: Add API tests**
 
 Create tests that:
 
