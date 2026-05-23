@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 1 completed the root monorepo scaffold.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 2 completed the shared domain contracts and reducer tests.
 
 ## Next Step
 
-- Execute Task 2: Shared Domain Contracts.
+- Execute Task 3: Config Package.
 
 ## Related Documents
 
@@ -274,7 +274,7 @@ git commit -m "chore: scaffold production monorepo"
 - Create: `packages/domain/src/reducer.ts`
 - Create: `packages/domain/src/reducer.test.ts`
 
-- [ ] **Step 1: Create domain package**
+- [x] **Step 1: Create domain package**
 
 Create `packages/domain/package.json`:
 
@@ -291,7 +291,7 @@ Create `packages/domain/package.json`:
 }
 ```
 
-- [ ] **Step 2: Define schemas**
+- [x] **Step 2: Define schemas**
 
 Create `packages/domain/src/schemas.ts` with user, workspace, node, edge, and message schemas. Use neutral `CanvasNode` naming and no node `type` field:
 
@@ -367,7 +367,7 @@ export type NodeMessage = z.infer<typeof NodeMessageSchema>;
 export type WorkspaceSnapshot = z.infer<typeof WorkspaceSnapshotSchema>;
 ```
 
-- [ ] **Step 3: Define commands**
+- [x] **Step 3: Define commands**
 
 Create `packages/domain/src/commands.ts`:
 
@@ -421,7 +421,7 @@ export const WorkspaceCommandSchema = z.discriminatedUnion("type", [
 export type WorkspaceCommand = z.infer<typeof WorkspaceCommandSchema>;
 ```
 
-- [ ] **Step 4: Define events and reducer**
+- [x] **Step 4: Define events and reducer**
 
 Create `packages/domain/src/events.ts` and `packages/domain/src/reducer.ts` so events can be applied identically in tests and the web app:
 
@@ -493,7 +493,7 @@ export function applyWorkspaceEvent(snapshot: WorkspaceSnapshot, event: Workspac
 }
 ```
 
-- [ ] **Step 5: Add reducer tests**
+- [x] **Step 5: Add reducer tests**
 
 Create `packages/domain/src/reducer.test.ts` with tests for node creation and streamed message deltas.
 
@@ -501,7 +501,7 @@ Run: `npm test -- packages/domain/src/reducer.test.ts`
 
 Expected: tests pass after `applyWorkspaceEvent` is implemented.
 
-- [ ] **Step 6: Export package API**
+- [x] **Step 6: Export package API**
 
 Create `packages/domain/src/index.ts`:
 
