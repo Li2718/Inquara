@@ -3,8 +3,11 @@ import { WorkspaceCommandSchema, type WorkspaceCommand, type WorkspaceEvent } fr
 import type { FastifyInstance } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { z } from "zod";
+import { fakeAIProvider } from "../ai/fake-provider";
 import { verifySession } from "../auth/session";
 import { createNodeAtPosition, createNodeFromSelection, updateNodePosition } from "../canvas/service";
+import { sendUserMessage } from "../messages/service";
+import { getWorkspaceSnapshot, WorkspaceNotFoundError } from "../workspaces/service";
 import { WorkspaceHub } from "./hub";
 
 const sessionCookieName = "inquara_session";
@@ -36,12 +39,13 @@ export async function registerRealtimeRoutes(
       try {
         const envelope = ClientEnvelopeSchema.parse(JSON.parse(data.toString()));
         if (envelope.type === "subscribe") {
+          await getWorkspaceSnapshot(userId, envelope.workspaceId);
           hub.subscribe(envelope.workspaceId, socket);
           socket.send(JSON.stringify({ type: "subscribed", workspaceId: envelope.workspaceId }));
           return;
         }
 
-        const events = await dispatchCommand(userId, envelope.command);
+        const events = await dispatchCommand(userId, envelope.command, hub);
         for (const event of events) {
           hub.broadcast(event.workspaceId, event);
         }
@@ -54,7 +58,11 @@ export async function registerRealtimeRoutes(
   });
 }
 
-async function dispatchCommand(userId: string, command: WorkspaceCommand): Promise<WorkspaceEvent[]> {
+async function dispatchCommand(
+  userId: string,
+  command: WorkspaceCommand,
+  hub: WorkspaceHub
+): Promise<WorkspaceEvent[]> {
   if (command.type === "node.createAtPosition") {
     return createNodeAtPosition(userId, command);
   }
@@ -64,10 +72,18 @@ async function dispatchCommand(userId: string, command: WorkspaceCommand): Promi
   if (command.type === "node.updatePosition") {
     return updateNodePosition(userId, command);
   }
+  if (command.type === "message.sendUserMessage") {
+    await sendUserMessage(userId, command, fakeAIProvider, event => hub.broadcast(event.workspaceId, event));
+    return [];
+  }
   return [];
 }
 
 function sendError(socket: WebSocket, error: unknown): void {
+  if (error instanceof WorkspaceNotFoundError) {
+    socket.send(JSON.stringify({ type: "error", error: "Workspace was not found." }));
+    return;
+  }
   const message = error instanceof Error ? error.message : "Realtime command failed.";
   socket.send(JSON.stringify({ type: "error", error: message }));
 }

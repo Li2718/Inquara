@@ -34,6 +34,28 @@ export function createMessageCreatedEvent(input: EventBaseInput & { message: Nod
   };
 }
 
+export function createMessageDeltaEvent(input: EventBaseInput & { messageId: string; delta: string }): WorkspaceEvent {
+  return {
+    ...baseEvent("workspace.message.delta", input),
+    messageId: input.messageId,
+    delta: input.delta
+  };
+}
+
+export function createMessageUpdatedEvent(input: EventBaseInput & { message: NodeMessage }): WorkspaceEvent {
+  return {
+    ...baseEvent("workspace.message.updated", input),
+    message: input.message
+  };
+}
+
+export function createMessageFailedEvent(input: EventBaseInput & { message: NodeMessage }): WorkspaceEvent {
+  return {
+    ...baseEvent("workspace.message.failed", input),
+    message: input.message
+  };
+}
+
 function baseEvent<TType extends WorkspaceEvent["type"]>(type: TType, input: EventBaseInput) {
   return {
     id: `event-${crypto.randomUUID()}`,

@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 7 completed the WebSocket realtime hub for workspace subscriptions and canvas command broadcasts.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 8 completed message commands and fake AI streaming through workspace realtime events.
 
 ## Next Step
 
-- Execute Task 8: Message Commands And Fake AI Streaming.
+- Execute Task 9: Web App Shell, Login, And Workspace List.
 
 ## Related Documents
 
@@ -1064,7 +1064,7 @@ git commit -m "feat: add workspace realtime websocket"
 - Modify: `apps/api/src/realtime/ws.ts`
 - Test: `apps/api/src/test/realtime.test.ts`
 
-- [ ] **Step 1: Define AI provider interface**
+- [x] **Step 1: Define AI provider interface**
 
 Create `apps/api/src/ai/provider.ts`:
 
@@ -1083,7 +1083,7 @@ export interface AIProvider {
 }
 ```
 
-- [ ] **Step 2: Implement fake provider**
+- [x] **Step 2: Implement fake provider**
 
 Create `apps/api/src/ai/fake-provider.ts`:
 
@@ -1108,7 +1108,7 @@ export const fakeAIProvider: AIProvider = {
 };
 ```
 
-- [ ] **Step 3: Implement message service**
+- [x] **Step 3: Implement message service**
 
 Implement `sendUserMessage(userId, command, provider, broadcast)`:
 
@@ -1122,7 +1122,7 @@ Implement `sendUserMessage(userId, command, provider, broadcast)`:
 - Broadcast `workspace.message.updated`.
 - On error, set assistant status to `failed` and broadcast `workspace.message.failed`.
 
-- [ ] **Step 4: Add streaming test**
+- [x] **Step 4: Add streaming test**
 
 Add a WebSocket test that:
 
