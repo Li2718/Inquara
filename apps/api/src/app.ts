@@ -4,6 +4,7 @@ import websocket from "@fastify/websocket";
 import { loadConfig, type AppConfig } from "@inquara/config";
 import Fastify from "fastify";
 import { registerRoutes } from "./http/routes";
+import { registerRealtimeRoutes } from "./realtime/ws";
 
 export type BuildAppOptions = {
   env?: Partial<AppConfig> & Record<string, string | undefined>;
@@ -20,6 +21,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(cookie);
   await app.register(websocket);
   await registerRoutes(app, config);
+  await registerRealtimeRoutes(app, config);
 
   return app;
 }

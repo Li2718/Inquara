@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 6 completed canvas command services and workspace event factories.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 7 completed the WebSocket realtime hub for workspace subscriptions and canvas command broadcasts.
 
 ## Next Step
 
-- Execute Task 7: WebSocket Realtime Hub.
+- Execute Task 8: Message Commands And Fake AI Streaming.
 
 ## Related Documents
 
@@ -1015,7 +1015,7 @@ git commit -m "feat: add canvas command services"
 - Modify: `apps/api/src/app.ts`
 - Test: `apps/api/src/test/realtime.test.ts`
 
-- [ ] **Step 1: Implement in-process workspace hub**
+- [x] **Step 1: Implement in-process workspace hub**
 
 Create `WorkspaceHub` with:
 
@@ -1024,7 +1024,7 @@ Create `WorkspaceHub` with:
 - `broadcast(workspaceId, event)`
 - `subscriberCount(workspaceId)`
 
-- [ ] **Step 2: Implement WebSocket route**
+- [x] **Step 2: Implement WebSocket route**
 
 Add `GET /realtime` WebSocket route. The client sends:
 
@@ -1040,7 +1040,7 @@ Then command envelopes:
 
 The route validates commands with `WorkspaceCommandSchema`, dispatches to canvas/message services, and broadcasts returned events.
 
-- [ ] **Step 3: Add realtime tests**
+- [x] **Step 3: Add realtime tests**
 
 Add tests that open two WebSocket clients for the same workspace, send `node.updatePosition` from one client, and assert both clients receive `workspace.node.updated`.
 
