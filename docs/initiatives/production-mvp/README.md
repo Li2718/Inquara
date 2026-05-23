@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 2 completed the shared domain contracts and reducer tests.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 3 completed the shared config package.
 
 ## Next Step
 
-- Execute Task 3: Config Package.
+- Execute Task 4: Database Package And Prisma Schema.
 
 ## Related Documents
 
@@ -525,7 +525,7 @@ git commit -m "feat: add shared workspace domain contracts"
 - Create: `packages/config/package.json`
 - Create: `packages/config/src/index.ts`
 
-- [ ] **Step 1: Create config package**
+- [x] **Step 1: Create config package**
 
 Create `packages/config/package.json`:
 
@@ -542,7 +542,7 @@ Create `packages/config/package.json`:
 }
 ```
 
-- [ ] **Step 2: Implement environment parsing**
+- [x] **Step 2: Implement environment parsing**
 
 Create `packages/config/src/index.ts`:
 
