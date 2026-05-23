@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 5 completed API login, workspace creation, workspace listing, and snapshot loading.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 6 completed canvas command services and workspace event factories.
 
 ## Next Step
 
-- Execute Task 6: Canvas Commands And Workspace Events.
+- Execute Task 7: WebSocket Realtime Hub.
 
 ## Related Documents
 
@@ -967,7 +967,7 @@ git commit -m "feat: add api auth and workspace snapshots"
 - Modify: `apps/api/src/workspaces/service.ts`
 - Test: `apps/api/src/test/app.test.ts`
 
-- [ ] **Step 1: Implement event factory**
+- [x] **Step 1: Implement event factory**
 
 Create event helpers for:
 
@@ -977,7 +977,7 @@ Create event helpers for:
 
 Each helper must include `id`, `workspaceId`, `version`, `clientMutationId`, and `createdAt`.
 
-- [ ] **Step 2: Implement canvas services**
+- [x] **Step 2: Implement canvas services**
 
 Create:
 
@@ -987,7 +987,7 @@ Create:
 
 Each service should run in a Prisma transaction, verify workspace ownership, update `workspaces.version`, and return events to broadcast.
 
-- [ ] **Step 3: Add tests**
+- [x] **Step 3: Add tests**
 
 Add tests that:
 
