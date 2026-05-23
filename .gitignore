@@ -1,0 +1,4 @@
+.playwright-mcp/
+.server-*.log
+demo/config.js
+.references/
