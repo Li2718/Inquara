@@ -1,6 +1,6 @@
 # Production MVP
 
-> status: planning
+> status: active
 > purpose: Plan and execute the first production version of Inquara.
 
 ## Goal
@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Implementation has not started yet.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 1 completed the root monorepo scaffold.
 
 ## Next Step
 
-- Execute Task 1: Monorepo Scaffold.
+- Execute Task 2: Shared Domain Contracts.
 
 ## Related Documents
 
@@ -142,7 +142,7 @@ apps/web/e2e/multi-window-sync.spec.ts
 - Create: `docker-compose.yml`
 - Create: `.env.example`
 
-- [ ] **Step 1: Create root package metadata**
+- [x] **Step 1: Create root package metadata**
 
 Create `package.json`:
 
@@ -171,7 +171,7 @@ Create `package.json`:
 }
 ```
 
-- [ ] **Step 2: Add shared TypeScript config**
+- [x] **Step 2: Add shared TypeScript config**
 
 Create `tsconfig.base.json`:
 
@@ -192,7 +192,7 @@ Create `tsconfig.base.json`:
 }
 ```
 
-- [ ] **Step 3: Add root test config**
+- [x] **Step 3: Add root test config**
 
 Create `vitest.config.ts`:
 
@@ -207,7 +207,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 4: Add local PostgreSQL service**
+- [x] **Step 4: Add local PostgreSQL service**
 
 Create `docker-compose.yml`:
 
@@ -229,7 +229,7 @@ volumes:
   inquara-postgres:
 ```
 
-- [ ] **Step 5: Add environment example**
+- [x] **Step 5: Add environment example**
 
 Create `.env.example`:
 
@@ -246,7 +246,7 @@ OPENAI_COMPATIBLE_API_KEY=""
 OPENAI_COMPATIBLE_MODEL=""
 ```
 
-- [ ] **Step 6: Verify scaffold**
+- [x] **Step 6: Verify scaffold**
 
 Run: `npm install`
 

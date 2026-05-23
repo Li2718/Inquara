@@ -2,3 +2,4 @@
 .server-*.log
 demo/config.js
 .references/
+node_modules/
