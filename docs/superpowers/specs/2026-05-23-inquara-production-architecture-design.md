@@ -333,6 +333,171 @@ apps/web/src/shared
   UI primitives, hooks, formatting, utilities.
 ```
 
+### Frontend Module Responsibilities
+
+#### `app`
+
+Owns Next.js routing and page composition.
+
+Responsibilities:
+
+- Public login/register routes.
+- Authenticated shell layout.
+- Workspace list page.
+- Workspace canvas page.
+- Route-level loading and error boundaries.
+
+Does not own:
+
+- Canvas state mutation logic.
+- WebSocket event application.
+- AI message sending logic.
+
+Primary interfaces:
+
+- Renders `WorkspaceListPage`.
+- Renders `WorkspaceCanvasPage` with the route `workspaceId`.
+
+#### `features/workspaces`
+
+Owns workspace-level product flows.
+
+Responsibilities:
+
+- Fetching the user's workspace list.
+- Creating a workspace.
+- Renaming and archiving a workspace.
+- Choosing the initial workspace after login.
+
+Primary interfaces:
+
+- `useWorkspaces()`
+- `createWorkspace(input)`
+- `renameWorkspace(input)`
+- `archiveWorkspace(input)`
+
+The module should not know how nodes, edges, or messages are rendered inside a workspace.
+
+#### `features/workspace-session`
+
+Owns the lifecycle of one opened workspace.
+
+Responsibilities:
+
+- Loading the initial workspace snapshot.
+- Creating the in-memory workspace store from the snapshot.
+- Opening the WebSocket subscription after snapshot load.
+- Reconnecting and refetching the snapshot when event gaps are detected.
+- Exposing the live workspace state to canvas and chat modules.
+
+Primary interfaces:
+
+- `WorkspaceSessionProvider`
+- `useWorkspaceSession()`
+- `useWorkspaceState(selector)`
+- `dispatchWorkspaceCommand(command)`
+
+This module is the bridge between HTTP snapshot loading, WebSocket events, and UI state.
+
+#### `features/canvas`
+
+Owns the infinite canvas experience.
+
+Responsibilities:
+
+- React Flow setup.
+- Rendering controlled nodes and edges.
+- Pan and zoom behavior.
+- Node dragging and position updates.
+- Node selection and toolbar positioning.
+- Empty-canvas node creation.
+- Selection-based branch creation entry point.
+
+Primary interfaces:
+
+- `CanvasView`
+- `CanvasNodeView`
+- `CanvasEdgeView`
+- `SelectionFollowupToolbar`
+- `useCanvasCommands()`
+
+This module may render a node shell, but it should delegate the message list and composer to `features/node-chat`.
+
+#### `features/node-chat`
+
+Owns chat behavior inside a canvas node.
+
+Responsibilities:
+
+- Rendering node messages.
+- Rendering the message composer.
+- Submitting user messages.
+- Displaying streaming assistant messages.
+- Displaying failed assistant messages and retry actions.
+- Capturing selected assistant text and producing a normalized selection payload.
+
+Primary interfaces:
+
+- `NodeChatPanel`
+- `MessageList`
+- `MessageComposer`
+- `useSendNodeMessage(nodeId)`
+- `useRetryAssistantMessage(messageId)`
+- `getMessageSelection(range)`
+
+This module should not know about React Flow internals. It reports branchable selections to the canvas module through callbacks.
+
+#### `features/realtime`
+
+Owns the browser WebSocket client.
+
+Responsibilities:
+
+- Connecting to the API WebSocket endpoint.
+- Authenticating the socket using the current session.
+- Subscribing to one workspace.
+- Receiving, validating, and ordering events.
+- Reconnecting with backoff.
+- Reporting event gaps to `workspace-session`.
+
+Primary interfaces:
+
+- `createRealtimeClient(config)`
+- `subscribeToWorkspace(workspaceId, handlers)`
+- `sendCommand(command)`
+
+This module should not mutate React state directly. It passes events to `workspace-session`.
+
+#### `features/commands`
+
+Owns client command construction and optimistic update metadata.
+
+Responsibilities:
+
+- Creating typed commands with `clientMutationId`.
+- Keeping command payloads stable across UI components.
+- Deciding which commands are safe to apply optimistically.
+
+Primary interfaces:
+
+- `createNodeAtPositionCommand(input)`
+- `createNodeFromSelectionCommand(input)`
+- `updateNodePositionCommand(input)`
+- `sendUserMessageCommand(input)`
+
+#### `shared`
+
+Owns reusable UI and utility code that has no product ownership.
+
+Responsibilities:
+
+- Buttons, menus, dialogs, loading states, and empty states.
+- Generic hooks.
+- Date and text formatting.
+- Non-domain utilities.
+
+Shared code should not import feature modules.
+
 State responsibilities:
 
 - TanStack Query handles initial snapshots and HTTP mutations.
@@ -341,6 +506,53 @@ State responsibilities:
 - React Flow renders controlled nodes and edges from the workspace store.
 
 The canvas node component should include a message list and composer, but the logic for sending messages should stay in the node-chat feature so it can be tested separately from React Flow.
+
+### Frontend Data Flow
+
+Opening a workspace:
+
+```text
+Workspace route
+  -> WorkspaceSessionProvider
+  -> GET workspace snapshot
+  -> initialize workspace store
+  -> open WebSocket subscription
+  -> render CanvasView
+```
+
+Dragging a node:
+
+```text
+React Flow node drag
+  -> canvas module creates node.updatePosition command
+  -> workspace-session applies optimistic position update
+  -> realtime client sends command
+  -> API persists and broadcasts workspace.node.updated
+  -> workspace-session reconciles optimistic state with server event
+```
+
+Sending a message:
+
+```text
+MessageComposer submit
+  -> node-chat creates message.sendUserMessage command
+  -> realtime client sends command
+  -> API creates user and assistant messages
+  -> workspace-session receives message events and deltas
+  -> NodeChatPanel renders the stream
+```
+
+Creating a branch from selected text:
+
+```text
+MessageList selection
+  -> node-chat normalizes message id, range, and quote
+  -> canvas shows SelectionFollowupToolbar
+  -> user confirms follow-up
+  -> canvas creates node.createFromSelection command
+  -> API creates child node and edge
+  -> all windows receive node and edge events
+```
 
 ## Backend Architecture
 
@@ -376,6 +588,209 @@ Backend rules:
 - Command handlers return the persisted result and the event or events to broadcast.
 - The AI gateway is the only code allowed to call external model providers.
 - API routes should never expose provider API keys to the browser.
+
+### Backend Module Responsibilities
+
+#### `http`
+
+Owns Fastify server setup.
+
+Responsibilities:
+
+- Registering plugins.
+- Registering HTTP routes.
+- Registering the WebSocket endpoint.
+- Attaching request ids and logging.
+- Converting thrown domain errors into HTTP responses.
+
+Does not own business logic. Route handlers should call command/query services.
+
+#### `auth`
+
+Owns user identity in the API service.
+
+Responsibilities:
+
+- Verifying the web session or bearer token.
+- Loading the current user.
+- Exposing `requireUser(request)`.
+- Providing authorization helpers such as `requireWorkspaceOwner(userId, workspaceId)`.
+
+The rest of the backend should depend on this module for identity checks instead of parsing auth details directly.
+
+#### `workspaces`
+
+Owns workspace queries and workspace-level commands.
+
+Responsibilities:
+
+- Listing workspaces for a user.
+- Creating a workspace with an initial root node when appropriate.
+- Renaming and archiving a workspace.
+- Loading a full workspace snapshot.
+- Incrementing the workspace version inside write transactions.
+
+Primary services:
+
+- `listWorkspaces(userId)`
+- `createWorkspace(userId, input)`
+- `renameWorkspace(userId, input)`
+- `archiveWorkspace(userId, input)`
+- `getWorkspaceSnapshot(userId, workspaceId)`
+
+#### `canvas`
+
+Owns node and edge mutations.
+
+Responsibilities:
+
+- Creating a node at a canvas position.
+- Creating a follow-up node from a source message selection.
+- Updating node position, size, title, and collapsed state.
+- Deleting a node and its related edges according to the first-version deletion policy.
+- Creating edge records when a branch is created.
+
+Primary services:
+
+- `createNodeAtPosition(userId, command)`
+- `createNodeFromSelection(userId, command)`
+- `updateNodePosition(userId, command)`
+- `updateNodeLayout(userId, command)`
+- `deleteNode(userId, command)`
+
+This module should not call AI providers. It only changes canvas structure.
+
+#### `messages`
+
+Owns persisted node messages and message commands.
+
+Responsibilities:
+
+- Creating user messages.
+- Creating assistant placeholder messages.
+- Updating assistant messages after streaming completes.
+- Marking assistant messages as failed.
+- Retrying failed assistant messages.
+- Selecting the message history that should be sent to the AI module.
+
+Primary services:
+
+- `sendUserMessage(userId, command)`
+- `createAssistantPlaceholder(transaction, input)`
+- `completeAssistantMessage(messageId, content)`
+- `failAssistantMessage(messageId, error)`
+- `retryAssistantMessage(userId, command)`
+
+This module coordinates with `ai` for generation, but it should keep persistence rules local.
+
+#### `ai`
+
+Owns model-provider interaction.
+
+Responsibilities:
+
+- Building provider-ready message context from a node's message history and source quote.
+- Calling the configured model provider.
+- Normalizing streaming chunks.
+- Reporting usage metadata when available.
+- Mapping provider errors into safe application errors.
+
+Primary interfaces:
+
+- `buildNodeChatContext(input)`
+- `streamAssistantReply(context, handlers)`
+
+This module should expose a provider-neutral stream interface so the app can change model providers later without touching canvas or message command code.
+
+#### `realtime`
+
+Owns WebSocket sessions and workspace event fanout.
+
+Responsibilities:
+
+- Authenticating socket connections.
+- Tracking which sockets are subscribed to each workspace.
+- Validating incoming command envelopes.
+- Dispatching commands to the correct backend service.
+- Broadcasting events to subscribed sockets.
+- Sending reconnect or resync instructions when needed.
+
+Primary interfaces:
+
+- `subscribe(socket, workspaceId)`
+- `broadcastWorkspaceEvent(workspaceId, event)`
+- `handleCommandEnvelope(socket, envelope)`
+
+This module should not contain database write logic. It dispatches commands and broadcasts the resulting events.
+
+#### `events`
+
+Owns event schemas and event construction.
+
+Responsibilities:
+
+- Defining event payload shapes.
+- Creating versioned workspace events.
+- Validating outbound events in tests.
+- Keeping event names stable.
+
+Primary interfaces:
+
+- `createNodeCreatedEvent(input)`
+- `createNodeUpdatedEvent(input)`
+- `createMessageDeltaEvent(input)`
+- `createMessageFailedEvent(input)`
+
+Events are part of the product contract between API and web. They should live in shared domain code when possible.
+
+#### `db`
+
+Owns Prisma access patterns.
+
+Responsibilities:
+
+- Exporting the Prisma client.
+- Providing transaction helpers.
+- Keeping low-level query helpers that are shared across modules.
+
+Business rules should stay in feature services, not in generic database helpers.
+
+### Backend Command Flow
+
+Example: create a follow-up from selected assistant text.
+
+```text
+WebSocket command envelope
+  -> realtime.handleCommandEnvelope
+  -> auth.requireWorkspaceOwner
+  -> canvas.createNodeFromSelection
+  -> database transaction:
+       validate source node and source message
+       create child canvas node
+       create canvas edge
+       increment workspace version
+  -> events.createNodeCreatedEvent
+  -> events.createEdgeCreatedEvent
+  -> realtime.broadcastWorkspaceEvent
+```
+
+Example: send a message and stream an assistant reply.
+
+```text
+WebSocket command envelope
+  -> realtime.handleCommandEnvelope
+  -> messages.sendUserMessage
+  -> database transaction:
+       create user message
+       create assistant placeholder
+       increment workspace version
+  -> broadcast message.created events
+  -> ai.streamAssistantReply
+  -> for each chunk:
+       broadcast message.delta
+  -> messages.completeAssistantMessage
+  -> broadcast message.updated
+```
 
 ## Error Handling
 
