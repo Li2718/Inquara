@@ -1,0 +1,14 @@
+"use client";
+
+import type { CanvasNode } from "@inquara/domain";
+import { MessageComposer } from "./MessageComposer";
+import { MessageList } from "./MessageList";
+
+export function NodeChatPanel({ node }: { node: CanvasNode }) {
+  return (
+    <div className="node-chat-panel">
+      <MessageList node={node} />
+      <MessageComposer nodeId={node.id} />
+    </div>
+  );
+}

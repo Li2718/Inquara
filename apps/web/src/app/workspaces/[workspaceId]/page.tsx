@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CanvasView } from "../../../features/canvas/CanvasView";
 import { WorkspaceSessionProvider } from "../../../features/workspace-session/WorkspaceSessionProvider";
 import { WorkspaceSessionStatus } from "../../../features/workspace-session/WorkspaceSessionStatus";
 
@@ -18,18 +19,18 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
           Back to workspaces
         </Link>
       </aside>
-      <WorkspaceSessionProvider workspaceId={workspaceId}>
-        <section className="workspace-panel" aria-label="Canvas placeholder">
-          <div className="panel-heading">
+      <section className="canvas-page" aria-label="Canvas workspace">
+        <WorkspaceSessionProvider workspaceId={workspaceId}>
+          <div className="canvas-topbar">
             <div>
               <p className="eyebrow">Workspace</p>
               <h2>{workspaceId}</h2>
             </div>
+            <WorkspaceSessionStatus />
           </div>
-          <WorkspaceSessionStatus />
-          <p className="empty-state">The realtime canvas surface is next.</p>
-        </section>
-      </WorkspaceSessionProvider>
+          <CanvasView />
+        </WorkspaceSessionProvider>
+      </section>
     </main>
   );
 }

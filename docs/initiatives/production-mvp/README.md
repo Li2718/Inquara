@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 10 completed the web workspace session store, realtime client, command creators, and session provider wiring.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 11 implemented the first React Flow canvas and chat node UI. Automated build and tests pass; full multi-window manual verification remains for the e2e smoke-test pass.
 
 ## Next Step
 
-- Execute Task 11: Canvas And Chat UI.
+- Execute Task 12: End-To-End Smoke Test.
 
 ## Related Documents
 
@@ -1309,23 +1309,23 @@ git commit -m "feat: add workspace session realtime store"
 - Create: `apps/web/src/features/node-chat/MessageList.tsx`
 - Create: `apps/web/src/features/node-chat/MessageComposer.tsx`
 
-- [ ] **Step 1: Render workspace page**
+- [x] **Step 1: Render workspace page**
 
 Route `workspaces/[workspaceId]/page.tsx` should wrap `CanvasView` in `WorkspaceSessionProvider`.
 
-- [ ] **Step 2: Render React Flow canvas**
+- [x] **Step 2: Render React Flow canvas**
 
 `CanvasView` maps `CanvasNode` records to React Flow nodes and `CanvasEdge` records to React Flow edges. On node drag stop, send `node.updatePosition`.
 
-- [ ] **Step 3: Render chat node**
+- [x] **Step 3: Render chat node**
 
 `CanvasNodeView` renders the node title, collapse affordance, and `NodeChatPanel`.
 
-- [ ] **Step 4: Implement message list and composer**
+- [x] **Step 4: Implement message list and composer**
 
 `MessageList` renders messages for a node and appends deltas as the store changes. `MessageComposer` sends `message.sendUserMessage`.
 
-- [ ] **Step 5: Implement selection follow-up**
+- [x] **Step 5: Implement selection follow-up**
 
 When selected text comes from an assistant message, show `SelectionFollowupToolbar`. On click, send `node.createFromSelection` with `sourceMessageId`, text range, quote, and a target position to the right of the source node.
 
