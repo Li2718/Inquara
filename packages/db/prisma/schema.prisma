@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  name       String?
+  avatarUrl  String?     @map("avatar_url")
+  workspaces Workspace[]
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Workspace {
+  id         String        @id @default(cuid())
+  ownerId    String        @map("owner_id")
+  owner      User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title      String
+  version    Int           @default(0)
+  nodes      CanvasNode[]
+  edges      CanvasEdge[]
+  messages   NodeMessage[]
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  archivedAt DateTime?     @map("archived_at")
+
+  @@index([ownerId, updatedAt])
+  @@map("workspaces")
+}
+
+model CanvasNode {
+  id               String        @id @default(cuid())
+  workspaceId      String        @map("workspace_id")
+  workspace        Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title            String
+  x                Float
+  y                Float
+  width            Float
+  height           Float
+  collapsed        Boolean       @default(false)
+  parentNodeId     String?       @map("parent_node_id")
+  parentNode       CanvasNode?   @relation("NodeChildren", fields: [parentNodeId], references: [id], onDelete: SetNull)
+  childNodes       CanvasNode[]  @relation("NodeChildren")
+  sourceNodeId     String?       @map("source_node_id")
+  sourceNode       CanvasNode?   @relation("SourceNode", fields: [sourceNodeId], references: [id], onDelete: SetNull)
+  sourcedNodes     CanvasNode[]  @relation("SourceNode")
+  sourceMessageId  String?       @map("source_message_id")
+  sourceMessage    NodeMessage?  @relation("SourceMessageNodes", fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  sourceQuote      String?       @map("source_quote")
+  sourceRangeStart Int?          @map("source_range_start")
+  sourceRangeEnd   Int?          @map("source_range_end")
+  version          Int           @default(0)
+  messages         NodeMessage[]
+  outgoingEdges    CanvasEdge[]  @relation("OutgoingEdges")
+  incomingEdges    CanvasEdge[]  @relation("IncomingEdges")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("canvas_nodes")
+}
+
+model CanvasEdge {
+  id              String       @id @default(cuid())
+  workspaceId     String       @map("workspace_id")
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceNodeId    String       @map("source_node_id")
+  sourceNode      CanvasNode   @relation("OutgoingEdges", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNodeId    String       @map("target_node_id")
+  targetNode      CanvasNode   @relation("IncomingEdges", fields: [targetNodeId], references: [id], onDelete: Cascade)
+  sourceMessageId String?      @map("source_message_id")
+  sourceMessage   NodeMessage? @relation(fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  label           String
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@map("canvas_edges")
+}
+
+model NodeMessage {
+  id             String       @id @default(cuid())
+  workspaceId    String       @map("workspace_id")
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  nodeId         String       @map("node_id")
+  node           CanvasNode   @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  status         String
+  model          String?
+  errorMessage   String?      @map("error_message")
+  sourceForNodes CanvasNode[] @relation("SourceMessageNodes")
+  sourceForEdges CanvasEdge[]
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([nodeId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@map("node_messages")
+}

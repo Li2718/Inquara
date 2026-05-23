@@ -1,0 +1,20 @@
+{
+  "name": "@inquara/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate --schema prisma/schema.prisma",
+    "migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "seed": "tsx src/seed.ts",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.0.0"
+  }
+}

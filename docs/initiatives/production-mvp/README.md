@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 3 completed the shared config package.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 4 completed the database package, Prisma schema, initial migration, and seed.
 
 ## Next Step
 
-- Execute Task 4: Database Package And Prisma Schema.
+- Execute Task 5: API Foundation, Auth, And Workspace Snapshots.
 
 ## Related Documents
 
@@ -64,7 +64,7 @@ The production architecture is defined in [docs/architecture.md](../../architect
 - Auth for MVP: email-only session login implemented in `apps/api`; the API sets an HTTP-only session cookie. This creates real user records and can later be replaced by Auth.js or hosted auth without changing workspace ownership rules.
 - AI provider for first passing slice: fake streaming provider. Add OpenAI-compatible provider behind the same `AIProvider` interface after the fake stream is working.
 - Node type scope: only chat behavior exists. Use `CanvasNode` and `NodeMessage` naming, but do not add database `type`, generic `data`, image, artifact, or plugin fields.
-- Database: local PostgreSQL via Docker Compose for development.
+- Database: local PostgreSQL via Docker Compose for development, exposed on host port `55432` to avoid conflicts with existing local databases.
 - First UI style: product workspace UI, not a landing page.
 
 ## File Structure
@@ -582,7 +582,7 @@ git commit -m "feat: add shared config package"
 - Create: `packages/db/src/client.ts`
 - Create: `packages/db/src/seed.ts`
 
-- [ ] **Step 1: Create db package**
+- [x] **Step 1: Create db package**
 
 Create `packages/db/package.json`:
 
@@ -607,7 +607,7 @@ Create `packages/db/package.json`:
 }
 ```
 
-- [ ] **Step 2: Create Prisma schema**
+- [x] **Step 2: Create Prisma schema**
 
 Create `packages/db/prisma/schema.prisma`. Use `CanvasNode` and `NodeMessage`; do not add node `type` or JSON payload columns.
 
@@ -721,7 +721,7 @@ model NodeMessage {
 }
 ```
 
-- [ ] **Step 3: Create Prisma client export**
+- [x] **Step 3: Create Prisma client export**
 
 Create `packages/db/src/client.ts`:
 
@@ -732,7 +732,7 @@ export const prisma = new PrismaClient();
 export type { PrismaClient };
 ```
 
-- [ ] **Step 4: Create seed script**
+- [x] **Step 4: Create seed script**
 
 Create `packages/db/src/seed.ts` to create a demo user, one workspace, and one root node:
 
@@ -775,7 +775,7 @@ console.log(`Seeded ${user.email} with workspace ${workspace.id}`);
 await prisma.$disconnect();
 ```
 
-- [ ] **Step 5: Run migration and seed**
+- [x] **Step 5: Run migration and seed**
 
 Run: `docker compose up -d postgres`
 
