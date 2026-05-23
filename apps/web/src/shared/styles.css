@@ -237,6 +237,21 @@ h2 {
   padding: 36px 0;
 }
 
+.session-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px 0 0;
+}
+
+.session-status span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
 .error-text {
   color: var(--danger);
   line-height: 1.5;

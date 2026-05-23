@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 9 completed the Next.js web shell with login, workspace listing, workspace creation, and an initial workspace route.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 10 completed the web workspace session store, realtime client, command creators, and session provider wiring.
 
 ## Next Step
 
-- Execute Task 10: Workspace Session Store And Realtime Client.
+- Execute Task 11: Canvas And Chat UI.
 
 ## Related Documents
 
@@ -1275,19 +1275,19 @@ git commit -m "feat: add web login and workspace list"
 - Create: `apps/web/src/features/realtime/client.ts`
 - Create: `apps/web/src/features/commands/createCommands.ts`
 
-- [ ] **Step 1: Implement workspace store**
+- [x] **Step 1: Implement workspace store**
 
 Create a Zustand store holding `WorkspaceSnapshot`, connection status, pending `clientMutationId`s, and an `applyEvent` action that uses `applyWorkspaceEvent` from `@inquara/domain`.
 
-- [ ] **Step 2: Implement realtime client**
+- [x] **Step 2: Implement realtime client**
 
 Create a browser WebSocket client that connects to `${NEXT_PUBLIC_WS_ORIGIN}/realtime`, sends a subscribe message, exposes `sendCommand(command)`, and calls `onEvent(event)` for server events.
 
-- [ ] **Step 3: Implement command creators**
+- [x] **Step 3: Implement command creators**
 
 Command creators must generate `clientMutationId` using `crypto.randomUUID()` and return objects matching `WorkspaceCommandSchema`.
 
-- [ ] **Step 4: Implement session provider**
+- [x] **Step 4: Implement session provider**
 
 `WorkspaceSessionProvider` loads `/workspaces/:workspaceId/snapshot`, initializes the store, opens WebSocket subscription, and provides command dispatch.
 

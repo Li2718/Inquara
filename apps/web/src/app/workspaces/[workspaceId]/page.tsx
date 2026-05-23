@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { WorkspaceSessionProvider } from "../../../features/workspace-session/WorkspaceSessionProvider";
+import { WorkspaceSessionStatus } from "../../../features/workspace-session/WorkspaceSessionStatus";
 
 type WorkspacePageProps = {
   params: Promise<{ workspaceId: string }>;
@@ -16,15 +18,18 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
           Back to workspaces
         </Link>
       </aside>
-      <section className="workspace-panel" aria-label="Canvas placeholder">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Workspace</p>
-            <h2>{workspaceId}</h2>
+      <WorkspaceSessionProvider workspaceId={workspaceId}>
+        <section className="workspace-panel" aria-label="Canvas placeholder">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Workspace</p>
+              <h2>{workspaceId}</h2>
+            </div>
           </div>
-        </div>
-        <p className="empty-state">The realtime canvas surface is next.</p>
-      </section>
+          <WorkspaceSessionStatus />
+          <p className="empty-state">The realtime canvas surface is next.</p>
+        </section>
+      </WorkspaceSessionProvider>
     </main>
   );
 }
