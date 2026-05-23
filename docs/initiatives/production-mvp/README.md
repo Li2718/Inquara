@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 8 completed message commands and fake AI streaming through workspace realtime events.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 9 completed the Next.js web shell with login, workspace listing, workspace creation, and an initial workspace route.
 
 ## Next Step
 
-- Execute Task 9: Web App Shell, Login, And Workspace List.
+- Execute Task 10: Workspace Session Store And Realtime Client.
 
 ## Related Documents
 
@@ -1155,7 +1155,7 @@ git commit -m "feat: stream assistant replies through realtime events"
 - Create: `apps/web/src/shared/api.ts`
 - Create: `apps/web/src/shared/styles.css`
 
-- [ ] **Step 1: Create web package**
+- [x] **Step 1: Create web package**
 
 Create `apps/web/package.json`:
 
@@ -1218,7 +1218,7 @@ Create `apps/web/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 2: Add API client**
+- [x] **Step 2: Add API client**
 
 Create `apps/web/src/shared/api.ts`:
 
@@ -1241,15 +1241,15 @@ export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<
 }
 ```
 
-- [ ] **Step 3: Implement login page**
+- [x] **Step 3: Implement login page**
 
 `LoginPage` posts to `/auth/login` and reloads the workspace list after success.
 
-- [ ] **Step 4: Implement workspace list**
+- [x] **Step 4: Implement workspace list**
 
 `WorkspaceListPage` fetches `/workspaces`, renders workspace rows, and creates a workspace via `POST /workspaces`.
 
-- [ ] **Step 5: Verify manually**
+- [x] **Step 5: Verify manually**
 
 Run: `npm run dev`
 
