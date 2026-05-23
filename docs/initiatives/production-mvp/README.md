@@ -1,8 +1,55 @@
-# Inquara Production MVP Implementation Plan
+# Production MVP
+
+> status: planning
+> purpose: Plan and execute the first production version of Inquara.
+
+## Goal
+
+Build the first production MVP: account login, multiple workspaces, persistent chat canvas nodes, selection-based branching, multi-window real-time sync, and server-broadcast AI streaming.
+
+## Boundary
+
+### Included
+
+- TypeScript monorepo scaffold.
+- Account login for individual users.
+- Multiple workspaces per user.
+- Persistent canvas nodes, edges, and node messages.
+- Selection-based branch creation.
+- Multi-window real-time synchronization.
+- Server-broadcast AI streaming.
+- Fake AI provider first, then OpenAI-compatible provider behind the same interface.
+
+### Not Included
+
+- Multi-user collaboration.
+- Offline editing.
+- Non-chat node kinds.
+- Billing.
+- Semantic search or RAG.
+
+## Current Status
+
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Implementation has not started yet.
+
+## Next Step
+
+- Execute Task 1: Monorepo Scaffold.
+
+## Related Documents
+
+- [Architecture](../../architecture.md)
+- [Documentation Standards](../../documentation-standards.md)
+
+## Archive Criteria
+
+- The MVP is implemented and verified.
+- Durable architecture changes discovered during implementation are written back to [docs/architecture.md](../../architecture.md).
+- Follow-up work is split into new initiatives or current docs.
+
+## Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
-**Goal:** Build the first production MVP: account login, multiple workspaces, persistent chat canvas nodes, selection-based branching, multi-window real-time sync, and server-broadcast AI streaming.
 
 **Architecture:** Use a TypeScript npm-workspaces monorepo with `apps/web` for the Next.js UI, `apps/api` for Fastify HTTP/WebSocket/AI streaming, and shared `packages/domain`, `packages/db`, and `packages/config`. The API is the authority for workspace state; clients load a snapshot, send typed commands, and apply versioned workspace events.
 
