@@ -34,6 +34,8 @@ Current docs in this repository:
 - `docs/architecture.md`
 - `docs/documentation-standards.md`
 
+Debug implementation rules are current long-term architecture rules and live in `docs/architecture.md`. Initiative docs may plan changes to the debug system, but durable constraints must be reflected back into the architecture document.
+
 ## Active Initiatives
 
 Active initiative docs live under `docs/initiatives/<topic>/`.

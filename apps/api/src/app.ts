@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import { loadConfig, type AppConfig } from "@inquara/config";
 import Fastify from "fastify";
+import { registerDebugRoutes } from "./debug/routes";
 import { registerRoutes } from "./http/routes";
 import { registerRealtimeRoutes } from "./realtime/ws";
 
@@ -21,6 +22,9 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(cookie);
   await app.register(websocket);
   await registerRoutes(app, config);
+  if (options.env?.NODE_ENV !== "production" && process.env.NODE_ENV !== "production") {
+    await registerDebugRoutes(app);
+  }
   await registerRealtimeRoutes(app, config);
 
   return app;

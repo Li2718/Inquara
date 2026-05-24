@@ -28,11 +28,11 @@ Create a global debug system that keeps product UI clean while making developmen
 
 ## Current Status
 
-The initiative is ready for design and implementation. Existing ad hoc canvas status indicators should be moved into this debug system rather than remaining in the product UI.
+Implementation is complete and verified. The first slice added a development-only web debug entrypoint, a canvas debug panel, `/debug/health`, production debug-marker scanning, and hard repository rules for future debug work.
 
 ## Next Step
 
-- Write the implementation plan for the debug system, then implement it as a separate change from the completed production MVP work.
+- Archive this initiative after a final review if no additional debug surfaces are needed immediately.
 
 ## Related Documents
 

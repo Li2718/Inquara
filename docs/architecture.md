@@ -68,6 +68,23 @@ This is preferred over a pure Next.js full-stack design because Inquara's core e
 - Real-time transport: WebSocket.
 - AI provider integration: server-side AI gateway using an OpenAI-compatible streaming interface where practical.
 
+## Debug System Rules
+
+Debug information must never be presented as normal product UI. Development diagnostics belong behind the global debug system.
+
+Hard rules:
+
+- Web debug UI must enter product pages only through `apps/web/src/debug/DebugRoot.tsx`.
+- Development-only debug UI modules must use `.dev.tsx` or `.dev.ts` filenames.
+- Product feature modules outside `apps/web/src/debug/` must not import `.dev` debug modules directly.
+- Debug UI must be visually incompatible with the product surface, using the yellow and black debug style so it is unmistakably not product UI.
+- Any API route intended for debugging must live under `/debug/*`.
+- Debug API routes must not be registered when `NODE_ENV` is `production`.
+- Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.
+- Production web builds must pass `npm run verify:debug-free`, which scans build artifacts for debug markers.
+
+The first debug surface is the canvas debug panel. It owns session diagnostics such as connection status, node counts, edge counts, message counts, pending mutation counts, and the first visible root node.
+
 ## Domain Model
 
 The first version only implements chat behavior, but the canvas layer should avoid being named as if every node will always be a chat node. Extensibility should come from clean boundaries and neutral naming, not from unused database fields or speculative node types.

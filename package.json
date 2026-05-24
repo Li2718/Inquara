@@ -9,6 +9,7 @@
     "build": "npm run build --workspaces",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:debug-free": "node scripts/verify-debug-free.mjs",
     "db:generate": "npm --workspace @inquara/db run generate",
     "db:migrate": "npm --workspace @inquara/db run migrate",
     "db:seed": "npm --workspace @inquara/db run seed"

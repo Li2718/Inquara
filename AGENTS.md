@@ -48,3 +48,16 @@ If the repository uses `docs/archive/`:
 
 1. Treat it as retained historical context, not the current source of truth.
 2. Keep archived package names time-oriented if time is the archive's primary lookup axis.
+
+## Debug Rules
+
+Debug implementation work must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+
+1. Web product code may import only `apps/web/src/debug/DebugRoot.tsx` as the debug entrypoint.
+2. Development-only debug UI files must use `.dev.ts` or `.dev.tsx` filenames.
+3. Product feature modules outside `apps/web/src/debug/` must not import `.dev` debug modules directly.
+4. Debug UI must look visibly non-product, using the yellow and black debug style.
+5. Debug API routes must use `/debug/*` paths only.
+6. Debug API routes must not be registered in production.
+7. Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.
+8. Production web builds must pass `npm run verify:debug-free` before completion.
