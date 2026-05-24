@@ -74,10 +74,11 @@ Debug information must never be presented as normal product UI. Development diag
 
 Hard rules:
 
-- Web debug UI must enter product pages only through `apps/web/src/debug/DebugRoot.tsx`.
+- Web debug UI must be mounted once from the global app layout through `apps/web/src/debug/DebugRoot.tsx`.
+- Product pages may publish page-specific debug data only through product-safe debug source entrypoints such as `apps/web/src/debug/DebugCanvasSource.tsx`; they must not render debug UI directly.
 - Development-only debug UI modules must use `.dev.tsx` or `.dev.ts` filenames.
 - Product feature modules outside `apps/web/src/debug/` must not import `.dev` debug modules directly.
-- Debug UI must be visually incompatible with the product surface, using the yellow and black debug style so it is unmistakably not product UI.
+- Debug UI must be visually incompatible with the product surface and include a clear debug marker, while remaining usable enough for daily development.
 - Any API route intended for debugging must live under `/debug/*`.
 - Debug API routes must not be registered when `NODE_ENV` is `production`.
 - Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.

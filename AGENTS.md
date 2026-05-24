@@ -53,11 +53,12 @@ If the repository uses `docs/archive/`:
 
 Debug implementation work must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
 
-1. Web product code may import only `apps/web/src/debug/DebugRoot.tsx` as the debug entrypoint.
-2. Development-only debug UI files must use `.dev.ts` or `.dev.tsx` filenames.
-3. Product feature modules outside `apps/web/src/debug/` must not import `.dev` debug modules directly.
-4. Debug UI must look visibly non-product, using the yellow and black debug style.
-5. Debug API routes must use `/debug/*` paths only.
-6. Debug API routes must not be registered in production.
-7. Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.
-8. Production web builds must pass `npm run verify:debug-free` before completion.
+1. Web debug UI must be mounted once from `apps/web/src/app/layout.tsx` through `apps/web/src/debug/DebugRoot.tsx`.
+2. Product pages may publish page-specific debug data only through product-safe debug source entrypoints such as `apps/web/src/debug/DebugCanvasSource.tsx`; they must not render debug UI directly.
+3. Development-only debug UI files must use `.dev.ts` or `.dev.tsx` filenames.
+4. Product feature modules outside `apps/web/src/debug/` must not import `.dev` debug modules directly.
+5. Debug UI must look visibly non-product and include a clear debug marker, but it should still be usable and visually intentional.
+6. Debug API routes must use `/debug/*` paths only.
+7. Debug API routes must not be registered in production.
+8. Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.
+9. Production web builds must pass `npm run verify:debug-free` before completion.

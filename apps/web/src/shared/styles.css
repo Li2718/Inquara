@@ -764,99 +764,182 @@ h2 {
 
 .debug-root {
   position: fixed;
-  left: 16px;
-  top: 16px;
+  left: 0;
+  top: 0;
   z-index: 100;
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-}
-
-.debug-root details {
-  position: relative;
-}
-
-.debug-floating-button,
-.debug-panel button {
-  min-height: 0;
-  border: 2px solid #000;
-  border-radius: 0;
-  background: #ffea00;
-  color: #000;
-  box-shadow: 4px 4px 0 #000;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0;
-  transform: none;
+  transition: transform 260ms cubic-bezier(0.2, 1.4, 0.3, 1);
+  --debug-bg: rgb(19 28 38 / 94%);
+  --debug-panel-bg: rgb(18 28 39 / 94%);
+  --debug-border: rgb(247 181 64 / 74%);
+  --debug-accent: #f6b846;
+  --debug-accent-strong: #ffd166;
+  --debug-ink: #f7fbff;
+  --debug-muted: rgb(233 242 247 / 62%);
+  --debug-shadow: 0 18px 56px rgb(0 0 0 / 24%);
+  --debug-row: rgb(255 255 255 / 8%);
+  --debug-radius: 13px;
 }
 
 .debug-floating-button {
-  display: inline-grid;
-  place-items: center;
-  min-width: 64px;
-  min-height: 36px;
-  padding: 9px 10px;
-  cursor: pointer;
+  width: 82px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--debug-border);
+  border-radius: 999px;
+  background: var(--debug-bg);
+  color: var(--debug-ink);
+  box-shadow: var(--debug-shadow);
+  padding: 0 11px;
+  cursor: grab;
   list-style: none;
   user-select: none;
+  backdrop-filter: blur(18px);
+  transform: none;
+  touch-action: none;
 }
 
-.debug-floating-button::-webkit-details-marker {
-  display: none;
+.debug-root[data-debug-dragging="true"] {
+  transition: none;
 }
 
-.debug-root details:not([open]) .debug-panel {
-  display: none;
+.debug-root[data-debug-dragging="true"] .debug-floating-button {
+  cursor: grabbing;
+  transform: scale(1.03);
 }
 
-.debug-floating-button:hover,
-.debug-panel button:hover {
-  background: #fff100;
-  color: #000;
-  box-shadow: 4px 4px 0 #000;
+.debug-floating-button span {
+  color: var(--debug-accent-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.debug-floating-button small {
+  color: var(--debug-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.debug-floating-button:hover {
+  border-color: var(--debug-accent-strong);
+  background: var(--debug-panel-bg);
+  color: var(--debug-ink);
+  box-shadow: var(--debug-shadow);
   transform: none;
 }
 
 .debug-panel {
   position: absolute;
-  left: 0;
-  top: calc(100% + 10px);
   width: min(360px, calc(100vw - 32px));
-  border: 3px solid #000;
-  background: #ffea00;
-  color: #000;
-  box-shadow: 7px 7px 0 #000;
+  overflow: hidden;
+  border: 1px solid var(--debug-border);
+  border-radius: 16px;
+  background: var(--debug-panel-bg);
+  color: var(--debug-ink);
+  box-shadow: var(--debug-shadow);
+  backdrop-filter: blur(22px);
 }
 
-.debug-panel header {
+.debug-root[data-debug-placement="right-down"] .debug-panel {
+  left: 0;
+  top: calc(100% + 10px);
+  transform-origin: top left;
+}
+
+.debug-root[data-debug-placement="right-up"] .debug-panel {
+  left: 0;
+  bottom: calc(100% + 10px);
+  transform-origin: bottom left;
+}
+
+.debug-root[data-debug-placement="left-down"] .debug-panel {
+  right: 0;
+  top: calc(100% + 10px);
+  transform-origin: top right;
+}
+
+.debug-root[data-debug-placement="left-up"] .debug-panel {
+  right: 0;
+  bottom: calc(100% + 10px);
+  transform-origin: bottom right;
+}
+
+.debug-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 10px;
-  border-bottom: 3px solid #000;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--debug-row);
+  user-select: none;
+}
+
+.debug-panel-title {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.debug-panel-title strong {
+  color: var(--debug-accent-strong);
+  font-size: 12px;
+}
+
+.debug-panel-title small {
+  color: var(--debug-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.debug-panel button {
+  min-height: 28px;
+  border: 1px solid var(--debug-border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--debug-ink);
+  box-shadow: none;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 800;
+  transform: none;
+}
+
+.debug-panel button:hover,
+.debug-panel button[data-active="true"] {
+  background: var(--debug-row);
+  color: var(--debug-accent-strong);
+  box-shadow: none;
+  transform: none;
 }
 
 .debug-panel-list {
   display: grid;
   margin: 0;
-  padding: 8px 10px 10px;
+  padding: 9px 10px 10px;
 }
 
 .debug-panel-row {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);
   gap: 10px;
-  padding: 5px 0;
-  border-bottom: 1px solid rgb(0 0 0 / 36%);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--debug-row);
   font-size: 12px;
 }
 
 .debug-panel-row dt {
   font-weight: 900;
+  color: var(--debug-muted);
 }
 
 .debug-panel-row dd {
   min-width: 0;
   margin: 0;
+  color: var(--debug-ink);
   overflow-wrap: anywhere;
 }
 

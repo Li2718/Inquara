@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DebugRoot } from "../../debug/DebugRoot";
+import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
@@ -44,7 +44,7 @@ function CanvasWorkspaceContent({
       <section className="canvas-stage" aria-label="Canvas">
         <CanvasView />
       </section>
-      <DebugRoot
+      <DebugCanvasSource
         page="canvas"
         workspaceId={workspaceId}
         connectionStatus={state.connectionStatus}

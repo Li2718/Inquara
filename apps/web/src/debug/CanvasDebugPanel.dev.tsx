@@ -1,8 +1,8 @@
 "use client";
 
-import type { DebugRootProps } from "./debugTypes";
+import type { CanvasDebugSnapshot } from "./debugTypes";
 
-type CanvasDebugPanelProps = Extract<DebugRootProps, { page: "canvas" }>;
+type CanvasDebugPanelProps = CanvasDebugSnapshot;
 
 export function CanvasDebugPanel({ workspaceId, connectionStatus, pendingClientMutationCount, snapshot }: CanvasDebugPanelProps) {
   const nodes = snapshot?.nodes ?? [];
