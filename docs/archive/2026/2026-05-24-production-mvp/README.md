@@ -1,7 +1,7 @@
 # Production MVP
 
-> status: active
-> purpose: Plan and execute the first production version of Inquara.
+> status: archived
+> purpose: Retain the implementation plan and historical context for the first production version of Inquara.
 
 ## Goal
 
@@ -30,22 +30,22 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production MVP slice is implemented and verified through database setup, builds, unit/integration tests, and the multi-window Playwright smoke test.
+The production MVP slice is implemented, verified, and archived on 2026-05-24. Follow-up work is tracked separately instead of extending this initiative.
 
 ## Next Step
 
-- Split remaining follow-up work into separate initiatives or current documentation updates.
+- Use this document only as historical context. Current follow-up work should live in active initiatives or current documentation.
 
 ## Related Documents
 
-- [Architecture](../../architecture.md)
-- [Documentation Standards](../../documentation-standards.md)
+- [Architecture](../../../architecture.md)
+- [Documentation Standards](../../../documentation-standards.md)
 
 ## Archive Criteria
 
-- The MVP is implemented and verified.
-- Durable architecture changes discovered during implementation are written back to [docs/architecture.md](../../architecture.md).
-- Follow-up work is split into new initiatives or current docs.
+- Archived on 2026-05-24 after implementation and verification.
+- Durable architecture changes discovered during implementation are retained in current documentation where still applicable.
+- Follow-up work has been split out of this initiative.
 
 ## Implementation Plan
 
