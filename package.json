@@ -3,9 +3,9 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "npm-run-all --parallel dev:api dev:web",
-    "dev:api": "npm --workspace @inquara/api run dev",
-    "dev:web": "npm --workspace @inquara/web run dev",
+    "dev": "node --env-file=.env scripts/dev.mjs",
+    "dev:api": "node --env-file=.env scripts/run-workspace.mjs @inquara/api dev",
+    "dev:web": "node --env-file=.env scripts/run-workspace.mjs @inquara/web dev",
     "build": "npm run build --workspaces",
     "test": "vitest run",
     "test:watch": "vitest",
