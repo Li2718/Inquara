@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 12 added an end-to-end multi-window smoke test for login, workspace creation, and realtime streamed chat synchronization.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 13 added the OpenAI-compatible streaming provider behind the existing AI provider interface.
 
 ## Next Step
 
-- Execute Task 13: OpenAI-Compatible Provider Behind The Existing AI Interface.
+- Run final verification for the production MVP slice and split remaining follow-up work.
 
 ## Related Documents
 
@@ -1402,15 +1402,15 @@ git commit -m "test: add multi-window sync smoke test"
 - Modify: `apps/api/src/app.ts`
 - Test: `apps/api/src/test/realtime.test.ts`
 
-- [ ] **Step 1: Implement provider selection**
+- [x] **Step 1: Implement provider selection**
 
 Create a factory that returns `fakeAIProvider` when `AI_PROVIDER=fake` and an OpenAI-compatible provider when `AI_PROVIDER=openai-compatible`.
 
-- [ ] **Step 2: Implement streaming parser**
+- [x] **Step 2: Implement streaming parser**
 
 The provider should call `${OPENAI_COMPATIBLE_BASE_URL}/chat/completions` or a configured full URL, send model/messages with `stream: true`, parse `data:` SSE chunks, and call `handlers.onDelta(content)` for `choices[0].delta.content`.
 
-- [ ] **Step 3: Add provider test with mocked fetch**
+- [x] **Step 3: Add provider test with mocked fetch**
 
 Mock a stream containing:
 

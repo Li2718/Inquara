@@ -3,7 +3,7 @@ import { WorkspaceCommandSchema, type WorkspaceCommand, type WorkspaceEvent } fr
 import type { FastifyInstance } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { z } from "zod";
-import { fakeAIProvider } from "../ai/fake-provider";
+import { createAIProvider } from "../ai/factory";
 import { verifySession } from "../auth/session";
 import { createNodeAtPosition, createNodeFromSelection, updateNodePosition } from "../canvas/service";
 import { sendUserMessage } from "../messages/service";
@@ -28,6 +28,8 @@ export async function registerRealtimeRoutes(
   config: AppConfig,
   hub = new WorkspaceHub()
 ): Promise<void> {
+  const aiProvider = createAIProvider(config);
+
   app.get("/realtime", { websocket: true }, (socket, request) => {
     const userId = verifySession(request.cookies[sessionCookieName], config.SESSION_SECRET);
     if (!userId) {
@@ -45,7 +47,7 @@ export async function registerRealtimeRoutes(
           return;
         }
 
-        const events = await dispatchCommand(userId, envelope.command, hub);
+        const events = await dispatchCommand(userId, envelope.command, hub, aiProvider);
         for (const event of events) {
           hub.broadcast(event.workspaceId, event);
         }
@@ -61,7 +63,8 @@ export async function registerRealtimeRoutes(
 async function dispatchCommand(
   userId: string,
   command: WorkspaceCommand,
-  hub: WorkspaceHub
+  hub: WorkspaceHub,
+  aiProvider: ReturnType<typeof createAIProvider>
 ): Promise<WorkspaceEvent[]> {
   if (command.type === "node.createAtPosition") {
     return createNodeAtPosition(userId, command);
@@ -73,7 +76,7 @@ async function dispatchCommand(
     return updateNodePosition(userId, command);
   }
   if (command.type === "message.sendUserMessage") {
-    await sendUserMessage(userId, command, fakeAIProvider, event => hub.broadcast(event.workspaceId, event));
+    await sendUserMessage(userId, command, aiProvider, event => hub.broadcast(event.workspaceId, event));
     return [];
   }
   return [];
