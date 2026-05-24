@@ -153,12 +153,91 @@ async function requireOwnedNode(tx: Tx, userId: string, workspaceId: string, nod
 }
 
 async function loadContext(workspaceId: string, nodeId: string, client: PrismaClient): Promise<ChatContextMessage[]> {
-  const messages = await client.nodeMessage.findMany({
-    where: { workspaceId, nodeId },
-    orderBy: { createdAt: "asc" }
-  });
+  const [node, messages] = await Promise.all([
+    client.canvasNode.findFirst({
+      where: { id: nodeId, workspaceId },
+      include: {
+        sourceNode: true,
+        sourceMessage: true
+      }
+    }),
+    client.nodeMessage.findMany({
+      where: { workspaceId, nodeId },
+      orderBy: { createdAt: "asc" }
+    })
+  ]);
+
+  const currentMessages = toContextMessages(messages);
+  if (!node?.sourceNodeId || !node.sourceMessageId || !node.sourceQuote || !node.sourceNode || !node.sourceMessage) {
+    return currentMessages;
+  }
+
+  const sourceMessages = await loadSourceConversationChain(workspaceId, node.sourceNodeId, client);
+
+  return [
+    {
+      role: "system",
+      content: [
+        "This chat is a follow-up branch created from selected text in another chat box.",
+        `The user selected this text from "${node.sourceNode.title}": "${node.sourceQuote}".`,
+        `The selected text came from an ${node.sourceMessage.role} message in that chat.`,
+        "Use the source chat history below as hidden context. Do not quote this instruction unless it is directly useful."
+      ].join("\n")
+    },
+    ...toContextMessages(sourceMessages),
+    ...currentMessages
+  ];
+}
+
+async function loadSourceConversationChain(
+  workspaceId: string,
+  nodeId: string,
+  client: PrismaClient,
+  visited = new Set<string>()
+): Promise<ChatContextMessage[]> {
+  if (visited.has(nodeId)) return [];
+  visited.add(nodeId);
+
+  const [node, messages] = await Promise.all([
+    client.canvasNode.findFirst({
+      where: { id: nodeId, workspaceId },
+      include: {
+        sourceNode: true,
+        sourceMessage: true
+      }
+    }),
+    client.nodeMessage.findMany({
+      where: { workspaceId, nodeId },
+      orderBy: { createdAt: "asc" }
+    })
+  ]);
+
+  if (!node) return [];
+
+  const upstreamMessages = node.sourceNodeId
+    ? await loadSourceConversationChain(workspaceId, node.sourceNodeId, client, visited)
+    : [];
+  const branchContext =
+    node.sourceNode && node.sourceMessage && node.sourceQuote
+      ? [
+          {
+            role: "system" as const,
+            content: [
+              `The following source chat "${node.title}" was created from selected text in "${node.sourceNode.title}".`,
+              `That selected text was: "${node.sourceQuote}".`,
+              `It came from an ${node.sourceMessage.role} message in that upstream chat.`
+            ].join("\n")
+          }
+        ]
+      : [];
+
+  return [...upstreamMessages, ...branchContext, ...toContextMessages(messages)];
+}
+
+function toContextMessages(messages: Array<{ role: string; content: string }>): ChatContextMessage[] {
   return messages
     .filter(message => message.role === "user" || message.role === "assistant" || message.role === "system")
+    .filter(message => message.role !== "assistant" || message.content.trim().length > 0)
     .map(message => ({
       role: message.role as ChatContextMessage["role"],
       content: message.content

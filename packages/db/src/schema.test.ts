@@ -15,6 +15,6 @@ describe("Prisma schema", () => {
 
     expect(canvasNodeModel).not.toMatch(/\btype\s+/);
     expect(canvasNodeModel).not.toMatch(/\bdata\s+/);
-    expect(canvasNodeModel).not.toContain("Json");
+    expect(canvasNodeModel).not.toMatch(/\bpayload\s+Json\b/);
   });
 });

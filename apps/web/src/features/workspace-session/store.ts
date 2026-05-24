@@ -7,7 +7,7 @@ export type WorkspaceSessionState = {
   snapshot: WorkspaceSnapshot | null;
   connectionStatus: ConnectionStatus;
   pendingClientMutationIds: string[];
-  setSnapshot(snapshot: WorkspaceSnapshot): void;
+  setSnapshot(snapshot: WorkspaceSnapshot | null): void;
   setConnectionStatus(status: ConnectionStatus): void;
   markPending(clientMutationId: string): void;
   applyEvent(event: WorkspaceEvent): void;

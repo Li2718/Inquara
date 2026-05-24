@@ -46,6 +46,10 @@ model CanvasNode {
   width            Float
   height           Float
   collapsed        Boolean       @default(false)
+  hiddenAt         DateTime?     @map("hidden_at")
+  deletedAt        DateTime?     @map("deleted_at")
+  scrollTop        Float         @default(0) @map("scroll_top")
+  hiddenStateSnapshot Json?      @map("hidden_state_snapshot")
   parentNodeId     String?       @map("parent_node_id")
   parentNode       CanvasNode?   @relation("NodeChildren", fields: [parentNodeId], references: [id], onDelete: SetNull)
   childNodes       CanvasNode[]  @relation("NodeChildren")

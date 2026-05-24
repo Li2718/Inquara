@@ -5,7 +5,17 @@ import type { RawData, WebSocket } from "ws";
 import { z } from "zod";
 import { createAIProvider } from "../ai/factory";
 import { verifySession } from "../auth/session";
-import { createNodeAtPosition, createNodeFromSelection, updateNodePosition } from "../canvas/service";
+import {
+  createNodeAtPosition,
+  createNodeFromSelection,
+  deleteNodeSubtree,
+  hideNodeSubtree,
+  renameNode,
+  restoreDeletedNodeSubtree,
+  restoreNodeBranch,
+  updateNodePosition,
+  updateNodeScroll
+} from "../canvas/service";
 import { sendUserMessage } from "../messages/service";
 import { getWorkspaceSnapshot, WorkspaceNotFoundError } from "../workspaces/service";
 import { WorkspaceHub } from "./hub";
@@ -74,6 +84,24 @@ async function dispatchCommand(
   }
   if (command.type === "node.updatePosition") {
     return updateNodePosition(userId, command);
+  }
+  if (command.type === "node.updateScroll") {
+    return updateNodeScroll(userId, command);
+  }
+  if (command.type === "node.rename") {
+    return renameNode(userId, command);
+  }
+  if (command.type === "node.hideSubtree") {
+    return hideNodeSubtree(userId, command);
+  }
+  if (command.type === "node.restoreBranch") {
+    return restoreNodeBranch(userId, command);
+  }
+  if (command.type === "node.deleteSubtree") {
+    return deleteNodeSubtree(userId, command);
+  }
+  if (command.type === "node.restoreDeletedSubtree") {
+    return restoreDeletedNodeSubtree(userId, command);
   }
   if (command.type === "message.sendUserMessage") {
     await sendUserMessage(userId, command, aiProvider, event => hub.broadcast(event.workspaceId, event));

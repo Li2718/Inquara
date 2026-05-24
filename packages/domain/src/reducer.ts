@@ -2,11 +2,18 @@ import type { WorkspaceEvent } from "./events";
 import type { WorkspaceSnapshot } from "./schemas";
 
 export function applyWorkspaceEvent(snapshot: WorkspaceSnapshot, event: WorkspaceEvent): WorkspaceSnapshot {
-  if (event.version <= snapshot.workspace.version) return snapshot;
+  if (event.version < snapshot.workspace.version) return snapshot;
+  const isSameVersion = event.version === snapshot.workspace.version;
+  const canApplySameVersionCreate =
+    (event.type === "workspace.node.created" && !snapshot.nodes.some(node => node.id === event.node.id)) ||
+    (event.type === "workspace.edge.created" && !snapshot.edges.some(edge => edge.id === event.edge.id)) ||
+    (event.type === "workspace.message.created" && !snapshot.messages.some(message => message.id === event.message.id));
+  if (isSameVersion && !canApplySameVersionCreate) return snapshot;
 
   const workspace = { ...snapshot.workspace, version: event.version, updatedAt: event.createdAt };
 
   if (event.type === "workspace.node.created") {
+    if (snapshot.nodes.some(node => node.id === event.node.id)) return snapshot;
     return { ...snapshot, workspace, nodes: [...snapshot.nodes, event.node] };
   }
 
@@ -19,10 +26,12 @@ export function applyWorkspaceEvent(snapshot: WorkspaceSnapshot, event: Workspac
   }
 
   if (event.type === "workspace.edge.created") {
+    if (snapshot.edges.some(edge => edge.id === event.edge.id)) return snapshot;
     return { ...snapshot, workspace, edges: [...snapshot.edges, event.edge] };
   }
 
   if (event.type === "workspace.message.created") {
+    if (snapshot.messages.some(message => message.id === event.message.id)) return snapshot;
     return { ...snapshot, workspace, messages: [...snapshot.messages, event.message] };
   }
 

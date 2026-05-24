@@ -86,6 +86,63 @@ describe("applyWorkspaceEvent", () => {
     expect(next.messages.find(message => message.id === "message-1")?.content).toBe("Hello");
   });
 
+  it("applies related events that share the current workspace version", () => {
+    const nodeEvent: WorkspaceEvent = {
+      id: "event-node",
+      type: "workspace.node.created",
+      workspaceId: "workspace-1",
+      version: 2,
+      clientMutationId: "mutation-branch",
+      createdAt: "2026-05-24T00:00:02.000Z",
+      node: {
+        id: "node-1",
+        workspaceId: "workspace-1",
+        title: "Follow-up",
+        x: 120,
+        y: 120,
+        width: 420,
+        height: 520,
+        collapsed: false,
+        hiddenAt: null,
+        deletedAt: null,
+        scrollTop: 0,
+        hiddenStateSnapshot: null,
+        parentNodeId: null,
+        sourceNodeId: null,
+        sourceMessageId: null,
+        sourceQuote: null,
+        sourceRangeStart: null,
+        sourceRangeEnd: null,
+        version: 1,
+        createdAt: "2026-05-24T00:00:02.000Z",
+        updatedAt: "2026-05-24T00:00:02.000Z"
+      }
+    };
+    const edgeEvent: WorkspaceEvent = {
+      id: "event-edge",
+      type: "workspace.edge.created",
+      workspaceId: "workspace-1",
+      version: 2,
+      clientMutationId: "mutation-branch",
+      createdAt: "2026-05-24T00:00:02.000Z",
+      edge: {
+        id: "edge-1",
+        workspaceId: "workspace-1",
+        sourceNodeId: "source-node",
+        targetNodeId: "node-1",
+        sourceMessageId: null,
+        label: "selected text",
+        createdAt: "2026-05-24T00:00:02.000Z"
+      }
+    };
+
+    const afterNode = applyWorkspaceEvent(baseSnapshot, nodeEvent);
+    const afterEdge = applyWorkspaceEvent(afterNode, edgeEvent);
+
+    expect(afterEdge.nodes).toHaveLength(1);
+    expect(afterEdge.edges).toHaveLength(1);
+  });
+
   it("ignores events that are not newer than the current snapshot", () => {
     const event: WorkspaceEvent = {
       id: "event-3",

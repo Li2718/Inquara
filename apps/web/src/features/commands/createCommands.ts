@@ -38,6 +38,57 @@ export function createCommands(workspaceId: string) {
         y: position.y
       };
     },
+    updateNodeScroll(nodeId: string, scrollTop: number): WorkspaceCommand {
+      return {
+        type: "node.updateScroll",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId,
+        scrollTop
+      };
+    },
+    renameNode(nodeId: string, title: string): WorkspaceCommand {
+      return {
+        type: "node.rename",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId,
+        title
+      };
+    },
+    hideNodeSubtree(nodeId: string, scrollTop?: number): WorkspaceCommand {
+      return {
+        type: "node.hideSubtree",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId,
+        ...(scrollTop === undefined ? {} : { scrollTop })
+      };
+    },
+    restoreNodeBranch(nodeId: string): WorkspaceCommand {
+      return {
+        type: "node.restoreBranch",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId
+      };
+    },
+    deleteNodeSubtree(nodeId: string): WorkspaceCommand {
+      return {
+        type: "node.deleteSubtree",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId
+      };
+    },
+    restoreDeletedNodeSubtree(nodeId: string): WorkspaceCommand {
+      return {
+        type: "node.restoreDeletedSubtree",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId
+      };
+    },
     sendUserMessage(nodeId: string, content: string): WorkspaceCommand {
       return {
         type: "message.sendUserMessage",

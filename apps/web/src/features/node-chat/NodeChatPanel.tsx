@@ -6,7 +6,7 @@ import { MessageList } from "./MessageList";
 
 export function NodeChatPanel({ node }: { node: CanvasNode }) {
   return (
-    <div className="node-chat-panel">
+    <div className="node-chat-panel nodrag">
       <MessageList node={node} />
       <MessageComposer nodeId={node.id} />
     </div>

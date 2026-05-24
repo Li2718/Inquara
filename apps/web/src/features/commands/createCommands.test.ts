@@ -18,4 +18,19 @@ describe("createCommands", () => {
       y: 220
     });
   });
+
+  it("creates schema-valid rename commands", () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("mutation-rename");
+
+    const commands = createCommands("workspace-1");
+    const command = commands.renameNode("node-1", "Better title");
+
+    expect(WorkspaceCommandSchema.parse(command)).toEqual({
+      type: "node.rename",
+      clientMutationId: "mutation-rename",
+      workspaceId: "workspace-1",
+      nodeId: "node-1",
+      title: "Better title"
+    });
+  });
 });

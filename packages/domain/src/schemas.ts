@@ -21,6 +21,13 @@ export const CanvasNodeSchema = z.object({
   width: z.number().positive(),
   height: z.number().positive(),
   collapsed: z.boolean(),
+  hiddenAt: IsoDateSchema.nullable(),
+  deletedAt: IsoDateSchema.nullable(),
+  scrollTop: z.number().nonnegative(),
+  hiddenStateSnapshot: z.record(z.string(), z.object({
+    hiddenAt: IsoDateSchema.nullable(),
+    scrollTop: z.number().nonnegative()
+  })).nullable(),
   parentNodeId: IdSchema.nullable(),
   sourceNodeId: IdSchema.nullable(),
   sourceMessageId: IdSchema.nullable(),

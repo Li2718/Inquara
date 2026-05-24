@@ -31,6 +31,39 @@ export const UpdateNodePositionCommandSchema = BaseCommandSchema.extend({
   y: z.number()
 });
 
+export const UpdateNodeScrollCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.updateScroll"),
+  nodeId: IdSchema,
+  scrollTop: z.number().nonnegative()
+});
+
+export const RenameNodeCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.rename"),
+  nodeId: IdSchema,
+  title: z.string().min(1).max(120)
+});
+
+export const HideNodeSubtreeCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.hideSubtree"),
+  nodeId: IdSchema,
+  scrollTop: z.number().nonnegative().optional()
+});
+
+export const RestoreNodeBranchCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.restoreBranch"),
+  nodeId: IdSchema
+});
+
+export const DeleteNodeSubtreeCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.deleteSubtree"),
+  nodeId: IdSchema
+});
+
+export const RestoreDeletedNodeSubtreeCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.restoreDeletedSubtree"),
+  nodeId: IdSchema
+});
+
 export const SendUserMessageCommandSchema = BaseCommandSchema.extend({
   type: z.literal("message.sendUserMessage"),
   nodeId: IdSchema,
@@ -41,6 +74,12 @@ export const WorkspaceCommandSchema = z.discriminatedUnion("type", [
   CreateNodeAtPositionCommandSchema,
   CreateNodeFromSelectionCommandSchema,
   UpdateNodePositionCommandSchema,
+  UpdateNodeScrollCommandSchema,
+  RenameNodeCommandSchema,
+  HideNodeSubtreeCommandSchema,
+  RestoreNodeBranchCommandSchema,
+  DeleteNodeSubtreeCommandSchema,
+  RestoreDeletedNodeSubtreeCommandSchema,
   SendUserMessageCommandSchema
 ]);
 

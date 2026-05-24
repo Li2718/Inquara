@@ -1,5 +1,6 @@
 import { prisma } from "@inquara/db";
 import type { CanvasEdge, CanvasNode, NodeMessage, Workspace, WorkspaceSnapshot } from "@inquara/domain";
+import type { Prisma } from "@prisma/client";
 import { signSession } from "../auth/session";
 
 const rootAssistantText = "Ask me anything. Select part of an answer to branch into a focused follow-up.";
@@ -124,6 +125,10 @@ function toCanvasNode(value: {
   width: number;
   height: number;
   collapsed: boolean;
+  hiddenAt: Date | null;
+  deletedAt: Date | null;
+  scrollTop: number;
+  hiddenStateSnapshot: Prisma.JsonValue | null;
   parentNodeId: string | null;
   sourceNodeId: string | null;
   sourceMessageId: string | null;
@@ -143,6 +148,10 @@ function toCanvasNode(value: {
     width: value.width,
     height: value.height,
     collapsed: value.collapsed,
+    hiddenAt: value.hiddenAt?.toISOString() ?? null,
+    deletedAt: value.deletedAt?.toISOString() ?? null,
+    scrollTop: value.scrollTop,
+    hiddenStateSnapshot: parseHiddenStateSnapshot(value.hiddenStateSnapshot),
     parentNodeId: value.parentNodeId,
     sourceNodeId: value.sourceNodeId,
     sourceMessageId: value.sourceMessageId,
@@ -153,6 +162,19 @@ function toCanvasNode(value: {
     createdAt: value.createdAt.toISOString(),
     updatedAt: value.updatedAt.toISOString()
   };
+}
+
+function parseHiddenStateSnapshot(value: Prisma.JsonValue | null): CanvasNode["hiddenStateSnapshot"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const snapshot: NonNullable<CanvasNode["hiddenStateSnapshot"]> = {};
+  for (const [nodeId, entry] of Object.entries(value)) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    snapshot[nodeId] = {
+      hiddenAt: typeof entry.hiddenAt === "string" ? entry.hiddenAt : null,
+      scrollTop: typeof entry.scrollTop === "number" && entry.scrollTop >= 0 ? entry.scrollTop : 0
+    };
+  }
+  return snapshot;
 }
 
 function toCanvasEdge(value: {

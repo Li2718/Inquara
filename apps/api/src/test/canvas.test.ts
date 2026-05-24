@@ -1,6 +1,16 @@
 import { prisma } from "@inquara/db";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createNodeAtPosition, createNodeFromSelection, updateNodePosition } from "../canvas/service";
+import {
+  createNodeAtPosition,
+  createNodeFromSelection,
+  deleteNodeSubtree,
+  hideNodeSubtree,
+  restoreDeletedNodeSubtree,
+  renameNode,
+  restoreNodeBranch,
+  updateNodePosition,
+  updateNodeScroll
+} from "../canvas/service";
 
 let userId = "";
 let workspaceId = "";
@@ -120,5 +130,103 @@ describe("canvas command services", () => {
     expect(event.node.x).toBe(300);
     expect(event.node.y).toBe(340);
     expect(event.version).toBe(1);
+  });
+
+  it("renames a node and emits an updated event", async () => {
+    const events = await renameNode(userId, {
+      type: "node.rename",
+      clientMutationId: "mutation-rename",
+      workspaceId,
+      nodeId: rootNodeId,
+      title: "Better title"
+    });
+
+    const event = events[0];
+    expect(event?.type).toBe("workspace.node.updated");
+    if (event?.type !== "workspace.node.updated") throw new Error("Expected node updated event");
+    expect(event.node.title).toBe("Better title");
+    expect(event.version).toBe(1);
+  });
+
+  it("hides a node subtree, stores visibility and scroll state, then restores it", async () => {
+    await createNodeFromSelection(userId, {
+      type: "node.createFromSelection",
+      clientMutationId: "mutation-branch",
+      workspaceId,
+      sourceNodeId: rootNodeId,
+      sourceMessageId,
+      sourceQuote: "which context matters",
+      sourceRangeStart: 18,
+      sourceRangeEnd: 39,
+      x: 560,
+      y: 100
+    });
+    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { workspaceId, parentNodeId: rootNodeId } });
+    await updateNodeScroll(userId, {
+      type: "node.updateScroll",
+      clientMutationId: "mutation-scroll",
+      workspaceId,
+      nodeId: childNode.id,
+      scrollTop: 144
+    });
+
+    const hiddenEvents = await hideNodeSubtree(userId, {
+      type: "node.hideSubtree",
+      clientMutationId: "mutation-hide",
+      workspaceId,
+      nodeId: childNode.id,
+      scrollTop: 233
+    });
+
+    expect(hiddenEvents).toHaveLength(1);
+    const hiddenChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: childNode.id } });
+    expect(hiddenChild.hiddenAt).toBeTruthy();
+    expect(hiddenChild.scrollTop).toBe(233);
+    expect(hiddenChild.hiddenStateSnapshot).toMatchObject({
+      [childNode.id]: { hiddenAt: null, scrollTop: 233 }
+    });
+
+    const restoredEvents = await restoreNodeBranch(userId, {
+      type: "node.restoreBranch",
+      clientMutationId: "mutation-restore",
+      workspaceId,
+      nodeId: childNode.id
+    });
+
+    expect(restoredEvents).toHaveLength(1);
+    const restoredChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: childNode.id } });
+    expect(restoredChild.hiddenAt).toBeNull();
+    expect(restoredChild.scrollTop).toBe(233);
+  });
+
+  it("soft deletes and restores a node subtree", async () => {
+    const createEvents = await createNodeAtPosition(userId, {
+      type: "node.createAtPosition",
+      clientMutationId: "mutation-create-delete",
+      workspaceId,
+      title: "Disposable",
+      x: 300,
+      y: 300
+    });
+    const created = createEvents[0];
+    if (created?.type !== "workspace.node.created") throw new Error("Expected node created event");
+
+    await deleteNodeSubtree(userId, {
+      type: "node.deleteSubtree",
+      clientMutationId: "mutation-delete",
+      workspaceId,
+      nodeId: created.node.id
+    });
+    expect((await prisma.canvasNode.findUniqueOrThrow({ where: { id: created.node.id } })).deletedAt).toBeTruthy();
+
+    await restoreDeletedNodeSubtree(userId, {
+      type: "node.restoreDeletedSubtree",
+      clientMutationId: "mutation-restore-delete",
+      workspaceId,
+      nodeId: created.node.id
+    });
+    const restored = await prisma.canvasNode.findUniqueOrThrow({ where: { id: created.node.id } });
+    expect(restored.deletedAt).toBeNull();
+    expect(restored.hiddenAt).toBeNull();
   });
 });

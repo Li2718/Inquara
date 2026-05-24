@@ -1,6 +1,7 @@
 .playwright-mcp/
 .env
 .server-*.log
+.tmp/
 demo/config.js
 .references/
 node_modules/
