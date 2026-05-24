@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 11 implemented the first React Flow canvas and chat node UI. Automated build and tests pass; full multi-window manual verification remains for the e2e smoke-test pass.
+The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 12 added an end-to-end multi-window smoke test for login, workspace creation, and realtime streamed chat synchronization.
 
 ## Next Step
 
-- Execute Task 12: End-To-End Smoke Test.
+- Execute Task 13: OpenAI-Compatible Provider Behind The Existing AI Interface.
 
 ## Related Documents
 
@@ -1353,7 +1353,7 @@ git commit -m "feat: add realtime chat canvas UI"
 - Create: `apps/web/e2e/multi-window-sync.spec.ts`
 - Modify: `apps/web/package.json`
 
-- [ ] **Step 1: Add Playwright script**
+- [x] **Step 1: Add Playwright script**
 
 Add to `apps/web/package.json`:
 
@@ -1368,7 +1368,7 @@ Add to `apps/web/package.json`:
 }
 ```
 
-- [ ] **Step 2: Create multi-window test**
+- [x] **Step 2: Create multi-window test**
 
 Create a Playwright test that:
 
@@ -1381,7 +1381,7 @@ Create a Playwright test that:
 - Drags a node in the first page.
 - Asserts the second page reflects the changed position or updated node state.
 
-- [ ] **Step 3: Run verification**
+- [x] **Step 3: Run verification**
 
 Run: `npm --workspace @inquara/web run e2e`
 

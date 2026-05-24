@@ -23,6 +23,19 @@ afterAll(async () => {
 });
 
 describe("API auth and workspace snapshots", () => {
+  it("returns a health check for local orchestration", async () => {
+    const app = await buildApp({ env: testEnv });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/healthz"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ ok: true });
+    await app.close();
+  });
+
   it("logs in, creates a workspace, and returns a snapshot with one chat canvas node", async () => {
     const app = await buildApp({ env: testEnv });
 

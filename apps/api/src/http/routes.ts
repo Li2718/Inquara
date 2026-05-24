@@ -22,6 +22,8 @@ const CreateWorkspaceSchema = z.object({
 });
 
 export async function registerRoutes(app: FastifyInstance, config: AppConfig): Promise<void> {
+  app.get("/healthz", async () => ({ ok: true }));
+
   app.post("/auth/login", async (request, reply) => {
     const body = LoginSchema.parse(request.body);
     const { user, session } = await loginWithEmail(body.email, config.SESSION_SECRET);
