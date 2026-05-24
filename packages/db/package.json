@@ -5,6 +5,7 @@
   "type": "module",
   "main": "src/client.ts",
   "scripts": {
+    "build": "tsc --noEmit",
     "generate": "prisma generate --schema prisma/schema.prisma",
     "migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "seed": "tsx src/seed.ts",
@@ -16,6 +17,7 @@
   "devDependencies": {
     "prisma": "^6.0.0",
     "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
     "vitest": "^3.0.0"
   }
 }

@@ -30,11 +30,11 @@ Build the first production MVP: account login, multiple workspaces, persistent c
 
 ## Current Status
 
-The production architecture is defined in [docs/architecture.md](../../architecture.md). Task 13 added the OpenAI-compatible streaming provider behind the existing AI provider interface.
+The production MVP slice is implemented and verified through database setup, builds, unit/integration tests, and the multi-window Playwright smoke test.
 
 ## Next Step
 
-- Run final verification for the production MVP slice and split remaining follow-up work.
+- Split remaining follow-up work into separate initiatives or current documentation updates.
 
 ## Related Documents
 
@@ -1433,7 +1433,7 @@ git commit -m "feat: add openai compatible streaming provider"
 
 ## Final Verification
 
-Run these commands in order:
+Latest verified on 2026-05-24:
 
 ```bash
 npm install
@@ -1443,19 +1443,33 @@ npm run db:migrate
 npm run db:seed
 npm test
 npm run build
-npm run dev
+npm --workspace @inquara/web run e2e -- multi-window-sync.spec.ts
 ```
 
-Manual verification while `npm run dev` is running:
+Results:
+
+- `docker compose up -d postgres`: container `inquara-postgres-1` running.
+- `npm run db:generate`: Prisma Client generated.
+- `npm run db:migrate`: database already in sync.
+- `npm run db:seed`: seeded `demo@inquara.local`.
+- `npm test`: 9 test files, 20 tests passed.
+- `npm run build`: all workspaces built successfully.
+- `npm --workspace @inquara/web run e2e -- multi-window-sync.spec.ts`: 1 Playwright test passed.
+
+Covered by e2e:
 
 - Log in.
-- Create a workspace.
-- Send a message in the root node.
-- Watch streamed assistant content.
-- Open the same workspace in another browser window.
-- Send another message and confirm both windows stream the same assistant reply.
-- Select assistant text and create a follow-up node.
-- Drag a node and confirm the other window updates.
+- Create and open a workspace.
+- Open the same workspace in a second page.
+- Send a message and confirm both pages receive the streamed assistant reply.
+- Drag a node and confirm the second page receives the updated node position.
+
+Remaining follow-up candidates:
+
+- Add broader browser/device coverage for the canvas UI.
+- Add a production deployment/runtime configuration document.
+- Improve selection follow-up e2e coverage with text range assertions.
+- Add real credential smoke coverage for `AI_PROVIDER=openai-compatible` in a safe environment.
 
 ## Self-Review Notes
 
