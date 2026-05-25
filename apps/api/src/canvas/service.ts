@@ -36,6 +36,15 @@ export type UpdateNodePositionCommand = {
   y: number;
 };
 
+export type UpdateNodeSizeCommand = {
+  type: "node.updateSize";
+  clientMutationId: string;
+  workspaceId: string;
+  nodeId: string;
+  width: number;
+  height: number;
+};
+
 export type UpdateNodeScrollCommand = {
   type: "node.updateScroll";
   clientMutationId: string;
@@ -201,6 +210,14 @@ export async function updateNodePosition(
       })
     ];
   });
+}
+
+export async function updateNodeSize(
+  userId: string,
+  command: UpdateNodeSizeCommand,
+  client: PrismaClient = prisma
+): Promise<WorkspaceEvent[]> {
+  return updateSingleNode(userId, command, { width: command.width, height: command.height }, client);
 }
 
 export async function updateNodeScroll(

@@ -33,4 +33,20 @@ describe("createCommands", () => {
       title: "Better title"
     });
   });
+
+  it("creates schema-valid node size commands", () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("mutation-size");
+
+    const commands = createCommands("workspace-1");
+    const command = commands.updateNodeSize("node-1", { width: 540, height: 680 });
+
+    expect(WorkspaceCommandSchema.parse(command)).toEqual({
+      type: "node.updateSize",
+      clientMutationId: "mutation-size",
+      workspaceId: "workspace-1",
+      nodeId: "node-1",
+      width: 540,
+      height: 680
+    });
+  });
 });

@@ -38,6 +38,16 @@ export function createCommands(workspaceId: string) {
         y: position.y
       };
     },
+    updateNodeSize(nodeId: string, size: { width: number; height: number }): WorkspaceCommand {
+      return {
+        type: "node.updateSize",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId,
+        nodeId,
+        width: size.width,
+        height: size.height
+      };
+    },
     updateNodeScroll(nodeId: string, scrollTop: number): WorkspaceCommand {
       return {
         type: "node.updateScroll",

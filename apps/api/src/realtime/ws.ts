@@ -14,6 +14,7 @@ import {
   restoreDeletedNodeSubtree,
   restoreNodeBranch,
   updateNodePosition,
+  updateNodeSize,
   updateNodeScroll
 } from "../canvas/service";
 import { sendUserMessage } from "../messages/service";
@@ -84,6 +85,9 @@ async function dispatchCommand(
   }
   if (command.type === "node.updatePosition") {
     return updateNodePosition(userId, command);
+  }
+  if (command.type === "node.updateSize") {
+    return updateNodeSize(userId, command);
   }
   if (command.type === "node.updateScroll") {
     return updateNodeScroll(userId, command);

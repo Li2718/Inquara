@@ -31,6 +31,13 @@ export const UpdateNodePositionCommandSchema = BaseCommandSchema.extend({
   y: z.number()
 });
 
+export const UpdateNodeSizeCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.updateSize"),
+  nodeId: IdSchema,
+  width: z.number().positive(),
+  height: z.number().positive()
+});
+
 export const UpdateNodeScrollCommandSchema = BaseCommandSchema.extend({
   type: z.literal("node.updateScroll"),
   nodeId: IdSchema,
@@ -74,6 +81,7 @@ export const WorkspaceCommandSchema = z.discriminatedUnion("type", [
   CreateNodeAtPositionCommandSchema,
   CreateNodeFromSelectionCommandSchema,
   UpdateNodePositionCommandSchema,
+  UpdateNodeSizeCommandSchema,
   UpdateNodeScrollCommandSchema,
   RenameNodeCommandSchema,
   HideNodeSubtreeCommandSchema,

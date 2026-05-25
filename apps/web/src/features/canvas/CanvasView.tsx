@@ -49,6 +49,7 @@ function CanvasFlow() {
           type: "chatNode",
           position: { x: node.x, y: node.y },
           data: node,
+          style: { width: node.width, height: node.height },
           width: node.width,
           height: node.height,
           dragHandle: ".canvas-node-header"

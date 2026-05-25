@@ -1,22 +1,71 @@
 "use client";
 
 import type { CanvasNode } from "@inquara/domain";
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
 import { NodeChatPanel } from "../node-chat/NodeChatPanel";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import type { ChatFlowNode } from "./CanvasView";
+import { clampNodeSize, type NodeSize } from "./nodeResize";
 
 const hiddenHandleStyle = { opacity: 0, pointerEvents: "none" } as const;
 
 export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodeProps<ChatFlowNode>) {
   const { commands, sendCommand } = useWorkspaceSession();
+  const updateNodeInternals = useUpdateNodeInternals();
   const [isDangerOpen, setIsDangerOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(data.title);
+  const [draftSize, setDraftSize] = useState<NodeSize>(() => clampNodeSize({ width: data.width, height: data.height }));
+  const resizeRef = useRef<null | { pointerId: number; startX: number; startY: number; originWidth: number; originHeight: number }>(null);
   const canHideBranch = Boolean(data.parentNodeId);
+
+  useEffect(() => {
+    if (resizeRef.current) return;
+    setDraftSize(clampNodeSize({ width: data.width, height: data.height }));
+  }, [data.width, data.height]);
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [draftSize.height, draftSize.width, id, updateNodeInternals]);
+
+  useEffect(() => {
+    const resize = (event: globalThis.PointerEvent) => {
+      const activeResize = resizeRef.current;
+      if (!activeResize || activeResize.pointerId !== event.pointerId) return;
+      setDraftSize(
+        clampNodeSize({
+          width: activeResize.originWidth + event.clientX - activeResize.startX,
+          height: activeResize.originHeight + event.clientY - activeResize.startY
+        })
+      );
+    };
+
+    const stopResize = (event: globalThis.PointerEvent) => {
+      const activeResize = resizeRef.current;
+      if (!activeResize || activeResize.pointerId !== event.pointerId) return;
+      resizeRef.current = null;
+      const nextSize = clampNodeSize({
+        width: activeResize.originWidth + event.clientX - activeResize.startX,
+        height: activeResize.originHeight + event.clientY - activeResize.startY
+      });
+      setDraftSize(nextSize);
+      if (nextSize.width !== data.width || nextSize.height !== data.height) {
+        sendCommand(commands.updateNodeSize(id, nextSize));
+      }
+    };
+
+    window.addEventListener("pointermove", resize);
+    window.addEventListener("pointerup", stopResize);
+    window.addEventListener("pointercancel", stopResize);
+    return () => {
+      window.removeEventListener("pointermove", resize);
+      window.removeEventListener("pointerup", stopResize);
+      window.removeEventListener("pointercancel", stopResize);
+    };
+  }, [commands, data.height, data.width, id, sendCommand]);
 
   function hideNode() {
     const list = document.querySelector(`[data-node-id="${id}"] .message-list`);
@@ -46,6 +95,19 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
     sendCommand(commands.renameNode(id, nextTitle));
   }
 
+  function startResize(event: PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originWidth: draftSize.width,
+      originHeight: draftSize.height
+    };
+  }
+
   const deleteDialog = isDeleteDialogOpen
     ? createPortal(
         <div className="modal-backdrop nodrag nowheel" role="presentation">
@@ -67,7 +129,13 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
     : null;
 
   return (
-    <section className="canvas-node" data-testid="canvas-node" data-node-id={id} data-position={`${Math.round(data.x)},${Math.round(data.y)}`}>
+    <section
+      className="canvas-node"
+      data-testid="canvas-node"
+      data-node-id={id}
+      data-position={`${Math.round(data.x)},${Math.round(data.y)}`}
+      style={{ width: draftSize.width, height: draftSize.height }}
+    >
       <Handle type="target" position={Position.Left} isConnectable={false} style={hiddenHandleStyle} />
       <header className="canvas-node-header">
         <div className="canvas-node-title-row">
@@ -127,6 +195,13 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
         </div>
       </header>
       {!data.collapsed ? <NodeChatPanel node={data} /> : null}
+      <button
+        type="button"
+        className="canvas-node-resize-handle nodrag nowheel"
+        aria-label="Resize chat"
+        title="Resize"
+        onPointerDown={startResize}
+      />
       <Handle type="source" position={Position.Right} isConnectable={false} style={hiddenHandleStyle} />
       {deleteDialog}
     </section>

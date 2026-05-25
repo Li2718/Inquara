@@ -9,6 +9,7 @@ import {
   renameNode,
   restoreNodeBranch,
   updateNodePosition,
+  updateNodeSize,
   updateNodeScroll
 } from "../canvas/service";
 
@@ -129,6 +130,24 @@ describe("canvas command services", () => {
     if (event?.type !== "workspace.node.updated") throw new Error("Expected node updated event");
     expect(event.node.x).toBe(300);
     expect(event.node.y).toBe(340);
+    expect(event.version).toBe(1);
+  });
+
+  it("updates node size and emits an updated event", async () => {
+    const events = await updateNodeSize(userId, {
+      type: "node.updateSize",
+      clientMutationId: "mutation-size",
+      workspaceId,
+      nodeId: rootNodeId,
+      width: 540,
+      height: 680
+    });
+
+    const event = events[0];
+    expect(event?.type).toBe("workspace.node.updated");
+    if (event?.type !== "workspace.node.updated") throw new Error("Expected node updated event");
+    expect(event.node.width).toBe(540);
+    expect(event.node.height).toBe(680);
     expect(event.version).toBe(1);
   });
 
