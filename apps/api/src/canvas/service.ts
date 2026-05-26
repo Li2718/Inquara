@@ -297,7 +297,7 @@ export async function restoreNodeBranch(
 
     const nodes = await tx.canvasNode.findMany({ where: { workspaceId: command.workspaceId, deletedAt: null } });
     const subtreeIds = collectSubtreeIds(nodes, command.nodeId);
-    const snapshot = parseHiddenStateSnapshot(node.hiddenStateSnapshot);
+    const snapshot = parseHiddenStateSnapshot(node.hiddenStateSnapshot) ?? {};
 
     for (const subtreeNodeId of subtreeIds) {
       const saved = snapshot[subtreeNodeId];

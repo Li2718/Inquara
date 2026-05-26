@@ -62,3 +62,13 @@ Debug implementation work must follow the hard rules in [docs/architecture.md](<
 7. Debug API routes must not be registered in production.
 8. Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.
 9. Production web builds must pass `npm run verify:debug-free` before completion.
+
+## Test Database Rules
+
+Database-backed tests must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+
+1. API, database integration, WebSocket, and Playwright e2e tests that write data must use the shared ephemeral PostgreSQL setup based on `testcontainers`.
+2. Do not let destructive tests default to the development `DATABASE_URL` from `.env`.
+3. Do not put direct database cleanup such as `deleteMany()` in individual test files; use the shared test database helper.
+4. Playwright e2e tests must be launched through the repository e2e wrapper so all processes share the same temporary database.
+5. If Docker or `testcontainers` fails, stop and report the blocker instead of silently replacing the setup with a simplified workaround.

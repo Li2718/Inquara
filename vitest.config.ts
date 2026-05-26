@@ -5,6 +5,9 @@ export default defineConfig({
     include: ["packages/**/*.test.ts", "apps/**/*.test.ts"],
     environment: "node",
     fileParallelism: false,
+    setupFiles: ["apps/api/src/test/setup.ts"],
+    hookTimeout: 120_000,
+    testTimeout: 120_000,
     passWithNoTests: true
   }
 });

@@ -1,0 +1,1 @@
+process.env.INQUARA_USE_EPHEMERAL_TEST_DB = "1";

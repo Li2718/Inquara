@@ -80,7 +80,20 @@ export async function sendUserMessage(
     const context = await loadContext(command.workspaceId, command.nodeId, client);
     const result = await provider.streamReply(context, {
       onDelta: async delta => {
-        const version = await incrementWorkspaceVersion(client, command.workspaceId);
+        const version = await client.$transaction(async tx => {
+          const nextVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
+          const currentMessage = await tx.nodeMessage.findUnique({
+            where: { id: created.assistantMessage.id },
+            select: { content: true }
+          });
+          await tx.nodeMessage.update({
+            where: { id: created.assistantMessage.id },
+            data: {
+              content: `${currentMessage?.content ?? ""}${delta}`
+            }
+          });
+          return nextVersion;
+        });
         broadcast(
           createMessageDeltaEvent({
             workspaceId: command.workspaceId,

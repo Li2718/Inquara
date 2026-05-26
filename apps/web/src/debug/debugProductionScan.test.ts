@@ -38,6 +38,7 @@ describe("debug production safety", () => {
 
     expect(shell).toContain("debug_position");
     expect(shell).toContain("data-debug-placement");
+    expect(shell).toContain("defaultPosition");
     expect(shell).toContain("onPointerDown");
     expect(shell).toContain("snapPosition");
     expect(shell).toContain("rawPosition");

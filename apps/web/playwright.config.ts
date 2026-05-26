@@ -29,7 +29,8 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
-        DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://inquara:inquara@localhost:55432/inquara?schema=public",
+        DATABASE_URL: process.env.DATABASE_URL ?? "",
+        INQUARA_USE_EXISTING_TEST_DB: "1",
         SESSION_SECRET: "e2e-session-secret-with-at-least-32-chars",
         WEB_ORIGIN: `http://127.0.0.1:${webPort}`,
         API_ORIGIN: `http://127.0.0.1:${apiPort}`,

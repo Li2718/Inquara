@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildApp } from "../app";
 
 const baseEnv = {
-  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://inquara:inquara@localhost:55432/inquara?schema=public",
+  DATABASE_URL: "postgresql://debug:debug@localhost:1/inquara_debug_test?schema=public",
   SESSION_SECRET: "test-session-secret-with-at-least-32-chars",
   WEB_ORIGIN: "http://localhost:3000",
   API_ORIGIN: "http://localhost:4000",

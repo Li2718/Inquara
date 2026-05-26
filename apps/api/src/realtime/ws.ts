@@ -96,7 +96,13 @@ async function dispatchCommand(
     return renameNode(userId, command);
   }
   if (command.type === "node.hideSubtree") {
-    return hideNodeSubtree(userId, command);
+    return hideNodeSubtree(userId, {
+      type: command.type,
+      clientMutationId: command.clientMutationId,
+      workspaceId: command.workspaceId,
+      nodeId: command.nodeId,
+      ...(command.scrollTop !== undefined ? { scrollTop: command.scrollTop } : {})
+    });
   }
   if (command.type === "node.restoreBranch") {
     return restoreNodeBranch(userId, command);

@@ -18,7 +18,7 @@ const DRAG_CLICK_THRESHOLD = 5;
 
 export function DebugRootDev(props: DebugRootProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<DebugPosition>({ x: 16, y: 16 });
+  const [position, setPosition] = useState<DebugPosition>({ x: SCREEN_GAP, y: SCREEN_GAP });
   const [isDragging, setIsDragging] = useState(false);
   const pageSnapshot = useDebugPageSnapshot();
   const hasDragged = useRef(false);
@@ -28,17 +28,22 @@ export function DebugRootDev(props: DebugRootProps) {
     const storedPosition = window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY);
     const storedOpen = window.localStorage.getItem(DEBUG_OPEN_STORAGE_KEY);
 
-    if (storedOpen === "true") setIsOpen(true);
     if (storedPosition) {
       try {
         const parsed = JSON.parse(storedPosition) as { x?: unknown; y?: unknown };
         if (typeof parsed.x === "number" && typeof parsed.y === "number") {
           setPosition(clampPosition(parsed.x, parsed.y));
+        } else {
+          setPosition(defaultPosition());
         }
       } catch {
         window.localStorage.removeItem(DEBUG_POSITION_STORAGE_KEY);
+        setPosition(defaultPosition());
       }
+    } else {
+      setPosition(defaultPosition());
     }
+    if (storedOpen === "true") setIsOpen(true);
   }, []);
 
   useEffect(() => {
@@ -160,6 +165,14 @@ function clampPosition(x: number, y: number): DebugPosition {
   return {
     x: Math.min(Math.max(SCREEN_GAP, x), Math.max(SCREEN_GAP, window.innerWidth - BUBBLE_WIDTH - SCREEN_GAP)),
     y: Math.min(Math.max(SCREEN_GAP, y), Math.max(SCREEN_GAP, window.innerHeight - BUBBLE_HEIGHT - SCREEN_GAP))
+  };
+}
+
+function defaultPosition(): DebugPosition {
+  if (typeof window === "undefined") return { x: SCREEN_GAP, y: SCREEN_GAP };
+  return {
+    x: window.innerWidth - BUBBLE_WIDTH - SCREEN_GAP,
+    y: SCREEN_GAP
   };
 }
 

@@ -3,25 +3,14 @@ import { WebSocket } from "ws";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
 import { signSession } from "../auth/session";
-
-const env = {
-  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://inquara:inquara@localhost:55432/inquara?schema=public",
-  SESSION_SECRET: "test-session-secret-with-at-least-32-chars",
-  WEB_ORIGIN: "http://localhost:3000",
-  API_ORIGIN: "http://localhost:4000",
-  AI_PROVIDER: "fake" as const
-};
+import { createApiTestEnv, resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
 let workspaceId = "";
 let nodeId = "";
 
 beforeEach(async () => {
-  await prisma.canvasEdge.deleteMany();
-  await prisma.nodeMessage.deleteMany();
-  await prisma.canvasNode.deleteMany();
-  await prisma.workspace.deleteMany();
-  await prisma.user.deleteMany();
+  await resetTestDatabase();
 
   const user = await prisma.user.create({
     data: { email: "realtime@inquara.local", name: "Realtime User" }
@@ -46,11 +35,12 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await stopEphemeralTestDatabase();
 });
 
 describe("workspace realtime websocket", () => {
   it("broadcasts node update events to all sockets subscribed to a workspace", async () => {
+    const env = createApiTestEnv();
     const app = await buildApp({ env });
     await app.listen({ port: 0 });
     const address = app.server.address();
@@ -93,6 +83,7 @@ describe("workspace realtime websocket", () => {
   });
 
   it("streams fake assistant replies through workspace message events", async () => {
+    const env = createApiTestEnv();
     const app = await buildApp({ env });
     await app.listen({ port: 0 });
     const address = app.server.address();
@@ -141,6 +132,7 @@ describe("workspace realtime websocket", () => {
   });
 
   it("rejects subscriptions to workspaces owned by another user", async () => {
+    const env = createApiTestEnv();
     const other = await prisma.user.create({
       data: { email: "other-realtime@inquara.local", name: "Other User" }
     });

@@ -1,30 +1,19 @@
 import { prisma } from "@inquara/db";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
-
-const testEnv = {
-  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://inquara:inquara@localhost:55432/inquara?schema=public",
-  SESSION_SECRET: "test-session-secret-with-at-least-32-chars",
-  WEB_ORIGIN: "http://localhost:3000",
-  API_ORIGIN: "http://localhost:4000",
-  AI_PROVIDER: "fake" as const
-};
+import { createApiTestEnv, resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 beforeEach(async () => {
-  await prisma.canvasEdge.deleteMany();
-  await prisma.nodeMessage.deleteMany();
-  await prisma.canvasNode.deleteMany();
-  await prisma.workspace.deleteMany();
-  await prisma.user.deleteMany();
+  await resetTestDatabase();
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await stopEphemeralTestDatabase();
 });
 
 describe("API auth and workspace snapshots", () => {
   it("returns a health check for local orchestration", async () => {
-    const app = await buildApp({ env: testEnv });
+    const app = await buildApp({ env: createApiTestEnv() });
 
     const response = await app.inject({
       method: "GET",
@@ -37,7 +26,7 @@ describe("API auth and workspace snapshots", () => {
   });
 
   it("logs in, creates a workspace, and returns a snapshot with one chat canvas node", async () => {
-    const app = await buildApp({ env: testEnv });
+    const app = await buildApp({ env: createApiTestEnv() });
 
     const loginResponse = await app.inject({
       method: "POST",
@@ -77,7 +66,7 @@ describe("API auth and workspace snapshots", () => {
   });
 
   it("rejects workspace access without a valid session", async () => {
-    const app = await buildApp({ env: testEnv });
+    const app = await buildApp({ env: createApiTestEnv() });
 
     const response = await app.inject({
       method: "GET",

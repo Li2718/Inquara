@@ -12,6 +12,7 @@ import {
   updateNodeSize,
   updateNodeScroll
 } from "../canvas/service";
+import { resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
 let workspaceId = "";
@@ -19,11 +20,7 @@ let rootNodeId = "";
 let sourceMessageId = "";
 
 beforeEach(async () => {
-  await prisma.canvasEdge.deleteMany();
-  await prisma.nodeMessage.deleteMany();
-  await prisma.canvasNode.deleteMany();
-  await prisma.workspace.deleteMany();
-  await prisma.user.deleteMany();
+  await resetTestDatabase();
 
   const user = await prisma.user.create({
     data: { email: "canvas@inquara.local", name: "Canvas User" }
@@ -61,7 +58,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await stopEphemeralTestDatabase();
 });
 
 describe("canvas command services", () => {

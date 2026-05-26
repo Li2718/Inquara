@@ -839,6 +839,15 @@ Use tests at the boundaries where mistakes are most likely:
 - Frontend component tests for node composer, message streaming display, and selection follow-up creation.
 - A Playwright smoke test for logging in, creating a workspace, asking a question, branching from selected text, and seeing updates in a second browser context.
 
+Database-backed tests must be isolated from local development data.
+
+- API, database integration, WebSocket, and Playwright e2e tests that write to the database must run against a temporary PostgreSQL database started with `testcontainers`.
+- Test setup must apply the real Prisma migrations to the temporary database before the test suite writes data.
+- Tests must not default to the local development `DATABASE_URL` from `.env` when they perform destructive cleanup.
+- Destructive cleanup such as `deleteMany()` belongs behind the shared ephemeral test database helper, not inside individual test files.
+- Playwright e2e tests must be launched through the repository e2e wrapper so the API server, web server, and test process share the same temporary database.
+- If Docker or `testcontainers` is unavailable, the test run should fail clearly. Do not silently fall back to the development database or a simplified schema-only workaround.
+
 ## Migration From The Demo
 
 The demo should be treated as interaction reference material, not production foundation.

@@ -6,7 +6,7 @@ import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 import { getLastVisibleSelectionRect, toViewportToolbarPoint } from "./selectionToolbarPosition";
-import { findSourceRange } from "./sourceRange";
+import { findSourceRange, getTextRangeInElement } from "./sourceRange";
 
 type SelectionState = {
   message: NodeMessage;
@@ -72,7 +72,11 @@ export function MessageList({ node }: { node: CanvasNode }) {
       setSelection(null);
       return;
     }
-    const sourceRange = findSourceRange(message.content, selected);
+    const messageElement = range?.commonAncestorContainer.parentElement?.closest<HTMLElement>("[data-message-content]");
+    const sourceRange =
+      range && messageElement && element.contains(messageElement)
+        ? getTextRangeInElement(messageElement, range) ?? findSourceRange(message.content, selected)
+        : findSourceRange(message.content, selected);
     if (!sourceRange) {
       setSelection(null);
       return;
@@ -123,6 +127,7 @@ export function MessageList({ node }: { node: CanvasNode }) {
           key={message.id}
           className={`message-bubble message-${message.role}`}
           onMouseUp={() => captureSelection(message)}
+          data-message-content
         >
           <p>
             <MessageContent

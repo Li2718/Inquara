@@ -1,26 +1,23 @@
-import { prisma } from "@inquara/db";
 import { expect, test } from "@playwright/test";
+import { resetTestDatabase, stopEphemeralTestDatabase } from "../../api/src/test/database";
 
 test.beforeEach(async () => {
-  await prisma.canvasEdge.deleteMany();
-  await prisma.nodeMessage.deleteMany();
-  await prisma.canvasNode.deleteMany();
-  await prisma.workspace.deleteMany();
-  await prisma.user.deleteMany();
+  await resetTestDatabase();
 });
 
 test.afterAll(async () => {
-  await prisma.$disconnect();
+  await stopEphemeralTestDatabase();
 });
 
 test("streams chat updates into two open workspace windows", async ({ page, browser }) => {
+  await clearDebugPosition(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
   await expect(page.getByRole("heading", { name: "Your canvases" })).toHaveCount(0);
   const workspacePath = new URL(page.url()).pathname;
 
-  await expect(page.getByText("Connection: connected")).toBeVisible();
+  await expect(page.getByTestId("canvas-node")).toHaveCount(1);
   await expect(page.getByText("Ask me anything")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Canvases" })).toBeVisible();
   const openStageBox = await page.locator(".canvas-stage").boundingBox();
@@ -34,7 +31,7 @@ test("streams chat updates into two open workspace windows", async ({ page, brow
 
   const second = await page.context().newPage();
   await second.goto(workspacePath);
-  await expect(second.getByText("Connection: connected")).toBeVisible();
+  await expect(second.getByTestId("canvas-node")).toHaveCount(1);
   await expect(second.getByText("Ask me anything")).toBeVisible();
 
   await page.getByPlaceholder("Ask in this node").fill("What is attention?");
@@ -113,10 +110,10 @@ test("streams chat updates into two open workspace windows", async ({ page, brow
 });
 
 test("creates a chat node from the empty canvas menu", async ({ page }) => {
+  await clearDebugPosition(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
-  await expect(page.getByText("Connection: connected")).toBeVisible();
   await expect(page.getByTestId("canvas-node")).toHaveCount(1);
 
   const paneBox = await page.locator(".react-flow__pane").boundingBox();
@@ -131,10 +128,10 @@ test("creates a chat node from the empty canvas menu", async ({ page }) => {
 });
 
 test("confirms node deletion with an in-app modal", async ({ page }) => {
+  await clearDebugPosition(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
-  await expect(page.getByText("Connection: connected")).toBeVisible();
   await expect(page.getByTestId("canvas-node")).toHaveCount(1);
 
   await page.getByRole("button", { name: "More node actions" }).click();
@@ -153,3 +150,10 @@ test("confirms node deletion with an in-app modal", async ({ page }) => {
 
   await expect(page.getByTestId("canvas-node")).toHaveCount(0);
 });
+
+async function clearDebugPosition(page: { addInitScript: (script: () => void) => Promise<void> }) {
+  await page.addInitScript(() => {
+    window.localStorage.removeItem("inquara.debug_position");
+    window.localStorage.removeItem("inquara.debug_open");
+  });
+}

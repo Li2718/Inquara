@@ -2,6 +2,7 @@ import { prisma } from "@inquara/db";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { AIProvider, ChatContextMessage } from "../ai/provider";
 import { sendUserMessage } from "../messages/service";
+import { resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
 let workspaceId = "";
@@ -18,11 +19,7 @@ const capturingProvider: AIProvider = {
 
 beforeEach(async () => {
   capturedContext = [];
-  await prisma.canvasEdge.deleteMany();
-  await prisma.nodeMessage.deleteMany();
-  await prisma.canvasNode.deleteMany();
-  await prisma.workspace.deleteMany();
-  await prisma.user.deleteMany();
+  await resetTestDatabase();
 
   const user = await prisma.user.create({
     data: { email: "messages@inquara.local", name: "Messages User" }
@@ -86,10 +83,45 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await prisma.$disconnect();
+  await stopEphemeralTestDatabase();
 });
 
 describe("message command services", () => {
+  it("persists streamed assistant deltas before the final reply completes", async () => {
+    const failingProvider: AIProvider = {
+      async streamReply(_messages, handlers) {
+        await handlers.onDelta("partial answer");
+        throw new Error("provider timed out");
+      }
+    };
+
+    await sendUserMessage(
+      userId,
+      {
+        type: "message.sendUserMessage",
+        clientMutationId: "mutation-partial-stream",
+        workspaceId,
+        nodeId: childNodeId,
+        content: "Start answering, then fail."
+      },
+      failingProvider,
+      () => undefined
+    );
+
+    const assistantMessage = await prisma.nodeMessage.findFirstOrThrow({
+      where: {
+        workspaceId,
+        nodeId: childNodeId,
+        role: "assistant"
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    expect(assistantMessage.status).toBe("failed");
+    expect(assistantMessage.content).toBe("partial answer");
+    expect(assistantMessage.errorMessage).toBe("provider timed out");
+  });
+
   it("adds hidden source conversation and selected quote context when replying in a follow-up node", async () => {
     await sendUserMessage(
       userId,
