@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
+import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 
 describe("message list scroll stickiness", () => {
   it("treats lists at or near the bottom as sticky", () => {
@@ -17,5 +17,18 @@ describe("message list scroll stickiness", () => {
     stickToBottom(element);
 
     expect(element.scrollTop).toBe(1200);
+  });
+
+  it("detects actual scrollable overflow with a small tolerance", () => {
+    expect(hasScrollableOverflow({ scrollHeight: 501.5, clientHeight: 500 })).toBe(true);
+    expect(hasScrollableOverflow({ scrollHeight: 500.5, clientHeight: 500 })).toBe(false);
+    expect(hasScrollableOverflow({ scrollHeight: 400, clientHeight: 500 })).toBe(false);
+  });
+
+  it("calculates middle-drag velocity from distance outside a dead zone", () => {
+    expect(getMiddleDragScrollVelocity(4)).toBe(0);
+    expect(getMiddleDragScrollVelocity(18)).toBeCloseTo(1.8);
+    expect(getMiddleDragScrollVelocity(-18)).toBeCloseTo(-1.8);
+    expect(getMiddleDragScrollVelocity(240)).toBe(24);
   });
 });

@@ -1,10 +1,10 @@
 "use client";
 
 import type { CanvasNode, NodeMessage } from "@inquara/domain";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
-import { isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
+import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 import { getLastVisibleSelectionRect, toViewportToolbarPoint } from "./selectionToolbarPosition";
 import { findSourceRange, getTextRangeInElement } from "./sourceRange";
 
@@ -23,6 +23,8 @@ export function MessageList({ node }: { node: CanvasNode }) {
   const listRef = useRef<HTMLDivElement>(null);
   const shouldStickToBottomRef = useRef(true);
   const scrollSaveTimerRef = useRef<number | null>(null);
+  const middleDragRef = useRef<null | { animationFrame: number | null; currentY: number; startY: number }>(null);
+  const [canScroll, setCanScroll] = useState(false);
   const messages = (state.snapshot?.messages ?? []).filter(message => message.nodeId === node.id);
 
   useEffect(() => {
@@ -39,6 +41,24 @@ export function MessageList({ node }: { node: CanvasNode }) {
   }, [node.id]);
 
   useEffect(() => {
+    const element = listRef.current;
+    if (!element) return;
+    const updateCanScroll = () => setCanScroll(hasScrollableOverflow(element));
+    updateCanScroll();
+    const observer = new ResizeObserver(updateCanScroll);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const element = listRef.current;
+      if (element) setCanScroll(hasScrollableOverflow(element));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages]);
+
+  useEffect(() => {
     function clearStaleSelection() {
       if (normalizeSelectionText(window.getSelection()?.toString() ?? "")) return;
       setSelection(null);
@@ -46,6 +66,14 @@ export function MessageList({ node }: { node: CanvasNode }) {
 
     document.addEventListener("selectionchange", clearStaleSelection);
     return () => document.removeEventListener("selectionchange", clearStaleSelection);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const activeDrag = middleDragRef.current;
+      if (activeDrag?.animationFrame) window.cancelAnimationFrame(activeDrag.animationFrame);
+      middleDragRef.current = null;
+    };
   }, []);
 
   function updateStickiness() {
@@ -56,6 +84,45 @@ export function MessageList({ node }: { node: CanvasNode }) {
     scrollSaveTimerRef.current = window.setTimeout(() => {
       sendCommand(commands.updateNodeScroll(node.id, element.scrollTop));
     }, 250);
+  }
+
+  function startMiddleDragScroll(event: MouseEvent<HTMLDivElement>) {
+    if (event.button !== 1 || !canScroll) return;
+    const element = listRef.current;
+    if (!element) return;
+    event.preventDefault();
+    event.stopPropagation();
+    middleDragRef.current = {
+      animationFrame: null,
+      currentY: event.clientY,
+      startY: event.clientY
+    };
+
+    const scrollFrame = () => {
+      const activeDrag = middleDragRef.current;
+      if (!activeDrag) return;
+      element.scrollTop += getMiddleDragScrollVelocity(activeDrag.currentY - activeDrag.startY);
+      activeDrag.animationFrame = window.requestAnimationFrame(scrollFrame);
+    };
+    const scrollOnMove = (moveEvent: globalThis.MouseEvent) => {
+      const activeDrag = middleDragRef.current;
+      if (!activeDrag) return;
+      moveEvent.preventDefault();
+      activeDrag.currentY = moveEvent.clientY;
+    };
+    const stopMiddleDragScroll = () => {
+      const activeDrag = middleDragRef.current;
+      if (activeDrag?.animationFrame) window.cancelAnimationFrame(activeDrag.animationFrame);
+      middleDragRef.current = null;
+      window.removeEventListener("mousemove", scrollOnMove);
+      window.removeEventListener("mouseup", stopMiddleDragScroll);
+      window.removeEventListener("blur", stopMiddleDragScroll);
+    };
+
+    middleDragRef.current.animationFrame = window.requestAnimationFrame(scrollFrame);
+    window.addEventListener("mousemove", scrollOnMove, { passive: false });
+    window.addEventListener("mouseup", stopMiddleDragScroll);
+    window.addEventListener("blur", stopMiddleDragScroll);
   }
 
   function captureSelection(message: NodeMessage) {
@@ -121,7 +188,13 @@ export function MessageList({ node }: { node: CanvasNode }) {
   }
 
   return (
-    <div ref={listRef} className="message-list nodrag nowheel" data-testid="message-list" onScroll={updateStickiness}>
+    <div
+      ref={listRef}
+      className={`message-list nodrag${canScroll ? " nowheel nopan" : ""}`}
+      data-testid="message-list"
+      onMouseDownCapture={startMiddleDragScroll}
+      onScroll={updateStickiness}
+    >
       {messages.map(message => (
         <article
           key={message.id}

@@ -17,7 +17,7 @@ export function MessageComposer({ nodeId }: { nodeId: string }) {
   }
 
   return (
-    <form className="message-composer nodrag nowheel" onSubmit={submit}>
+    <form className="message-composer nodrag" onSubmit={submit}>
       <input
         value={content}
         onChange={event => setContent(event.target.value)}
