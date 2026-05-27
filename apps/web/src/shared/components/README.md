@@ -32,7 +32,7 @@ Use these layers:
 
 - `ui/`
   - Generic UI primitives and reusable interactions.
-  - Examples: `Button`, `IconButton`, `PopupMenu`, `Modal`, `Tooltip`, `Input`, `Textarea`, `StatusPill`, shared icon source.
+  - Examples: `Button`, `IconButton`, `PopupMenu`, `ConfirmDialog`, `Modal`, `Tooltip`, `Input`, `Textarea`, `StatusPill`, shared icon source.
 - `chrome/`
   - App-level frame and navigation components.
   - Examples: product shell, top controls, sidebar frame.
@@ -133,6 +133,7 @@ When a new shared component is needed:
 Implemented shared components:
 
 - `ui/PopupMenu.tsx` provides the shared opaque menu surface, outside-click handling, Escape handling, and menu item styling for product menus.
+- `ui/ConfirmDialog.tsx` provides the shared confirmation modal pattern, portal mounting, Escape/backdrop close behavior, accessible dialog attributes, and confirm/cancel actions for destructive or irreversible product actions.
 
 The project currently has several feature-owned UI pieces that may be promoted into shared components as reuse becomes clear:
 

@@ -2,9 +2,8 @@
 
 import type { CanvasNode } from "@inquara/domain";
 import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { createPortal } from "react-dom";
 import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
-import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { ConfirmDialog, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { NodeChatPanel } from "../node-chat/NodeChatPanel";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import type { ChatFlowNode } from "./CanvasView";
@@ -117,25 +116,6 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
     };
   }
 
-  const deleteDialog = isDeleteDialogOpen
-    ? createPortal(
-        <div className="modal-backdrop nodrag nowheel" role="presentation">
-          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby={`delete-node-${id}-title`}>
-            <h2 id={`delete-node-${id}-title`}>Move chat to trash?</h2>
-            <p>This will hide this chat and its branches until you restore them from Trash.</p>
-            <div className="confirm-dialog-actions">
-              <button type="button" className="secondary-button" onClick={() => setIsDeleteDialogOpen(false)}>
-                Cancel
-              </button>
-              <button type="button" className="danger-button" onClick={deleteNode}>
-                Move to trash
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    : null;
   const zoomScale = getSafeZoom(zoom);
   const nodeStyle = {
     width: draftSize.width,
@@ -228,7 +208,15 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
         />
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} style={hiddenHandleStyle} />
-      {deleteDialog}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        title="Move chat to trash?"
+        description="This will hide this chat and its branches until you restore them from Trash."
+        confirmLabel="Move to trash"
+        confirmTone="danger"
+        onCancel={() => setIsDeleteDialogOpen(false)}
+        onConfirm={deleteNode}
+      />
     </section>
   );
 });

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { apiJson } from "../../shared/api";
-import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { ConfirmDialog, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
@@ -69,6 +69,7 @@ function CanvasWorkspaceContent({
   const { state } = useWorkspaceSession();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -141,12 +142,29 @@ function CanvasWorkspaceContent({
             onClose={() => setIsAccountMenuOpen(false)}
             placement="bottom-end"
           >
-            <PopupMenuItem tone="danger" onClick={logOut} disabled={isLoggingOut}>
+            <PopupMenuItem
+              tone="danger"
+              onClick={() => {
+                setIsAccountMenuOpen(false);
+                setIsLogoutDialogOpen(true);
+              }}
+              disabled={isLoggingOut}
+            >
               {isLoggingOut ? "Logging out..." : "Log out"}
             </PopupMenuItem>
           </PopupMenu>
         ) : null}
       </div>
+      <ConfirmDialog
+        isOpen={isLogoutDialogOpen}
+        title="Log out?"
+        description="You will need to sign in again on this device."
+        confirmLabel={isLoggingOut ? "Logging out..." : "Log out"}
+        confirmTone="danger"
+        isConfirming={isLoggingOut}
+        onCancel={() => setIsLogoutDialogOpen(false)}
+        onConfirm={logOut}
+      />
       <WorkspaceSidebar
         currentWorkspaceId={workspaceId}
         isOpen={isSidebarOpen}

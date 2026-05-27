@@ -4,9 +4,8 @@ import type { Workspace } from "@inquara/domain";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { apiJson } from "../../shared/api";
-import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { ConfirmDialog, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 
 type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
@@ -26,16 +25,11 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [deletingWorkspace, setDeletingWorkspace] = useState<Workspace | null>(null);
-  const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     void loadWorkspaces({ showLoading: workspaceListCache === null });
-  }, []);
-
-  useEffect(() => {
-    setModalRoot(document.body);
   }, []);
 
   async function loadWorkspaces({ showLoading }: { showLoading: boolean }) {
@@ -131,29 +125,6 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
     }
   }
 
-  const deleteDialog =
-    deletingWorkspace && modalRoot
-      ? createPortal(
-          <div className="workspace-delete-backdrop" role="presentation">
-            <div className="workspace-delete-dialog" role="dialog" aria-modal="true" aria-label="Delete canvas?">
-              <h2>Delete canvas?</h2>
-              <p>
-                {deletingWorkspace.title} will be removed from your canvas list. This uses a soft delete.
-              </p>
-              <div className="workspace-delete-actions">
-                <button type="button" className="secondary-button" onClick={() => setDeletingWorkspace(null)} disabled={isDeleting}>
-                  Cancel
-                </button>
-                <button type="button" className="danger-button" onClick={confirmDeleteWorkspace} disabled={isDeleting}>
-                  {isDeleting ? "Deleting" : "Delete"}
-                </button>
-              </div>
-            </div>
-          </div>,
-          modalRoot
-        )
-      : null;
-
   return (
     <aside className="workspace-sidebar" data-open={isOpen} aria-label="Workspace navigation">
       <button
@@ -215,7 +186,16 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
 
         {error ? <p className="error-text">{error}</p> : null}
       </div>
-      {deleteDialog}
+      <ConfirmDialog
+        isOpen={Boolean(deletingWorkspace)}
+        title="Delete canvas?"
+        description={deletingWorkspace ? `${deletingWorkspace.title} will be removed from your canvas list. This uses a soft delete.` : undefined}
+        confirmLabel={isDeleting ? "Deleting" : "Delete"}
+        confirmTone="danger"
+        isConfirming={isDeleting}
+        onCancel={() => setDeletingWorkspace(null)}
+        onConfirm={confirmDeleteWorkspace}
+      />
     </aside>
   );
 }

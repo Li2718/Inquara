@@ -36,11 +36,13 @@ The first shared interaction extraction is underway:
 - `PopupMenu` now lives in `apps/web/src/shared/components/ui/`.
 - Workspace item menus, node action menus, canvas context menus, and the account menu now consume the shared menu surface and menu item behavior.
 - Menu outside-click and Escape handling are now owned by the shared component.
+- `ConfirmDialog` now lives in `apps/web/src/shared/components/ui/`.
+- Node deletion, workspace deletion, and account logout now consume the shared confirmation dialog instead of feature-local modal markup.
+- Confirmation dialog portal mounting, Escape handling, backdrop click handling, accessible dialog attributes, and confirm/cancel action layout are now owned by the shared component.
 
 ## Next Step
 
-- Extract the shared confirmation modal/dialog pattern used by node deletion and workspace deletion.
-- After that, evaluate whether `IconButton` and floating canvas control buttons should be unified in the same slice or handled separately.
+- Evaluate whether `IconButton` and floating canvas control buttons should be unified in the same slice or handled separately.
 
 ## Related Documents
 
