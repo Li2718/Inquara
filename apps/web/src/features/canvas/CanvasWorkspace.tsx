@@ -102,7 +102,13 @@ function CanvasWorkspaceContent({
         </span>
       </div>
       <div className="canvas-account">
-        <button type="button" className="canvas-account-button" aria-label={`Account: ${userLabel}`} title={userLabel}>
+        <button
+          type="button"
+          className="canvas-floating-circle-button canvas-account-button"
+          data-size="md"
+          aria-label={`Account: ${userLabel}`}
+          title={userLabel}
+        >
           <span>{userInitial}</span>
         </button>
       </div>
@@ -113,7 +119,7 @@ function CanvasWorkspaceContent({
         onWorkspaceSwitchStart={onWorkspaceSwitchStart}
       />
       <section className="canvas-stage" aria-label="Canvas">
-        <CanvasView isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch} routeWorkspaceId={workspaceId} />
+        <CanvasView isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch} isSidebarOpen={isSidebarOpen} routeWorkspaceId={workspaceId} />
       </section>
       <DebugCanvasSource
         page="canvas"

@@ -287,25 +287,39 @@ h2 {
   z-index: 31;
 }
 
-.canvas-account-button {
-  width: 38px;
-  min-height: 38px;
+.canvas-floating-circle-button {
+  width: var(--floating-circle-size);
+  min-height: var(--floating-circle-size);
   padding: 0;
   display: inline-grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 50%;
   background: rgb(255 255 255 / 82%);
   color: var(--ink);
   box-shadow: 0 10px 28px rgb(51 118 145 / 10%);
   backdrop-filter: blur(16px);
+  --floating-circle-size: 38px;
 }
 
-.canvas-account-button:hover {
+.canvas-floating-circle-button[data-size="sm"] {
+  --floating-circle-size: 30px;
+}
+
+.canvas-floating-circle-button[data-size="md"] {
+  --floating-circle-size: 38px;
+}
+
+.canvas-floating-circle-button:hover {
   background: rgb(255 255 255 / 92%);
   color: var(--ink);
   box-shadow: 0 10px 28px rgb(51 118 145 / 10%);
   transform: none;
+}
+
+.canvas-floating-circle-button:disabled {
+  opacity: 0.42;
+  box-shadow: none;
 }
 
 .canvas-account-button span {
@@ -413,35 +427,41 @@ h2 {
   stroke-dasharray: 6 6;
 }
 
-.canvas-reset-view-button {
+.canvas-viewport-controls {
   position: absolute;
   right: 18px;
   bottom: 18px;
   z-index: 12;
-  min-width: 38px;
-  min-height: 38px;
-  padding: 0;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgb(255 255 255 / 82%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.canvas-viewport-zoom-label {
+  color: rgb(111 135 148 / 84%);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 30px;
+}
+
+.canvas-viewport-controls button {
   color: var(--muted);
-  box-shadow: 0 10px 28px rgb(51 118 145 / 10%);
-  font-size: 21px;
   line-height: 1;
-  backdrop-filter: blur(16px);
 }
 
-.canvas-reset-view-button:hover {
-  background: #fff;
+.canvas-viewport-controls button:hover {
   color: var(--ink);
-  box-shadow: 0 12px 30px rgb(51 118 145 / 14%);
-  transform: none;
 }
 
-.canvas-reset-view-button:disabled {
-  opacity: 0.42;
+.canvas-reset-view-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
 }
 
 .workspace-sidebar {
@@ -863,6 +883,12 @@ h2 {
   position: relative;
   width: 420px;
   height: 520px;
+  cursor: default;
+}
+
+.canvas-node-content {
+  position: absolute;
+  inset: 0 auto auto 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
@@ -871,7 +897,7 @@ h2 {
   background: rgb(255 255 255 / 86%);
   box-shadow: 0 24px 70px rgb(51 118 145 / 16%);
   backdrop-filter: blur(18px);
-  cursor: default;
+  transform-origin: top left;
 }
 
 .canvas-node-resize-handle {
