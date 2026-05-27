@@ -14,7 +14,7 @@ import {
   type OnNodeDrag
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { findFirstVisibleRootNode } from "./rootNodeFocus";
@@ -25,19 +25,35 @@ const nodeTypes: NodeTypes = {
   chatNode: CanvasNodeView
 };
 
-export function CanvasView() {
+export function CanvasView({
+  isPreparingWorkspaceSwitch,
+  routeWorkspaceId
+}: {
+  isPreparingWorkspaceSwitch: boolean;
+  routeWorkspaceId: string;
+}) {
   return (
     <ReactFlowProvider>
-      <CanvasFlow />
+      <CanvasFlow isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch} routeWorkspaceId={routeWorkspaceId} />
     </ReactFlowProvider>
   );
 }
 
-function CanvasFlow() {
+function CanvasFlow({
+  isPreparingWorkspaceSwitch,
+  routeWorkspaceId
+}: {
+  isPreparingWorkspaceSwitch: boolean;
+  routeWorkspaceId: string;
+}) {
   const { state, commands, sendCommand } = useWorkspaceSession();
   const { screenToFlowPosition, setCenter } = useReactFlow();
   const snapshot = state.snapshot;
+  const workspaceId = snapshot?.workspace.id ?? null;
+  const isShowingStaleSnapshot = Boolean(workspaceId && workspaceId !== routeWorkspaceId);
+  const previousWorkspaceIdRef = useRef<string | null>(workspaceId);
   const [contextMenu, setContextMenu] = useState<null | { screenX: number; screenY: number; flowX: number; flowY: number }>(null);
+  const [isSettlingWorkspace, setIsSettlingWorkspace] = useState(false);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
 
   const snapshotNodes = useMemo<ChatFlowNode[]>(
@@ -61,6 +77,20 @@ function CanvasFlow() {
   useEffect(() => {
     setNodes(snapshotNodes);
   }, [snapshotNodes]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    if (previousWorkspaceIdRef.current === null) {
+      previousWorkspaceIdRef.current = workspaceId;
+      return;
+    }
+    if (previousWorkspaceIdRef.current === workspaceId) return;
+
+    previousWorkspaceIdRef.current = workspaceId;
+    setIsSettlingWorkspace(true);
+    const timeout = window.setTimeout(() => setIsSettlingWorkspace(false), 110);
+    return () => window.clearTimeout(timeout);
+  }, [workspaceId]);
 
   const edges = useMemo<Edge[]>(
     () =>
@@ -125,7 +155,16 @@ function CanvasFlow() {
   }
 
   return (
-    <div className="canvas-view">
+    <div
+      className="canvas-view"
+      data-workspace-transition={
+        isPreparingWorkspaceSwitch || isShowingStaleSnapshot
+          ? "leaving"
+          : state.connectionStatus === "connecting" || isSettlingWorkspace
+            ? "entering"
+            : "idle"
+      }
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}

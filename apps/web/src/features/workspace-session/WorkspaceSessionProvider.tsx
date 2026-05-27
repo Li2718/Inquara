@@ -16,6 +16,8 @@ type WorkspaceSessionContextValue = {
 
 const WorkspaceSessionContext = createContext<WorkspaceSessionContextValue | null>(null);
 
+const workspaceSnapshotCache = new Map<string, WorkspaceSnapshot>();
+
 export function WorkspaceSessionProvider({
   workspaceId,
   children
@@ -30,15 +32,24 @@ export function WorkspaceSessionProvider({
 
   useEffect(() => {
     let cancelled = false;
+    const cachedSnapshot = workspaceSnapshotCache.get(workspaceId);
+    if (cachedSnapshot) {
+      workspaceSessionStore.getState().setSnapshot(cachedSnapshot);
+    }
     workspaceSessionStore.getState().setConnectionStatus("connecting");
 
     async function start() {
       const snapshot = await apiJson<WorkspaceSnapshot>(`/workspaces/${workspaceId}/snapshot`);
       if (cancelled) return;
+      workspaceSnapshotCache.set(workspaceId, snapshot);
       workspaceSessionStore.getState().setSnapshot(snapshot);
       realtimeRef.current = createRealtimeClient({
         workspaceId,
-        onEvent: event => workspaceSessionStore.getState().applyEvent(event),
+        onEvent: event => {
+          workspaceSessionStore.getState().applyEvent(event);
+          const nextSnapshot = workspaceSessionStore.getState().snapshot;
+          if (nextSnapshot) workspaceSnapshotCache.set(workspaceId, nextSnapshot);
+        },
         onStatusChange: status => workspaceSessionStore.getState().setConnectionStatus(status),
         onError: () => workspaceSessionStore.getState().setConnectionStatus("disconnected")
       });

@@ -8,12 +8,14 @@ import {
   verifySessionToken
 } from "../auth/session";
 import {
+  archiveWorkspace,
   AuthError,
   createWorkspace,
   getUser,
   getWorkspaceSnapshot,
   listWorkspaces,
   loginWithPassword,
+  renameWorkspace,
   registerWithPassword,
   WorkspaceNotFoundError
 } from "../workspaces/service";
@@ -32,6 +34,10 @@ const LoginSchema = RegisterSchema.extend({
 });
 
 const CreateWorkspaceSchema = z.object({
+  title: z.string().min(1).max(120)
+});
+
+const UpdateWorkspaceSchema = z.object({
   title: z.string().min(1).max(120)
 });
 
@@ -117,6 +123,38 @@ export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig)
     if (!userId) return;
     const body = CreateWorkspaceSchema.parse(request.body);
     return createWorkspace(userId, body.title);
+  });
+
+  app.patch("/workspaces/:workspaceId", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+    const body = UpdateWorkspaceSchema.parse(request.body);
+
+    try {
+      return await renameWorkspace(userId, params.workspaceId, body.title);
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) {
+        return reply.code(404).send({ error: "Workspace not found" });
+      }
+      throw error;
+    }
+  });
+
+  app.delete("/workspaces/:workspaceId", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+
+    try {
+      await archiveWorkspace(userId, params.workspaceId);
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) {
+        return reply.code(404).send({ error: "Workspace not found" });
+      }
+      throw error;
+    }
   });
 
   app.get("/workspaces/:workspaceId/snapshot", async (request, reply) => {

@@ -24,7 +24,8 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
   await app.register(cors, {
     origin: config.WEB_ORIGIN,
-    credentials: true
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PATCH", "DELETE"]
   });
   await app.register(cookie);
   await app.register(websocket);

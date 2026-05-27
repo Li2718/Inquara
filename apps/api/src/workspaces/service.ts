@@ -136,6 +136,35 @@ export async function createWorkspace(userId: string, title: string): Promise<Wo
   return toWorkspace(workspace);
 }
 
+export async function renameWorkspace(userId: string, workspaceId: string, title: string): Promise<Workspace> {
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: workspaceId, ownerId: userId, archivedAt: null }
+  });
+  if (!workspace) {
+    throw new WorkspaceNotFoundError(workspaceId);
+  }
+
+  const updated = await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { title }
+  });
+  return toWorkspace(updated);
+}
+
+export async function archiveWorkspace(userId: string, workspaceId: string): Promise<void> {
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: workspaceId, ownerId: userId, archivedAt: null }
+  });
+  if (!workspace) {
+    throw new WorkspaceNotFoundError(workspaceId);
+  }
+
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { archivedAt: new Date() }
+  });
+}
+
 export async function getWorkspaceSnapshot(userId: string, workspaceId: string): Promise<WorkspaceSnapshot> {
   const workspace = await prisma.workspace.findFirst({
     where: { id: workspaceId, ownerId: userId, archivedAt: null },
