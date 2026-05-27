@@ -1130,9 +1130,39 @@ h2 {
   padding: 16px;
   background: linear-gradient(180deg, rgb(250 254 255 / 62%), rgb(255 255 255 / 34%));
   overscroll-behavior: contain;
+  scrollbar-color: rgb(111 135 148 / 32%) transparent;
+  scrollbar-width: thin;
   user-select: text;
   cursor: auto;
   font-size: 14px;
+}
+
+.message-list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.message-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-list::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgb(111 135 148 / 28%);
+  background-clip: padding-box;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover {
+  background: rgb(57 183 165 / 42%);
+  background-clip: padding-box;
+}
+
+.message-list::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .message-bubble {
