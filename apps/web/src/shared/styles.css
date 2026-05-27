@@ -1343,18 +1343,17 @@ h2 {
 }
 
 .debug-floating-button {
-  width: 82px;
-  min-height: 44px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   border: 1px solid var(--debug-border);
-  border-radius: 999px;
+  border-radius: 50%;
   background: var(--debug-bg);
   color: var(--debug-ink);
   box-shadow: var(--debug-shadow);
-  padding: 0 11px;
+  padding: 0;
   cursor: grab;
   list-style: none;
   user-select: none;
@@ -1374,15 +1373,9 @@ h2 {
 
 .debug-floating-button span {
   color: var(--debug-accent-strong);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
-}
-
-.debug-floating-button small {
-  color: var(--debug-muted);
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
+  line-height: 1;
 }
 
 .debug-floating-button:hover {
