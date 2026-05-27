@@ -3,7 +3,7 @@
 import type { Workspace } from "@inquara/domain";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, MouseEvent, useEffect, useState } from "react";
+import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { apiJson } from "../../shared/api";
 
@@ -193,68 +193,22 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
             <p className="workspace-sidebar-note">No canvases yet.</p>
           ) : null}
           {workspaces.map(workspace => (
-            <div key={workspace.id} className="workspace-sidebar-item-shell">
-              {renamingId === workspace.id ? (
-                <form className="workspace-sidebar-rename-form" onSubmit={event => submitRename(event, workspace)}>
-                  <input
-                    value={renameTitle}
-                    onChange={event => setRenameTitle(event.target.value)}
-                    onKeyDown={event => {
-                      if (event.key === "Escape") setRenamingId(null);
-                    }}
-                    maxLength={120}
-                    autoFocus
-                    required
-                  />
-                  <button type="submit">Save</button>
-                </form>
-              ) : (
-                <>
-                  <Link
-                    className="workspace-sidebar-item"
-                    data-active={workspace.id === currentWorkspaceId}
-                    href={`/workspaces/${workspace.id}`}
-                    onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-                      if (workspace.id === currentWorkspaceId) return;
-                      event.preventDefault();
-                      void onWorkspaceSwitchStart(workspace.id).then(() => {
-                        router.push(`/workspaces/${workspace.id}`);
-                      });
-                    }}
-                  >
-                    <strong>{workspace.title}</strong>
-                    <span>{new Date(workspace.updatedAt).toLocaleDateString()}</span>
-                  </Link>
-                  <button
-                    type="button"
-                    className="workspace-sidebar-item-menu-trigger"
-                    onClick={() => setActiveMenuId(activeMenuId === workspace.id ? null : workspace.id)}
-                    aria-label={`Canvas actions for ${workspace.title}`}
-                    aria-expanded={activeMenuId === workspace.id}
-                  >
-                    ⋮
-                  </button>
-                  {activeMenuId === workspace.id ? (
-                    <div className="workspace-sidebar-item-menu" role="menu" aria-label={`Canvas actions for ${workspace.title}`}>
-                      <button type="button" role="menuitem" onClick={() => startRenaming(workspace)}>
-                        Rename
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="danger-menu-item"
-                        onClick={() => {
-                          setActiveMenuId(null);
-                          setDeletingWorkspace(workspace);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ) : null}
-                </>
-              )}
-            </div>
+            <WorkspaceSidebarItem
+              key={workspace.id}
+              activeMenuId={activeMenuId}
+              currentWorkspaceId={currentWorkspaceId}
+              onMenuToggle={setActiveMenuId}
+              onRename={startRenaming}
+              onWorkspaceSwitchStart={onWorkspaceSwitchStart}
+              renamingId={renamingId}
+              renameTitle={renameTitle}
+              router={router}
+              setDeletingWorkspace={setDeletingWorkspace}
+              setRenameTitle={setRenameTitle}
+              setRenamingId={setRenamingId}
+              submitRename={submitRename}
+              workspace={workspace}
+            />
           ))}
         </div>
 
@@ -262,5 +216,123 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       </div>
       {deleteDialog}
     </aside>
+  );
+}
+
+function WorkspaceSidebarItem({
+  activeMenuId,
+  currentWorkspaceId,
+  onMenuToggle,
+  onRename,
+  onWorkspaceSwitchStart,
+  renamingId,
+  renameTitle,
+  router,
+  setDeletingWorkspace,
+  setRenameTitle,
+  setRenamingId,
+  submitRename,
+  workspace
+}: {
+  activeMenuId: string | null;
+  currentWorkspaceId: string;
+  onMenuToggle(activeMenuId: string | null): void;
+  onRename(workspace: Workspace): void;
+  onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
+  renamingId: string | null;
+  renameTitle: string;
+  router: ReturnType<typeof useRouter>;
+  setDeletingWorkspace(workspace: Workspace): void;
+  setRenameTitle(title: string): void;
+  setRenamingId(workspaceId: string | null): void;
+  submitRename(event: FormEvent<HTMLFormElement>, workspace: Workspace): Promise<void>;
+  workspace: Workspace;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const isMenuOpen = activeMenuId === workspace.id;
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    function closeFromOutside(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      onMenuToggle(null);
+    }
+
+    function closeFromEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onMenuToggle(null);
+    }
+
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromEscape);
+    };
+  }, [isMenuOpen, onMenuToggle]);
+
+  return (
+    <div className="workspace-sidebar-item-shell" ref={menuRef}>
+      {renamingId === workspace.id ? (
+        <form className="workspace-sidebar-rename-form" onSubmit={event => submitRename(event, workspace)}>
+          <input
+            value={renameTitle}
+            onChange={event => setRenameTitle(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === "Escape") setRenamingId(null);
+            }}
+            maxLength={120}
+            autoFocus
+            required
+          />
+          <button type="submit">Save</button>
+        </form>
+      ) : (
+        <>
+          <Link
+            className="workspace-sidebar-item"
+            data-active={workspace.id === currentWorkspaceId}
+            href={`/workspaces/${workspace.id}`}
+            onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+              if (workspace.id === currentWorkspaceId) return;
+              event.preventDefault();
+              void onWorkspaceSwitchStart(workspace.id).then(() => {
+                router.push(`/workspaces/${workspace.id}`);
+              });
+            }}
+          >
+            <strong>{workspace.title}</strong>
+            <span>{new Date(workspace.updatedAt).toLocaleDateString()}</span>
+          </Link>
+          <button
+            type="button"
+            className="workspace-sidebar-item-menu-trigger"
+            onClick={() => onMenuToggle(isMenuOpen ? null : workspace.id)}
+            aria-label={`Canvas actions for ${workspace.title}`}
+            aria-expanded={isMenuOpen}
+          >
+            ⋮
+          </button>
+          {isMenuOpen ? (
+            <div className="workspace-sidebar-item-menu" role="menu" aria-label={`Canvas actions for ${workspace.title}`}>
+              <button type="button" role="menuitem" onClick={() => onRename(workspace)}>
+                Rename
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="danger-menu-item"
+                onClick={() => {
+                  onMenuToggle(null);
+                  setDeletingWorkspace(workspace);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }

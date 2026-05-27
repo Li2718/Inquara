@@ -24,6 +24,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(data.title);
   const [draftSize, setDraftSize] = useState<NodeSize>(() => clampNodeSize({ width: data.width, height: data.height }));
+  const menuRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<null | { pointerId: number; startX: number; startY: number; originWidth: number; originHeight: number }>(null);
   const canHideBranch = Boolean(data.parentNodeId);
 
@@ -73,6 +74,26 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
       window.removeEventListener("pointercancel", stopResize);
     };
   }, [commands, data.height, data.width, id, sendCommand, zoom]);
+
+  useEffect(() => {
+    if (!isDangerOpen) return;
+
+    function closeFromOutside(event: globalThis.PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setIsDangerOpen(false);
+    }
+
+    function closeFromEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsDangerOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromEscape);
+    };
+  }, [isDangerOpen]);
 
   function hideNode() {
     const list = document.querySelector(`[data-node-id="${id}"] .message-list`);
@@ -156,7 +177,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
       <Handle type="target" position={Position.Left} isConnectable={false} style={hiddenHandleStyle} />
       <div className="canvas-node-content" style={contentStyle}>
         <header className="canvas-node-header">
-          <div className="canvas-node-title-row">
+          <div className="canvas-node-title-row" ref={menuRef}>
             {isRenaming ? (
               <input
                 className="node-title-input nodrag nowheel"

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { apiJson } from "../../shared/api";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
@@ -63,8 +64,12 @@ function CanvasWorkspaceContent({
   onWorkspaceSwitchReady(): void;
   onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
 }) {
+  const router = useRouter();
   const { state } = useWorkspaceSession();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!pendingWorkspaceId) return;
@@ -87,6 +92,38 @@ function CanvasWorkspaceContent({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+
+    function closeFromOutside(event: PointerEvent) {
+      if (accountRef.current?.contains(event.target as Node)) return;
+      setIsAccountMenuOpen(false);
+    }
+
+    function closeFromEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsAccountMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromEscape);
+    };
+  }, [isAccountMenuOpen]);
+
+  async function logOut() {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await apiJson<void>("/auth/logout", { method: "POST" });
+      router.replace("/");
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
+
   const userLabel = currentUser?.name || currentUser?.email || "Account";
   const userInitial = useMemo(() => {
     const source = currentUser?.name || currentUser?.email || "";
@@ -101,16 +138,26 @@ function CanvasWorkspaceContent({
           <span className="canvas-brand-badge">Alpha</span>
         </span>
       </div>
-      <div className="canvas-account">
+      <div className="canvas-account" ref={accountRef}>
         <button
           type="button"
           className="canvas-floating-circle-button canvas-account-button"
           data-size="md"
           aria-label={`Account: ${userLabel}`}
+          aria-expanded={isAccountMenuOpen}
+          aria-haspopup="menu"
           title={userLabel}
+          onClick={() => setIsAccountMenuOpen(value => !value)}
         >
           <span>{userInitial}</span>
         </button>
+        {isAccountMenuOpen ? (
+          <div className="canvas-account-menu" role="menu" aria-label="Account menu">
+            <button type="button" role="menuitem" onClick={logOut} disabled={isLoggingOut}>
+              {isLoggingOut ? "Logging out..." : "Log out"}
+            </button>
+          </div>
+        ) : null}
       </div>
       <WorkspaceSidebar
         currentWorkspaceId={workspaceId}

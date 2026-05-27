@@ -285,6 +285,9 @@ h2 {
   top: 16px;
   right: 18px;
   z-index: 31;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
 }
 
 .canvas-floating-circle-button {
@@ -332,6 +335,43 @@ h2 {
   color: var(--accent-dark);
   font-size: 12px;
   font-weight: 800;
+}
+
+.canvas-account-menu {
+  min-width: 118px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgb(51 118 145 / 14%);
+  backdrop-filter: blur(16px);
+}
+
+.canvas-account-menu button {
+  width: 100%;
+  justify-content: start;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 13px;
+  text-align: left;
+}
+
+.canvas-account-menu button:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.canvas-account-menu button:disabled {
+  color: var(--muted);
+  cursor: default;
 }
 
 .canvas-stage {
@@ -775,7 +815,7 @@ h2 {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgb(255 255 255 / 94%);
+  background: #fff;
   box-shadow: 0 16px 38px rgb(51 118 145 / 14%);
   backdrop-filter: blur(16px);
 }
@@ -859,7 +899,7 @@ h2 {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgb(255 255 255 / 94%);
+  background: #fff;
   box-shadow: 0 24px 70px rgb(34 49 63 / 18%);
 }
 
@@ -1029,7 +1069,7 @@ h2 {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgb(255 255 255 / 94%);
+  background: #fff;
   box-shadow: 0 12px 32px rgb(51 118 145 / 16%);
   cursor: default;
 }
@@ -1086,7 +1126,7 @@ h2 {
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 20px;
-  background: rgb(255 255 255 / 94%);
+  background: #fff;
   box-shadow: 0 24px 70px rgb(34 49 63 / 18%);
 }
 
