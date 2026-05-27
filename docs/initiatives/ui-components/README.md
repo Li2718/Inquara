@@ -29,12 +29,18 @@ Turn the current page and feature-local UI patterns into a clear, reusable compo
 
 ## Current Status
 
-The UI governance rules have been migrated into long-term documentation. The shared component root exists with a component manual, but most product UI is still feature-local and should be organized gradually.
+The UI governance rules have been migrated into long-term documentation. The shared component root exists with a component manual.
+
+The first shared interaction extraction is underway:
+
+- `PopupMenu` now lives in `apps/web/src/shared/components/ui/`.
+- Workspace item menus, node action menus, canvas context menus, and the account menu now consume the shared menu surface and menu item behavior.
+- Menu outside-click and Escape handling are now owned by the shared component.
 
 ## Next Step
 
-- Audit the existing UI surfaces and list the first shared components to extract.
-- Start with the most obvious reusable interactions: popup menus, modal confirmations, icon buttons, and floating canvas control buttons.
+- Extract the shared confirmation modal/dialog pattern used by node deletion and workspace deletion.
+- After that, evaluate whether `IconButton` and floating canvas control buttons should be unified in the same slice or handled separately.
 
 ## Related Documents
 

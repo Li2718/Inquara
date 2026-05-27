@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { apiJson } from "../../shared/api";
+import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
@@ -69,7 +70,7 @@ function CanvasWorkspaceContent({
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const accountRef = useRef<HTMLDivElement>(null);
+  const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!pendingWorkspaceId) return;
@@ -91,26 +92,6 @@ function CanvasWorkspaceContent({
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!isAccountMenuOpen) return;
-
-    function closeFromOutside(event: PointerEvent) {
-      if (accountRef.current?.contains(event.target as Node)) return;
-      setIsAccountMenuOpen(false);
-    }
-
-    function closeFromEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setIsAccountMenuOpen(false);
-    }
-
-    document.addEventListener("pointerdown", closeFromOutside);
-    document.addEventListener("keydown", closeFromEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeFromOutside);
-      document.removeEventListener("keydown", closeFromEscape);
-    };
-  }, [isAccountMenuOpen]);
 
   async function logOut() {
     if (isLoggingOut) return;
@@ -138,8 +119,9 @@ function CanvasWorkspaceContent({
           <span className="canvas-brand-badge">Alpha</span>
         </span>
       </div>
-      <div className="canvas-account" ref={accountRef}>
+      <div className="canvas-account">
         <button
+          ref={accountMenuTriggerRef}
           type="button"
           className="canvas-floating-circle-button canvas-account-button"
           data-size="md"
@@ -152,11 +134,17 @@ function CanvasWorkspaceContent({
           <span>{userInitial}</span>
         </button>
         {isAccountMenuOpen ? (
-          <div className="canvas-account-menu" role="menu" aria-label="Account menu">
-            <button type="button" role="menuitem" onClick={logOut} disabled={isLoggingOut}>
+          <PopupMenu
+            className="canvas-account-menu"
+            aria-label="Account menu"
+            ignoreRef={accountMenuTriggerRef}
+            onClose={() => setIsAccountMenuOpen(false)}
+            placement="bottom-end"
+          >
+            <PopupMenuItem tone="danger" onClick={logOut} disabled={isLoggingOut}>
               {isLoggingOut ? "Logging out..." : "Log out"}
-            </button>
-          </div>
+            </PopupMenuItem>
+          </PopupMenu>
         ) : null}
       </div>
       <WorkspaceSidebar

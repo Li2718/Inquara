@@ -130,6 +130,10 @@ When a new shared component is needed:
 
 ## Current Examples To Normalize Over Time
 
+Implemented shared components:
+
+- `ui/PopupMenu.tsx` provides the shared opaque menu surface, outside-click handling, Escape handling, and menu item styling for product menus.
+
 The project currently has several feature-owned UI pieces that may be promoted into shared components as reuse becomes clear:
 
 - `features/workspaces/WorkspaceSidebar.tsx`

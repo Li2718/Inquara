@@ -325,6 +325,48 @@ h2 {
   box-shadow: none;
 }
 
+.ui-popup-menu {
+  min-width: 132px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgb(51 118 145 / 14%);
+  backdrop-filter: blur(16px);
+  cursor: default;
+}
+
+.ui-popup-menu-item {
+  width: 100%;
+  justify-content: start;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 13px;
+  text-align: left;
+}
+
+.ui-popup-menu-item:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.ui-popup-menu-item:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.ui-popup-menu-item[data-tone="danger"] {
+  color: var(--danger);
+}
+
 .canvas-account-button span {
   width: 24px;
   height: 24px;
@@ -339,39 +381,6 @@ h2 {
 
 .canvas-account-menu {
   min-width: 118px;
-  display: grid;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 16px 38px rgb(51 118 145 / 14%);
-  backdrop-filter: blur(16px);
-}
-
-.canvas-account-menu button {
-  width: 100%;
-  justify-content: start;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--ink);
-  box-shadow: none;
-  font-size: 13px;
-  text-align: left;
-}
-
-.canvas-account-menu button:hover {
-  background: var(--surface-soft);
-  color: var(--ink);
-  box-shadow: none;
-  transform: none;
-}
-
-.canvas-account-menu button:disabled {
-  color: var(--muted);
-  cursor: default;
 }
 
 .canvas-stage {
@@ -434,31 +443,9 @@ h2 {
   position: fixed;
   z-index: 40;
   min-width: 148px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
   background: rgb(255 255 255 / 90%);
   box-shadow: 0 18px 48px rgb(51 118 145 / 16%);
   backdrop-filter: blur(20px);
-}
-
-.canvas-context-menu button {
-  width: 100%;
-  justify-content: start;
-  min-height: 34px;
-  padding: 0 11px;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--ink);
-  box-shadow: none;
-  text-align: left;
-}
-
-.canvas-context-menu button:hover {
-  background: var(--surface-soft);
-  color: var(--ink);
-  box-shadow: none;
-  transform: none;
 }
 
 .canvas-edge .react-flow__edge-path {
@@ -810,38 +797,6 @@ h2 {
   right: 8px;
   z-index: 3;
   min-width: 116px;
-  display: grid;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 16px 38px rgb(51 118 145 / 14%);
-  backdrop-filter: blur(16px);
-}
-
-.workspace-sidebar-item-menu button {
-  width: 100%;
-  justify-content: start;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--ink);
-  box-shadow: none;
-  font-size: 13px;
-  text-align: left;
-}
-
-.workspace-sidebar-item-menu button:hover {
-  background: var(--surface-soft);
-  color: var(--ink);
-  box-shadow: none;
-  transform: none;
-}
-
-.workspace-sidebar-item-menu .danger-menu-item {
-  color: var(--danger);
 }
 
 .workspace-sidebar-rename-form {
@@ -1065,35 +1020,7 @@ h2 {
   top: calc(100% + 8px);
   left: 0;
   z-index: 6;
-  min-width: 132px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fff;
   box-shadow: 0 12px 32px rgb(51 118 145 / 16%);
-  cursor: default;
-}
-
-.node-actions-menu button {
-  width: 100%;
-  justify-content: start;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--ink);
-  box-shadow: none;
-  text-align: left;
-}
-
-.node-actions-menu button:hover {
-  background: var(--surface-soft);
-  box-shadow: none;
-  transform: none;
-}
-
-.node-actions-menu .danger-menu-item {
-  color: var(--danger);
 }
 
 .hide-branch-button {

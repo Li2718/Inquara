@@ -16,6 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { findFirstVisibleRootNode } from "./rootNodeFocus";
@@ -181,16 +182,16 @@ function CanvasFlow({
       </ReactFlow>
       <CanvasViewportControls firstRootNode={firstRootNode} isSidebarOpen={isSidebarOpen} />
       {contextMenu ? (
-        <div
+        <PopupMenu
           className="canvas-context-menu"
-          role="menu"
           aria-label="Canvas actions"
+          onClose={() => setContextMenu(null)}
           style={{ left: contextMenu.screenX, top: contextMenu.screenY }}
         >
-          <button type="button" role="menuitem" onClick={createNodeFromContextMenu}>
+          <PopupMenuItem onClick={createNodeFromContextMenu}>
             New chat
-          </button>
-        </div>
+          </PopupMenuItem>
+        </PopupMenu>
       ) : null}
     </div>
   );

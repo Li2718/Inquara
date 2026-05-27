@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { apiJson } from "../../shared/api";
+import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 
 type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
@@ -248,31 +249,11 @@ function WorkspaceSidebarItem({
   submitRename(event: FormEvent<HTMLFormElement>, workspace: Workspace): Promise<void>;
   workspace: Workspace;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
   const isMenuOpen = activeMenuId === workspace.id;
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    function closeFromOutside(event: PointerEvent) {
-      if (menuRef.current?.contains(event.target as Node)) return;
-      onMenuToggle(null);
-    }
-
-    function closeFromEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onMenuToggle(null);
-    }
-
-    document.addEventListener("pointerdown", closeFromOutside);
-    document.addEventListener("keydown", closeFromEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeFromOutside);
-      document.removeEventListener("keydown", closeFromEscape);
-    };
-  }, [isMenuOpen, onMenuToggle]);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div className="workspace-sidebar-item-shell" ref={menuRef}>
+    <div className="workspace-sidebar-item-shell">
       {renamingId === workspace.id ? (
         <form className="workspace-sidebar-rename-form" onSubmit={event => submitRename(event, workspace)}>
           <input
@@ -305,6 +286,7 @@ function WorkspaceSidebarItem({
             <span>{new Date(workspace.updatedAt).toLocaleDateString()}</span>
           </Link>
           <button
+            ref={menuTriggerRef}
             type="button"
             className="workspace-sidebar-item-menu-trigger"
             onClick={() => onMenuToggle(isMenuOpen ? null : workspace.id)}
@@ -314,22 +296,25 @@ function WorkspaceSidebarItem({
             ⋮
           </button>
           {isMenuOpen ? (
-            <div className="workspace-sidebar-item-menu" role="menu" aria-label={`Canvas actions for ${workspace.title}`}>
-              <button type="button" role="menuitem" onClick={() => onRename(workspace)}>
+            <PopupMenu
+              className="workspace-sidebar-item-menu"
+              aria-label={`Canvas actions for ${workspace.title}`}
+              ignoreRef={menuTriggerRef}
+              onClose={() => onMenuToggle(null)}
+            >
+              <PopupMenuItem onClick={() => onRename(workspace)}>
                 Rename
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="danger-menu-item"
+              </PopupMenuItem>
+              <PopupMenuItem
+                tone="danger"
                 onClick={() => {
                   onMenuToggle(null);
                   setDeletingWorkspace(workspace);
                 }}
               >
                 Delete
-              </button>
-            </div>
+              </PopupMenuItem>
+            </PopupMenu>
           ) : null}
         </>
       )}
