@@ -24,6 +24,8 @@ export function createApiTestEnv(overrides: Partial<AppConfig> & Record<string, 
 export async function resetTestDatabase(): Promise<void> {
   await startEphemeralTestDatabase();
   assertTestDatabaseUrl(process.env.DATABASE_URL);
+  await prisma.userSession.deleteMany();
+  await prisma.userIdentity.deleteMany();
   await prisma.canvasEdge.deleteMany();
   await prisma.nodeMessage.deleteMany();
   await prisma.canvasNode.deleteMany();

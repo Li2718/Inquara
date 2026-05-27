@@ -1,7 +1,8 @@
 import { prisma } from "@inquara/db";
 import type { CanvasEdge, CanvasNode, NodeMessage, Workspace, WorkspaceSnapshot } from "@inquara/domain";
 import type { Prisma } from "@prisma/client";
-import { signSession } from "../auth/session";
+import { hashPassword, verifyPassword } from "../auth/password";
+import { createUserSession, type CreateSessionOptions } from "../auth/session";
 
 const rootAssistantText = "Ask me anything. Select part of an answer to branch into a focused follow-up.";
 
@@ -9,24 +10,90 @@ export type UserDto = {
   id: string;
   email: string;
   name: string | null;
+  role: string;
 };
 
-export async function loginWithEmail(email: string, secret: string): Promise<{ user: UserDto; session: string }> {
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: {},
-    create: { email, name: email.split("@")[0] || null }
+export type AuthResult = {
+  user: UserDto;
+  session: string;
+};
+
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+export async function registerWithPassword(
+  email: string,
+  password: string,
+  options: CreateSessionOptions = {}
+): Promise<AuthResult> {
+  const normalizedEmail = normalizeEmail(email);
+  const passwordHash = await hashPassword(password);
+  const user = await prisma.$transaction(async tx => {
+    const existing = await tx.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing?.passwordHash) {
+      throw new AuthError("Account already has a password.", 409);
+    }
+
+    const saved = existing
+      ? await tx.user.update({
+          where: { id: existing.id },
+          data: {
+            passwordHash,
+            identities: {
+              upsert: {
+                where: { provider_providerUserId: { provider: "password", providerUserId: normalizedEmail } },
+                update: { email: normalizedEmail },
+                create: { provider: "password", providerUserId: normalizedEmail, email: normalizedEmail }
+              }
+            }
+          }
+        })
+      : await tx.user.create({
+          data: {
+            email: normalizedEmail,
+            name: normalizedEmail.split("@")[0] || null,
+            passwordHash,
+            identities: {
+              create: { provider: "password", providerUserId: normalizedEmail, email: normalizedEmail }
+            }
+          }
+        });
+
+    return saved;
   });
 
+  const { token } = await createUserSession(user.id, options);
   return {
-    user: { id: user.id, email: user.email, name: user.name },
-    session: signSession(user.id, secret)
+    user: toUserDto(user),
+    session: token
+  };
+}
+
+export async function loginWithPassword(email: string, password: string, options: CreateSessionOptions = {}): Promise<AuthResult> {
+  const normalizedEmail = normalizeEmail(email);
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  const passwordMatches = await verifyPassword(password, user?.passwordHash ?? null);
+  if (!user || !passwordMatches) {
+    throw new AuthError("Invalid email or password.", 401);
+  }
+
+  const { token } = await createUserSession(user.id, options);
+  return {
+    user: toUserDto(user),
+    session: token
   };
 }
 
 export async function getUser(userId: string): Promise<UserDto | null> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  return user ? { id: user.id, email: user.email, name: user.name } : null;
+  return user ? toUserDto(user) : null;
 }
 
 export async function listWorkspaces(userId: string): Promise<Workspace[]> {
@@ -96,6 +163,19 @@ export class WorkspaceNotFoundError extends Error {
     super(`Workspace not found: ${workspaceId}`);
     this.name = "WorkspaceNotFoundError";
   }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function toUserDto(user: { id: string; email: string; name: string | null; role: string }): UserDto {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role
+  };
 }
 
 function toWorkspace(value: {

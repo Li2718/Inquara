@@ -12,7 +12,7 @@ test.afterAll(async () => {
 test("streams chat updates into two open workspace windows", async ({ page, browser }) => {
   await clearDebugPosition(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await register(page);
   await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
   await expect(page.getByRole("heading", { name: "Your canvases" })).toHaveCount(0);
   const workspacePath = new URL(page.url()).pathname;
@@ -112,7 +112,7 @@ test("streams chat updates into two open workspace windows", async ({ page, brow
 test("creates a chat node from the empty canvas menu", async ({ page }) => {
   await clearDebugPosition(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await register(page);
   await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
   await expect(page.getByTestId("canvas-node")).toHaveCount(1);
 
@@ -130,7 +130,7 @@ test("creates a chat node from the empty canvas menu", async ({ page }) => {
 test("confirms node deletion with an in-app modal", async ({ page }) => {
   await clearDebugPosition(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await register(page);
   await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
   await expect(page.getByTestId("canvas-node")).toHaveCount(1);
 
@@ -150,6 +150,13 @@ test("confirms node deletion with an in-app modal", async ({ page }) => {
 
   await expect(page.getByTestId("canvas-node")).toHaveCount(0);
 });
+
+async function register(page: Parameters<typeof clearDebugPosition>[0]) {
+  await page.getByRole("button", { name: "Register" }).click();
+  await page.getByLabel("Email").fill(`e2e-${Date.now()}@inquara.local`);
+  await page.getByLabel("Password").fill("correct horse battery staple");
+  await page.getByRole("button", { name: "Create account" }).click();
+}
 
 async function clearDebugPosition(page: { addInitScript: (script: () => void) => Promise<void> }) {
   await page.addInitScript(() => {

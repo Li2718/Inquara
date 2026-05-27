@@ -72,3 +72,12 @@ Database-backed tests must follow the hard rules in [docs/architecture.md](<repo
 3. Do not put direct database cleanup such as `deleteMany()` in individual test files; use the shared test database helper.
 4. Playwright e2e tests must be launched through the repository e2e wrapper so all processes share the same temporary database.
 5. If Docker or `testcontainers` fails, stop and report the blocker instead of silently replacing the setup with a simplified workaround.
+
+## Development Database Rules
+
+Development database changes must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+
+1. After modifying the Prisma schema or adding/changing a database migration, check whether a local development server is running.
+2. If a local development server is running, apply the development database migration before asking the user to continue using the app.
+3. Do not leave the running development server connected to an unmigrated development database.
+4. If migration cannot be applied, stop and report the blocker instead of letting the user debug stale database-shape errors in the browser.

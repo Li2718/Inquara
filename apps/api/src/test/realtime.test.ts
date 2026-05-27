@@ -2,7 +2,6 @@ import { prisma } from "@inquara/db";
 import { WebSocket } from "ws";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
-import { signSession } from "../auth/session";
 import { createApiTestEnv, resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
@@ -46,7 +45,7 @@ describe("workspace realtime websocket", () => {
     const address = app.server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
     const url = `ws://127.0.0.1:${address.port}/realtime`;
-    const session = signSession(userId, env.SESSION_SECRET);
+    const session = await registerForSession(app, "realtime@inquara.local");
 
     const first = await connect(url, session);
     const second = await connect(url, session);
@@ -89,7 +88,7 @@ describe("workspace realtime websocket", () => {
     const address = app.server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
     const url = `ws://127.0.0.1:${address.port}/realtime`;
-    const session = signSession(userId, env.SESSION_SECRET);
+    const session = await registerForSession(app, "realtime@inquara.local");
 
     const socket = await connect(url, session);
     socket.send(JSON.stringify({ type: "subscribe", workspaceId }));
@@ -141,7 +140,7 @@ describe("workspace realtime websocket", () => {
     const address = app.server.address();
     if (!address || typeof address === "string") throw new Error("Expected TCP address");
     const url = `ws://127.0.0.1:${address.port}/realtime`;
-    const session = signSession(other.id, env.SESSION_SECRET);
+    const session = await registerForSession(app, other.email);
 
     const socket = await connect(url, session);
     socket.send(JSON.stringify({ type: "subscribe", workspaceId }));
@@ -153,6 +152,20 @@ describe("workspace realtime websocket", () => {
     await app.close();
   });
 });
+
+async function registerForSession(app: Awaited<ReturnType<typeof buildApp>>, email: string): Promise<string> {
+  const response = await app.inject({
+    method: "POST",
+    url: "/auth/register",
+    payload: { email, password: "correct horse battery staple" }
+  });
+  if (response.statusCode !== 200) {
+    throw new Error(`Expected register to succeed, got ${response.statusCode}: ${response.body}`);
+  }
+  const cookie = response.cookies.find(item => item.name === "inquara_session")?.value;
+  if (!cookie) throw new Error("Expected auth session cookie.");
+  return cookie;
+}
 
 function connect(url: string, session: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {

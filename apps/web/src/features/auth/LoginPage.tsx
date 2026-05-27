@@ -8,7 +8,10 @@ type LoginPageProps = {
 };
 
 export function LoginPage({ onLoggedIn }: LoginPageProps) {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("demo@inquara.local");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -17,9 +20,9 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
     setError("");
     setIsSubmitting(true);
     try {
-      await apiJson("/auth/login", {
+      await apiJson(mode === "login" ? "/auth/login" : "/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, password, rememberMe })
       });
       onLoggedIn();
     } catch (caught) {
@@ -40,6 +43,14 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           </p>
         </div>
         <form className="login-form" onSubmit={submit}>
+          <div className="auth-mode-toggle" role="tablist" aria-label="Auth mode">
+            <button type="button" aria-pressed={mode === "login"} onClick={() => setMode("login")}>
+              Login
+            </button>
+            <button type="button" aria-pressed={mode === "register"} onClick={() => setMode("register")}>
+              Register
+            </button>
+          </div>
           <label htmlFor="email">Email</label>
           <input
             id="email"
@@ -49,8 +60,22 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
             autoComplete="email"
             required
           />
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={event => setPassword(event.target.value)}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            minLength={mode === "login" ? 1 : 6}
+            required
+          />
+          <label className="checkbox-row">
+            <input type="checkbox" checked={rememberMe} onChange={event => setRememberMe(event.target.checked)} />
+            <span>Remember this device</span>
+          </label>
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting ? "Working..." : mode === "login" ? "Login" : "Create account"}
           </button>
           {error ? <p className="error-text">{error}</p> : null}
         </form>

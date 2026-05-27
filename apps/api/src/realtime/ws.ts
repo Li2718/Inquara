@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { z } from "zod";
 import { createAIProvider } from "../ai/factory";
-import { verifySession } from "../auth/session";
+import { verifySessionToken } from "../auth/session";
 import {
   createNodeAtPosition,
   createNodeFromSelection,
@@ -42,14 +42,21 @@ export async function registerRealtimeRoutes(
   const aiProvider = createAIProvider(config);
 
   app.get("/realtime", { websocket: true }, (socket, request) => {
-    const userId = verifySession(request.cookies[sessionCookieName], config.SESSION_SECRET);
-    if (!userId) {
-      socket.close(1008, "Unauthorized");
-      return;
-    }
+    const sessionPromise = verifySessionToken(request.cookies[sessionCookieName]);
+    sessionPromise
+      .then(session => {
+        if (!session) socket.close(1008, "Unauthorized");
+      })
+      .catch(() => socket.close(1011, "Session check failed"));
 
     socket.on("message", async data => {
       try {
+        const session = await sessionPromise;
+        if (!session) {
+          socket.close(1008, "Unauthorized");
+          return;
+        }
+        const userId = session.userId;
         const envelope = ClientEnvelopeSchema.parse(JSON.parse(data.toString()));
         if (envelope.type === "subscribe") {
           await getWorkspaceSnapshot(userId, envelope.workspaceId);

@@ -94,6 +94,15 @@ The first version only implements chat behavior, but the canvas layer should avo
 
 Represents an authenticated individual account.
 
+Users may have a password identity now and OAuth identities later. The API uses server-side sessions rather than signed user-id cookies so sessions can be remembered, listed by device, revoked individually, or revoked all at once.
+
+Related account concepts:
+
+- `UserIdentity` records a login provider such as `password`, and later `google` or `github`.
+- `UserSession` records one browser/device session with a hashed opaque token, `rememberMe`, device metadata, expiry, and revocation state.
+- `User.role` distinguishes regular users from admins. The first admin can be bootstrapped from seed environment variables.
+- Refresh-token style access can be added later by attaching refresh token records to a session/device family; the current web app does not need access tokens for first-party cookie auth.
+
 ### Workspace
 
 Represents one saved canvas owned by one user. A user can own many workspaces.
@@ -164,6 +173,30 @@ users
   email
   name
   avatar_url
+  role
+  password_hash
+  created_at
+  updated_at
+
+user_identities
+  id
+  user_id
+  provider
+  provider_user_id
+  email
+  created_at
+  updated_at
+
+user_sessions
+  id
+  user_id
+  token_hash
+  remember_me
+  user_agent
+  ip_address
+  last_seen_at
+  expires_at
+  revoked_at
   created_at
   updated_at
 
@@ -629,12 +662,15 @@ Owns user identity in the API service.
 
 Responsibilities:
 
-- Verifying the web session or bearer token.
+- Hashing and verifying passwords.
+- Creating and verifying opaque server-side session tokens.
+- Listing and revoking active user sessions.
+- Tracking identity providers in a way that can accept OAuth providers later.
 - Loading the current user.
 - Exposing `requireUser(request)`.
 - Providing authorization helpers such as `requireWorkspaceOwner(userId, workspaceId)`.
 
-The rest of the backend should depend on this module for identity checks instead of parsing auth details directly.
+The rest of the backend should depend on this module for identity checks instead of parsing auth details directly. WebSocket handlers must attach message listeners synchronously and await session verification inside message handling so the first client message cannot be lost while authentication is still loading.
 
 #### `workspaces`
 
@@ -847,6 +883,15 @@ Database-backed tests must be isolated from local development data.
 - Destructive cleanup such as `deleteMany()` belongs behind the shared ephemeral test database helper, not inside individual test files.
 - Playwright e2e tests must be launched through the repository e2e wrapper so the API server, web server, and test process share the same temporary database.
 - If Docker or `testcontainers` is unavailable, the test run should fail clearly. Do not silently fall back to the development database or a simplified schema-only workaround.
+
+## Development Database Migration Rule
+
+When implementation work modifies the Prisma schema or adds/changes a database migration, the local development database must be kept in sync with the running app.
+
+- Before handing the app back to the user, check whether a local development server is running.
+- If a local development server is running, apply the development database migration before the user continues using the browser app.
+- Do not leave a running development server connected to a database that lacks the new schema shape.
+- If the migration cannot be applied, report the blocker clearly instead of letting stale database errors surface through the product UI.
 
 ## Migration From The Demo
 
