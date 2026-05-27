@@ -63,6 +63,121 @@ Debug implementation work must follow the hard rules in [docs/architecture.md](<
 8. Debug code must not expose secrets, raw cookies, API keys, database URLs, or full environment objects.
 9. Production web builds must pass `npm run verify:debug-free` before completion.
 
+## UI System Rules
+
+All UI work must follow:
+
+- [docs/ui-system.md](<repo-root-placeholder>/docs/ui-system.md)
+- [apps/web/src/shared/components/README.md](<repo-root-placeholder>/apps/web/src/shared/components/README.md)
+
+Use these rules as hard constraints, not optional style guidance.
+
+### Minimal Long-Term UI Rules
+
+1. Distinguish `UI rules` from `design style`.
+2. Reuse shared UI components before writing page-local UI.
+3. Add missing shared abstractions to the component library before using them in pages.
+4. Prefer semantic tokens over hard-coded colors, borders, shadows, spacing, and typography.
+5. Keep page information architecture stable across display modes unless explicitly redesigned.
+6. The product currently supports `light` only unless a future task explicitly adds another display mode.
+7. Keep readability, operation clarity, and maintainability above decoration.
+8. Before creating any new UI component, search existing shared components first.
+9. Do not implement reusable UI interaction directly inside `page.tsx`, `chrome`, product/domain views, or feature views if it belongs in shared UI.
+10. Do not place page-only or parent-component-only UI into the shared component library.
+11. If an action creates a new database record that appears in a managed list, default to a button plus modal, drawer, or wizard unless the user explicitly asks for inline creation or creation is the page's only core task.
+
+### Surface Rules
+
+When adding or changing pages or UI components, classify them into one of these surfaces first:
+
+1. `product`
+2. `admin`
+3. `debug`
+
+Then follow these rules:
+
+1. Product pages are the normal authenticated Inquara workspace experience.
+2. Admin pages must use an explicit admin route and centralized admin guard when they exist.
+3. Debug UI must follow the Debug Rules above and the architecture rules in `docs/architecture.md`.
+4. Do not treat debug as a hidden runtime branch inside normal product pages.
+5. Product pages must not depend on debug-only components.
+6. Admin pages must not depend on debug-only components.
+7. Product pages should not directly depend on admin-only components.
+8. If multiple surfaces need the same component, extract it upward into a shared layer instead of cross-importing between surfaces.
+
+### How To Find Components
+
+Before creating or editing UI, follow this search order:
+
+1. Read [apps/web/src/shared/components/README.md](<repo-root-placeholder>/apps/web/src/shared/components/README.md).
+2. Check relevant barrel exports under `apps/web/src/shared/components/**/index.ts` when they exist.
+3. Search `apps/web/src/shared/components/` for likely names and usages.
+4. Search `apps/web/src/features/` for feature-owned components that may need to remain private or be promoted.
+5. Decide whether the component belongs to `product`, `admin`, or `debug`.
+6. Only create a new component after confirming the existing shared layers do not already cover the need.
+
+This is a required workflow, not a suggestion.
+
+### Component Placement Rules
+
+Use these directories as fixed shared layers:
+
+- `apps/web/src/shared/components/ui/`
+  - Shared generic UI primitives and reusable interactions.
+  - Examples: button, icon button, popup menu, modal, tabs, input, badge, tooltip, shared icons.
+- `apps/web/src/shared/components/chrome/`
+  - App-level frame and navigation components.
+  - Examples: product shell, top controls, global sidebar primitives.
+- `apps/web/src/shared/components/product/`
+  - Product-surface reusable components that are not generic enough for `ui`.
+  - Examples: workspace navigation pieces, account menu compositions.
+- `apps/web/src/shared/components/domain/`
+  - Domain-composed components built from lower shared layers.
+  - Examples: reusable canvas or node compositions that are not feature-private.
+- `apps/web/src/shared/components/admin/`
+  - Future admin-surface reusable components.
+  - Create only when admin UI exists.
+
+Debug UI belongs under `apps/web/src/debug/` unless `docs/architecture.md` explicitly defines a different production-excluded shared debug layer.
+
+Use these private placement rules for non-shared components:
+
+1. Page-only components go under a same-name private directory beside the page file.
+2. Parent-component-only subcomponents go under a same-name private directory beside the parent component.
+3. Component-local styles and assets should live in that same-name private directory when they are not shared.
+4. If a component could be reused by multiple pages or multiple toolbar/surface locations, it must not stay inside a page file.
+
+### Icon Rules
+
+1. Do not hand-draw routine product icons as inline SVG in page or feature components.
+2. Prefer the shared icon source in `apps/web/src/shared/components/ui/icons.ts` when available.
+3. Default to outline icons for routine product UI such as toolbars, menus, buttons, filters, and tables.
+4. Use filled icons only for explicit exceptions such as external brand marks or deliberate high-emphasis semantic treatment.
+5. Reuse shared icon presets for size and stroke before setting custom values.
+6. Keep icon stroke style, size rhythm, and optical weight consistent within the same surface.
+
+### Forbidden UI Shortcuts
+
+Do not do these unless the user explicitly approves a temporary exception:
+
+1. Do not hand-roll reusable dropdown, modal, tab, table, or menu behavior directly inside page files, chrome, product/domain views, or feature views.
+2. Do not create a second component that overlaps an existing shared component because the existing one was not searched for.
+3. Do not place reusable UI under `app/**` when it belongs under `shared/components/**`.
+4. Do not place page-only or parent-component-only pieces into `shared/components/**` just to make the owner file shorter.
+5. Do not leave a reusable component unindexed if future sessions would struggle to discover it.
+6. Do not use browser `alert`, `confirm`, or `prompt` for product UI.
+
+### UI Definition Of Done
+
+Before closing a UI task, verify:
+
+1. Existing shared components were searched first.
+2. Shared components and private components were separated correctly.
+3. New reusable logic was placed in the correct shared layer.
+4. Page and feature files compose shared components instead of owning generic interactions.
+5. Shared exports or component docs were updated when needed.
+6. `typecheck`, `lint`, and relevant build checks still pass.
+
 ## Test Database Rules
 
 Database-backed tests must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).

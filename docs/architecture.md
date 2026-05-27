@@ -384,6 +384,8 @@ apps/web/src/shared
   UI primitives, hooks, formatting, utilities.
 ```
 
+UI implementation and component placement must follow `docs/ui-system.md`. Shared reusable UI belongs under `apps/web/src/shared/components/`, with generic primitives and interactions in `shared/components/ui/`.
+
 ### Frontend Module Responsibilities
 
 #### `app`

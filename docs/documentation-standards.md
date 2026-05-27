@@ -33,8 +33,11 @@ Current docs in this repository:
 
 - `docs/architecture.md`
 - `docs/documentation-standards.md`
+- `docs/ui-system.md`
 
 Debug implementation rules are current long-term architecture rules and live in `docs/architecture.md`. Initiative docs may plan changes to the debug system, but durable constraints must be reflected back into the architecture document.
+
+UI implementation rules are current long-term product rules and live in `docs/ui-system.md`. Component placement and discovery rules are documented in `apps/web/src/shared/components/README.md`.
 
 ## Active Initiatives
 
