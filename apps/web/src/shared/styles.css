@@ -464,6 +464,15 @@ h2 {
   animation: canvas-edge-path-appear 200ms ease-out both;
 }
 
+.canvas-view[data-workspace-transition="idle"] .canvas-node.canvas-node-exiting {
+  pointer-events: none;
+  animation: canvas-node-exit 150ms ease-in both;
+}
+
+.canvas-view[data-workspace-transition="idle"] .react-flow__edge.canvas-edge-exiting .react-flow__edge-path {
+  animation: canvas-edge-path-exit 150ms ease-in both;
+}
+
 @keyframes canvas-content-enter {
   from {
     opacity: 0;
@@ -488,6 +497,18 @@ h2 {
   }
 }
 
+@keyframes canvas-node-exit {
+  from {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(1px);
+  }
+}
+
 @keyframes canvas-edge-path-appear {
   from {
     stroke-opacity: 0;
@@ -495,6 +516,16 @@ h2 {
 
   to {
     stroke-opacity: 1;
+  }
+}
+
+@keyframes canvas-edge-path-exit {
+  from {
+    stroke-opacity: 1;
+  }
+
+  to {
+    stroke-opacity: 0;
   }
 }
 

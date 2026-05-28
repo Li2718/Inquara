@@ -82,13 +82,13 @@ This initiative README is the source of truth for live task status. When an audi
 - Browser-measured the right-click creation sequence: the context menu leaves the DOM before the new node is inserted, and the inserted node receives the shared `canvas-node-appearing` class.
 - Fixed edge appear cleanup so the temporary appear classes are removed after the animation lifetime instead of being reintroduced by first-frame detection.
 - Moved edge appear animation from the React Flow edge wrapper to the edge path's `stroke-opacity`, avoiding a wrapper `filter` change at animation completion.
+- Added visual-only exit motion for hidden and deleted canvas nodes/edges by retaining the previous visible React Flow items briefly as non-interactive exiting items while the real snapshot updates immediately.
+- Browser-verified branch hide and node delete exit paths: exiting nodes/edges receive temporary exit classes and are removed after the short animation without leaving residual classes.
 - Added a small source-highlight color transition for hover and active branch state changes.
 - Added a small workspace rename-form enter transition that does not animate typing or submitted content.
 
 ## Remaining Work
 
-- Evaluate branch hide/show and delete motion separately. Current implementation does not animate hidden/deleted nodes out.
-- If hide/delete exit motion is added, prefer a visual-only overlay based on the previous visible snapshot rather than delaying the real hidden/deleted data update.
 - Let the user compare the final shared node/edge reveal timing in the browser and tune the single shared duration only if it still feels off.
 - Update long-term UI documentation if reusable motion rules are introduced.
 

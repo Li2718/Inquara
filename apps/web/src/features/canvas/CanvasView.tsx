@@ -24,6 +24,7 @@ import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
 
 export type ChatFlowNodeData = CanvasNode & {
   isAppearing?: boolean;
+  isExiting?: boolean;
 };
 export type ChatFlowNode = Node<ChatFlowNodeData, "chatNode">;
 
@@ -32,6 +33,7 @@ const nodeTypes: NodeTypes = {
 };
 
 const CANVAS_CONTEXT_MENU_EXIT_MS = 110;
+const CANVAS_ITEM_EXIT_MS = 150;
 
 export function CanvasView({
   isPreparingWorkspaceSwitch,
@@ -64,7 +66,14 @@ function CanvasFlow({
   const workspaceId = snapshot?.workspace.id ?? null;
   const isShowingStaleSnapshot = Boolean(workspaceId && workspaceId !== routeWorkspaceId);
   const previousWorkspaceIdRef = useRef<string | null>(workspaceId);
+  const previousVisibleFlowItemsRef = useRef<{
+    edges: Map<string, Edge>;
+    nodes: Map<string, ChatFlowNode>;
+    workspaceId: string | null;
+  }>({ edges: new Map(), nodes: new Map(), workspaceId: null });
   const [contextMenu, setContextMenu] = useState<null | { screenX: number; screenY: number; flowX: number; flowY: number }>(null);
+  const [exitingEdges, setExitingEdges] = useState<Edge[]>([]);
+  const [exitingNodes, setExitingNodes] = useState<ChatFlowNode[]>([]);
   const [isSettlingWorkspace, setIsSettlingWorkspace] = useState(false);
   const contextMenuCreateTimerRef = useRef<number | null>(null);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
@@ -89,7 +98,7 @@ function CanvasFlow({
     workspaceId
   });
 
-  const snapshotNodes = useMemo<ChatFlowNode[]>(
+  const visibleFlowNodes = useMemo<ChatFlowNode[]>(
     () =>
       visibleNodes.map(node => ({
         id: node.id,
@@ -103,11 +112,7 @@ function CanvasFlow({
       })),
     [appearingNodeIds, visibleNodes]
   );
-  const [nodes, setNodes] = useState<ChatFlowNode[]>(snapshotNodes);
-
-  useLayoutEffect(() => {
-    setNodes(snapshotNodes);
-  }, [snapshotNodes]);
+  const visibleFlowNodeIdSet = useMemo(() => new Set(visibleFlowNodes.map(node => node.id)), [visibleFlowNodes]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -123,7 +128,7 @@ function CanvasFlow({
     return () => window.clearTimeout(timeout);
   }, [workspaceId]);
 
-  const edges = useMemo<Edge[]>(
+  const visibleFlowEdges = useMemo<Edge[]>(
     () =>
       visibleEdges.map(edge => ({
         id: edge.id,
@@ -135,6 +140,86 @@ function CanvasFlow({
       })),
     [appearingEdgeIds, visibleEdges]
   );
+  const visibleFlowEdgeIdSet = useMemo(() => new Set(visibleFlowEdges.map(edge => edge.id)), [visibleFlowEdges]);
+
+  useLayoutEffect(() => {
+    const previous = previousVisibleFlowItemsRef.current;
+    const nextNodeMap = new Map(visibleFlowNodes.map(node => [node.id, node]));
+    const nextEdgeMap = new Map(visibleFlowEdges.map(edge => [edge.id, edge]));
+
+    if (!workspaceId || previous.workspaceId !== workspaceId) {
+      previousVisibleFlowItemsRef.current = {
+        edges: nextEdgeMap,
+        nodes: nextNodeMap,
+        workspaceId
+      };
+      setExitingEdges([]);
+      setExitingNodes([]);
+      return;
+    }
+
+    const removedNodes = [...previous.nodes.values()]
+      .filter(node => !nextNodeMap.has(node.id))
+      .map(node => ({
+        ...node,
+        data: { ...node.data, isAppearing: false, isExiting: true },
+        selected: false
+      }));
+    const removedEdges = [...previous.edges.values()]
+      .filter(edge => !nextEdgeMap.has(edge.id))
+      .map(edge => ({
+        ...edge,
+        className: [edge.className?.replace("canvas-edge-appearing", "").trim(), "canvas-edge-exiting"]
+          .filter(Boolean)
+          .join(" "),
+        selected: false
+      }));
+
+    previousVisibleFlowItemsRef.current = {
+      edges: nextEdgeMap,
+      nodes: nextNodeMap,
+      workspaceId
+    };
+
+    if (removedNodes.length === 0 && removedEdges.length === 0) return;
+
+    const removedNodeIds = new Set(removedNodes.map(node => node.id));
+    const removedEdgeIds = new Set(removedEdges.map(edge => edge.id));
+    setExitingNodes(current => [
+      ...current.filter(node => !removedNodeIds.has(node.id) && !nextNodeMap.has(node.id)),
+      ...removedNodes
+    ]);
+    setExitingEdges(current => [
+      ...current.filter(edge => !removedEdgeIds.has(edge.id) && !nextEdgeMap.has(edge.id)),
+      ...removedEdges
+    ]);
+
+    const timeout = window.setTimeout(() => {
+      setExitingNodes(current => current.filter(node => !removedNodeIds.has(node.id)));
+      setExitingEdges(current => current.filter(edge => !removedEdgeIds.has(edge.id)));
+    }, CANVAS_ITEM_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [visibleFlowEdges, visibleFlowNodes, workspaceId]);
+
+  const renderedNodes = useMemo(
+    () => [
+      ...visibleFlowNodes,
+      ...exitingNodes.filter(node => !visibleFlowNodeIdSet.has(node.id))
+    ],
+    [exitingNodes, visibleFlowNodeIdSet, visibleFlowNodes]
+  );
+  const renderedEdges = useMemo(
+    () => [
+      ...visibleFlowEdges,
+      ...exitingEdges.filter(edge => !visibleFlowEdgeIdSet.has(edge.id))
+    ],
+    [exitingEdges, visibleFlowEdgeIdSet, visibleFlowEdges]
+  );
+  const [nodes, setNodes] = useState<ChatFlowNode[]>(renderedNodes);
+
+  useLayoutEffect(() => {
+    setNodes(renderedNodes);
+  }, [renderedNodes]);
 
   useEffect(() => {
     return () => {
@@ -192,7 +277,7 @@ function CanvasFlow({
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={renderedEdges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onNodeDragStop={onNodeDragStop}
