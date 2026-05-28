@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "./Button";
 
 type ConfirmDialogProps = {
   cancelLabel?: string;
@@ -52,7 +53,7 @@ export function ConfirmDialog({
   if (!isOpen || !portalRoot) return null;
 
   const body = children ?? description;
-  const confirmClassName = confirmTone === "danger" ? "danger-button" : "";
+  const confirmVariant = confirmTone === "danger" ? "danger" : "primary";
 
   return createPortal(
     <div
@@ -72,12 +73,12 @@ export function ConfirmDialog({
         <h2 id={titleId}>{title}</h2>
         {body ? <div id={descriptionId} className="ui-confirm-dialog-body">{body}</div> : null}
         <div className="ui-confirm-dialog-actions">
-          <button type="button" className="secondary-button" onClick={onCancel} disabled={isConfirming}>
+          <Button variant="secondary" onClick={onCancel} disabled={isConfirming}>
             {cancelLabel}
-          </button>
-          <button type="button" className={confirmClassName} onClick={onConfirm} disabled={isConfirming}>
+          </Button>
+          <Button variant={confirmVariant} onClick={onConfirm} disabled={isConfirming}>
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,
