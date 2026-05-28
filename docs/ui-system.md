@@ -721,9 +721,30 @@ Required:
 - Modal close and focus restoration.
 - Escape handling for dismissible floating UI.
 
-### 14.4 Reduced Motion
+### 14.4 Motion
 
-Motion should be subtle. Respect `prefers-reduced-motion` for nonessential animations.
+Motion exists to explain state changes, preserve spatial continuity, and reduce abrupt flashing. It is not decoration.
+
+Use these timing ranges as the product baseline:
+
+- Menus and small inline interactions: roughly `90-140ms`.
+- Modals and confirmation dialogs: roughly `140-180ms`.
+- Canvas node and edge appear/exit motion: roughly `150-220ms`.
+- Large context switches should stay short enough that the app still feels responsive.
+
+Implementation rules:
+
+- Prefer `opacity`, small `translate` or `scale`, and line-specific properties such as `stroke-opacity`.
+- Do not animate layout-affecting properties when the user is reading, selecting text, typing, dragging, scrolling, or resizing.
+- React Flow nodes and edges must not animate the outer positioning `transform`.
+- Canvas edges should animate the edge path, not the React Flow edge wrapper, when the intent is only line appearance or disappearance.
+- Hidden and deleted data state should update immediately. Use a visual-only previous-frame item for exit motion instead of delaying commands, database updates, or real-time synchronization.
+- Shared components such as menus, dialogs, and confirmation surfaces own their enter/exit behavior. Product pages and feature views should not hand-roll separate menu or modal motion.
+- Motion must not be the only signal for state.
+
+Respect `prefers-reduced-motion` for nonessential animations.
+
+When changing product motion, verify it in the browser. Check enter, exit, quick repeated actions, route or canvas switching, and browser console errors. Canvas motion also needs checks for text selection, node dragging, node resizing, node scrolling, zooming, and real-time synchronization assumptions.
 
 ## 15. Implementation And Adoption Rules
 

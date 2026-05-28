@@ -1,6 +1,6 @@
 # Motion Polish
 
-> status: active
+> status: archived
 > purpose: Add restrained, consistent motion to product interactions so state changes feel smooth without becoming distracting.
 
 ## Goal
@@ -86,11 +86,11 @@ This initiative README is the source of truth for live task status. When an audi
 - Browser-verified branch hide and node delete exit paths: exiting nodes/edges receive temporary exit classes and are removed after the short animation without leaving residual classes.
 - Added a small source-highlight color transition for hover and active branch state changes.
 - Added a small workspace rename-form enter transition that does not animate typing or submitted content.
+- Updated the long-term UI system documentation with durable product motion rules.
 
 ## Remaining Work
 
-- Let the user compare the final shared node/edge reveal timing in the browser and tune the single shared duration only if it still feels off.
-- Update long-term UI documentation if reusable motion rules are introduced.
+- None.
 
 ## Deferred Work
 
@@ -101,9 +101,9 @@ This initiative README is the source of truth for live task status. When an audi
 
 ## Related Documents
 
-- [UI System](../../ui-system.md)
-- [Architecture](../../architecture.md)
-- [Documentation Standards](../../documentation-standards.md)
+- [UI System](../../../ui-system.md)
+- [Architecture](../../../architecture.md)
+- [Documentation Standards](../../../documentation-standards.md)
 
 ## Archive Criteria
 
