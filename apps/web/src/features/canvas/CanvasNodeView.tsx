@@ -3,7 +3,7 @@
 import type { CanvasNode } from "@inquara/domain";
 import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
-import { ConfirmDialog, IconButton, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { CheckIcon, ConfirmDialog, IconButton, MoreVerticalIcon, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { NodeChatPanel } from "../node-chat/NodeChatPanel";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import type { ChatFlowNode } from "./CanvasView";
@@ -165,7 +165,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
               title="More actions"
               onClick={() => setIsDangerOpen(value => !value)}
             >
-              ⋮
+              <MoreVerticalIcon />
             </IconButton>
             {isDangerOpen ? (
               <PopupMenu
@@ -192,7 +192,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
           <div className="canvas-node-actions">
             {canHideBranch ? (
               <IconButton className="hide-branch-button" aria-label="Hide branch" title="Hide branch" onClick={hideNode}>
-                ✓
+                <CheckIcon />
               </IconButton>
             ) : null}
           </div>

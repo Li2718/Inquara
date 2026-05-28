@@ -16,7 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { FloatingCircleButton, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { FloatingCircleButton, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { findFirstVisibleRootNode } from "./rootNodeFocus";
@@ -235,10 +235,7 @@ function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNod
         disabled={!firstRootNode}
         onClick={resetViewportToRoot}
       >
-        <svg className="canvas-reset-view-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M12 4v16M4 12h16" />
-          <circle cx="12" cy="12" r="4.35" />
-        </svg>
+        <ResetViewIcon />
       </FloatingCircleButton>
     </div>
   );

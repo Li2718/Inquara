@@ -137,6 +137,7 @@ Implemented shared components:
 - `ui/FloatingCircleButton.tsx` provides the shared round floating control wrapper with fixed size presets.
 - `ui/PopupMenu.tsx` provides the shared opaque menu surface, outside-click handling, Escape handling, and menu item styling for product menus.
 - `ui/ConfirmDialog.tsx` provides the shared confirmation modal pattern, portal mounting, Escape/backdrop close behavior, accessible dialog attributes, and confirm/cancel actions for destructive or irreversible product actions.
+- `ui/icons.tsx` provides the shared routine product icon source for current sidebar, menu, check, plus, and reset-view icons. Prefer this file before adding inline SVG or text-symbol icons in feature code.
 
 The project currently has several feature-owned UI pieces that may be promoted into shared components as reuse becomes clear:
 

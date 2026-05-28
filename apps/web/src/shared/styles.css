@@ -666,10 +666,17 @@ h2 {
   background: rgb(255 255 255 / 54%);
   color: var(--accent-dark);
   box-shadow: none;
-  font-size: 21px;
-  font-weight: 500;
   line-height: 1;
   transform: translateY(-50%);
+}
+
+.workspace-sidebar-create-button .ui-plus-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.1px;
 }
 
 .workspace-sidebar-create-button:hover {
@@ -701,7 +708,7 @@ h2 {
   transform: translateY(calc(-50% + 1.5px));
 }
 
-.workspace-sidebar-collapse-button span {
+.workspace-sidebar-collapse-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -712,7 +719,7 @@ h2 {
   transform: translate(-50%, -50%);
 }
 
-.workspace-sidebar-collapse-button span::before {
+.workspace-sidebar-collapse-icon::before {
   content: "";
   position: absolute;
   top: 0;
@@ -722,7 +729,7 @@ h2 {
   background: currentColor;
 }
 
-.workspace-sidebar-collapse-button span::after {
+.workspace-sidebar-collapse-icon::after {
   content: "";
   position: absolute;
   top: 3.2px;
@@ -973,8 +980,14 @@ h2 {
   min-width: 28px;
   min-height: 28px;
   color: rgb(111 135 148 / 70%);
-  font-size: 18px;
   line-height: 1;
+}
+
+.ui-more-vertical-icon {
+  width: 17px;
+  height: 17px;
+  display: block;
+  fill: currentColor;
 }
 
 .node-actions-menu {
@@ -989,11 +1002,21 @@ h2 {
   min-width: 32px;
   min-height: 32px;
   color: var(--accent-dark);
-  font-size: 22px;
 }
 
 .hide-branch-button:hover {
   color: var(--accent);
+}
+
+.ui-check-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4px;
 }
 
 .ui-confirm-dialog-backdrop {

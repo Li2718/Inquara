@@ -47,10 +47,11 @@ The first shared interaction extraction is underway:
 - Node header icon buttons, the account button, and reset-view floating control now consume shared button wrappers while preserving the current visual class contract.
 - `Button` now lives in `apps/web/src/shared/components/ui/`.
 - Confirmation dialog action buttons now consume the shared primary/secondary/danger action wrapper instead of raw button class names.
+- Routine product icons now have a shared source in `apps/web/src/shared/components/ui/icons.tsx`.
+- Sidebar, workspace create, menu trigger, hide-branch, and reset-view icons now consume the shared icon source instead of feature-local text symbols or inline SVG markup.
 
 ## Remaining Work
 
-- Create a shared icon source for routine product icons. Prioritize sidebars, reset-view controls, menu triggers, and other currently hand-drawn or text-symbol icons.
 - Evaluate whether the auth form, message composer, and workspace rename/create controls should adopt `Button` now or remain feature-local until their interaction patterns settle.
 - Evaluate whether workspace/canvas chrome should be promoted into `chrome/` or `product/` components. Current candidates include `WorkspaceSidebar`, the account entry, and canvas viewport controls.
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { apiJson } from "../../shared/api";
-import { ConfirmDialog, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { ConfirmDialog, MoreVerticalIcon, PlusIcon, PopupMenu, PopupMenuItem, SidebarCollapseIcon, SidebarPanelIcon } from "../../shared/components/ui";
 
 type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
@@ -134,10 +134,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
         aria-label={isOpen ? "Collapse sidebar" : "Open sidebar"}
         aria-expanded={isOpen}
       >
-        <span className="workspace-sidebar-open-icon" aria-hidden="true">
-          <span />
-          <span />
-        </span>
+        <SidebarPanelIcon />
       </button>
 
       <div className="workspace-sidebar-content" aria-hidden={!isOpen}>
@@ -152,10 +149,10 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
             aria-label="New canvas"
             disabled={isCreating}
           >
-            +
+            <PlusIcon />
           </button>
           <button type="button" className="workspace-sidebar-collapse-button" onClick={onToggle} aria-label="Collapse sidebar">
-            <span aria-hidden="true" />
+            <SidebarCollapseIcon />
           </button>
         </header>
 
@@ -273,7 +270,7 @@ function WorkspaceSidebarItem({
             aria-label={`Canvas actions for ${workspace.title}`}
             aria-expanded={isMenuOpen}
           >
-            ⋮
+            <MoreVerticalIcon />
           </button>
           {isMenuOpen ? (
             <PopupMenu
