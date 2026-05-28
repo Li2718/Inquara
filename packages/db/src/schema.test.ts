@@ -5,11 +5,6 @@ import { describe, expect, it } from "vitest";
 const schema = readFileSync(resolve(import.meta.dirname, "../prisma/schema.prisma"), "utf8");
 
 describe("Prisma schema", () => {
-  it("defines CanvasNode and NodeMessage as first-version chat canvas primitives", () => {
-    expect(schema).toContain("model CanvasNode");
-    expect(schema).toContain("model NodeMessage");
-  });
-
   it("does not add speculative node type or generic payload fields", () => {
     const canvasNodeModel = schema.match(/model CanvasNode \{[\s\S]*?\n\}/)?.[0] ?? "";
 

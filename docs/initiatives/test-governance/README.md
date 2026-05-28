@@ -52,10 +52,22 @@ This initiative README is the source of truth for live task status. When audit, 
   - `apps/api/src/test/testDatabaseSafety.test.ts` protects ephemeral test database usage.
   - `packages/db/src/schema.test.ts` protects the first-version canvas node data-model boundary against speculative generic node fields.
 - Verified the cleaned Vitest suite: 19 test files and 74 tests passed.
+- Started a second-pass value audit that is not limited to source-string tests.
+- Extracted additional low-value test signals:
+  - Thin-wrapper tests that only prove an object factory copies arguments into an object.
+  - Tests whose expected values are the implementation rewritten inline, without checking a product rule.
+  - Happy-path-only tests for code whose risk is mostly error, rejection, deduplication, ordering, or stale-state behavior.
+  - Tests that mock the only meaningful dependency and then mostly verify the mock interaction shape.
+  - Tests that cover constants or default values without a failure mode that matters to users or operators.
+  - Tests that duplicate coverage already provided by a higher-value API, domain, or e2e test.
+- Removed `apps/web/src/features/commands/createCommands.test.ts`; it only checked that a thin client command factory copied arguments into command-shaped objects, while the meaningful command shapes are already exercised by API/domain command handling tests.
+- Removed the weak `packages/db/src/schema.test.ts` assertion that merely checked model names exist; kept only the speculative-field data-model boundary guard.
+- Updated [Testing Standards](../../testing-standards.md) with the second-pass low-value test signals.
+- Verified the second cleanup pass: 18 test files and 70 tests passed.
 
 ## Remaining Work
 
-- Review the first cleanup pass and decide whether to archive this initiative or keep it open for a later frontend component testing pass.
+- Review whether the remaining shallow helper tests should stay as regression tests tied to known UI bugs or be replaced by higher-level browser coverage later.
 
 ## Deferred Work
 

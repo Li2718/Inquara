@@ -26,8 +26,15 @@ Do not add tests whose main assertion is any of the following:
 - A documentation file or skill contains a specific sentence or heading.
 - A barrel file exports a name, unless the export is a published package contract used outside this monorepo.
 - A feature module uses a particular shared component, unless that is an enforced architectural boundary with production risk.
+- A thin wrapper or factory copies arguments into an object with the same fields.
+- The expected value is just the implementation logic rewritten inline, without naming an independent product rule.
+- A mock is the only meaningful dependency, and the test mostly verifies that the mock was called in the shape the test itself arranged.
+- A constant or default value exists, without a meaningful failure mode for users or operators.
+- The same behavior is already protected by a higher-value API, domain, integration, or e2e test.
 
 These checks make refactoring and UI tuning slower without meaningfully protecting users.
+
+Happy-path tests are not automatically bad, but they are weak when the real risk is authorization failure, invalid input, stale events, ordering, deduplication, persistence, or recovery after errors. For those areas, cover the risky branch or prefer a higher-level boundary test.
 
 ## Source-Level Guardrail Tests
 
