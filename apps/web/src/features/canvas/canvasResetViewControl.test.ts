@@ -15,8 +15,8 @@ describe("canvas reset view control", () => {
     expect(source).toContain("reservedLeft");
     expect(source).toContain("hideAttribution: true");
     expect(source).toContain("canvas-viewport-controls");
-    expect(source).toContain("canvas-floating-circle-button");
-    expect(source).toContain('data-size="sm"');
+    expect(source).toContain("FloatingCircleButton");
+    expect(source).toContain('size="sm"');
     expect(source).toContain("Current zoom");
     expect(source).toContain("Reset view to root chat");
     expect(styles).toMatch(/\.canvas-floating-circle-button\s*{/);

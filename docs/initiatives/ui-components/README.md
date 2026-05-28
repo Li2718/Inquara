@@ -39,10 +39,12 @@ The first shared interaction extraction is underway:
 - `ConfirmDialog` now lives in `apps/web/src/shared/components/ui/`.
 - Node deletion, workspace deletion, and account logout now consume the shared confirmation dialog instead of feature-local modal markup.
 - Confirmation dialog portal mounting, Escape handling, backdrop click handling, accessible dialog attributes, and confirm/cancel action layout are now owned by the shared component.
+- `IconButton` and `FloatingCircleButton` now live in `apps/web/src/shared/components/ui/`.
+- Node header icon buttons, the account button, and reset-view floating control now consume shared button wrappers while preserving the current visual class contract.
 
 ## Next Step
 
-- Evaluate whether `IconButton` and floating canvas control buttons should be unified in the same slice or handled separately.
+- Decide whether plain action buttons such as secondary/danger actions should get a small shared `Button` component now or wait until another repeated form/action surface appears.
 
 ## Related Documents
 

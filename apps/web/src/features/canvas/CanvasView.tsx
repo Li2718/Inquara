@@ -16,7 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { FloatingCircleButton, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { findFirstVisibleRootNode } from "./rootNodeFocus";
@@ -228,10 +228,8 @@ function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNod
       <span className="canvas-viewport-zoom-label" aria-label={`Current zoom ${zoomPercent}%`}>
         {zoomPercent}%
       </span>
-      <button
-        type="button"
-        className="canvas-floating-circle-button"
-        data-size="sm"
+      <FloatingCircleButton
+        size="sm"
         aria-label="Reset view to root chat"
         title="Reset view"
         disabled={!firstRootNode}
@@ -241,7 +239,7 @@ function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNod
           <path d="M12 4v16M4 12h16" />
           <circle cx="12" cy="12" r="4.35" />
         </svg>
-      </button>
+      </FloatingCircleButton>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { apiJson } from "../../shared/api";
-import { ConfirmDialog, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { ConfirmDialog, FloatingCircleButton, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
@@ -121,11 +121,10 @@ function CanvasWorkspaceContent({
         </span>
       </div>
       <div className="canvas-account">
-        <button
+        <FloatingCircleButton
           ref={accountMenuTriggerRef}
-          type="button"
-          className="canvas-floating-circle-button canvas-account-button"
-          data-size="md"
+          className="canvas-account-button"
+          size="md"
           aria-label={`Account: ${userLabel}`}
           aria-expanded={isAccountMenuOpen}
           aria-haspopup="menu"
@@ -133,7 +132,7 @@ function CanvasWorkspaceContent({
           onClick={() => setIsAccountMenuOpen(value => !value)}
         >
           <span>{userInitial}</span>
-        </button>
+        </FloatingCircleButton>
         {isAccountMenuOpen ? (
           <PopupMenu
             className="canvas-account-menu"

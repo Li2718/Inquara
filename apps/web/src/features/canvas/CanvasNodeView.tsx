@@ -3,7 +3,7 @@
 import type { CanvasNode } from "@inquara/domain";
 import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
-import { ConfirmDialog, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { ConfirmDialog, IconButton, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { NodeChatPanel } from "../node-chat/NodeChatPanel";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import type { ChatFlowNode } from "./CanvasView";
@@ -158,16 +158,15 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
             ) : (
               <strong>{data.title}</strong>
             )}
-            <button
+            <IconButton
               ref={menuTriggerRef}
-              type="button"
-              className="icon-button node-menu-trigger nodrag"
+              className="node-menu-trigger nodrag"
               aria-label="More node actions"
               title="More actions"
               onClick={() => setIsDangerOpen(value => !value)}
             >
               ⋮
-            </button>
+            </IconButton>
             {isDangerOpen ? (
               <PopupMenu
                 className="node-actions-menu nodrag nowheel"
@@ -192,9 +191,9 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
           </div>
           <div className="canvas-node-actions">
             {canHideBranch ? (
-              <button type="button" className="icon-button hide-branch-button" aria-label="Hide branch" title="Hide branch" onClick={hideNode}>
+              <IconButton className="hide-branch-button" aria-label="Hide branch" title="Hide branch" onClick={hideNode}>
                 ✓
-              </button>
+              </IconButton>
             ) : null}
           </div>
         </header>
