@@ -18,11 +18,12 @@ const DRAG_CLICK_THRESHOLD = 5;
 
 export function DebugRootDev(props: DebugRootProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<DebugPosition>({ x: SCREEN_GAP, y: SCREEN_GAP });
+  const [position, setPosition] = useState<DebugPosition | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const pageSnapshot = useDebugPageSnapshot();
   const hasDragged = useRef(false);
-  const latestPositionRef = useRef<DebugPosition>({ x: SCREEN_GAP, y: SCREEN_GAP });
+  const hasRestoredPositionRef = useRef(Boolean(position));
+  const latestPositionRef = useRef<DebugPosition>(position ?? { x: SCREEN_GAP, y: SCREEN_GAP });
   const dragRef = useRef<null | { pointerId: number; startX: number; startY: number; originX: number; originY: number }>(null);
 
   const updatePosition = (nextPosition: DebugPosition) => {
@@ -34,30 +35,18 @@ export function DebugRootDev(props: DebugRootProps) {
     const storedPosition = window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY);
     const storedOpen = window.localStorage.getItem(DEBUG_OPEN_STORAGE_KEY);
 
-    if (storedPosition) {
-      try {
-        const parsed = JSON.parse(storedPosition) as { x?: unknown; y?: unknown };
-        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-          updatePosition(clampPosition(parsed.x, parsed.y));
-        } else {
-          updatePosition(defaultPosition());
-        }
-      } catch {
-        window.localStorage.removeItem(DEBUG_POSITION_STORAGE_KEY);
-        updatePosition(defaultPosition());
-      }
-    } else {
-      updatePosition(defaultPosition());
-    }
+    if (!position) updatePosition(readInitialPosition());
+    hasRestoredPositionRef.current = true;
     if (storedOpen === "true") setIsOpen(true);
-  }, []);
+  }, [position]);
 
   useEffect(() => {
     window.localStorage.setItem(DEBUG_OPEN_STORAGE_KEY, String(isOpen));
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isDragging) window.localStorage.setItem(DEBUG_POSITION_STORAGE_KEY, JSON.stringify(position));
+    if (!hasRestoredPositionRef.current || !position || isDragging) return;
+    window.localStorage.setItem(DEBUG_POSITION_STORAGE_KEY, JSON.stringify(position));
   }, [isDragging, position]);
 
   useEffect(() => {
@@ -93,8 +82,6 @@ export function DebugRootDev(props: DebugRootProps) {
     };
   }, []);
 
-  const placement = getPlacement(position);
-
   const startDrag = (event: PointerEvent<HTMLButtonElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     hasDragged.current = false;
@@ -103,8 +90,8 @@ export function DebugRootDev(props: DebugRootProps) {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: position.x,
-      originY: position.y
+      originX: latestPositionRef.current.x,
+      originY: latestPositionRef.current.y
     };
   };
 
@@ -115,6 +102,10 @@ export function DebugRootDev(props: DebugRootProps) {
     }
     setIsOpen(value => !value);
   };
+
+  if (!position) return null;
+
+  const placement = getPlacement(position);
 
   return (
     <aside
@@ -165,6 +156,23 @@ function GlobalDebugPanel({ page }: DebugRootProps) {
 
 function rawPosition(x: number, y: number): DebugPosition {
   return { x, y };
+}
+
+function readInitialPosition(): DebugPosition | null {
+  return readStoredPosition(window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY)) ?? defaultPosition();
+}
+
+function readStoredPosition(storedPosition: string | null): DebugPosition | null {
+  if (!storedPosition) return null;
+  try {
+    const parsed = JSON.parse(storedPosition) as { x?: unknown; y?: unknown };
+    if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+      return clampPosition(parsed.x, parsed.y);
+    }
+  } catch {
+    window.localStorage.removeItem(DEBUG_POSITION_STORAGE_KEY);
+  }
+  return null;
 }
 
 function clampPosition(x: number, y: number): DebugPosition {
