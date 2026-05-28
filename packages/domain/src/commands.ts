@@ -58,7 +58,9 @@ export const HideNodeSubtreeCommandSchema = BaseCommandSchema.extend({
 
 export const RestoreNodeBranchCommandSchema = BaseCommandSchema.extend({
   type: z.literal("node.restoreBranch"),
-  nodeId: IdSchema
+  nodeId: IdSchema,
+  x: z.number().optional(),
+  y: z.number().optional()
 });
 
 export const DeleteNodeSubtreeCommandSchema = BaseCommandSchema.extend({

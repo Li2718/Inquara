@@ -74,6 +74,8 @@ export type RestoreNodeBranchCommand = {
   clientMutationId: string;
   workspaceId: string;
   nodeId: string;
+  x?: number;
+  y?: number;
 };
 
 export type DeleteNodeSubtreeCommand = {
@@ -304,8 +306,10 @@ export async function restoreNodeBranch(
       await tx.canvasNode.update({
         where: { id: subtreeNodeId },
         data: {
-          hiddenAt: saved?.hiddenAt ? new Date(saved.hiddenAt) : null,
-          scrollTop: saved?.scrollTop ?? 0
+          hiddenAt: subtreeNodeId === command.nodeId ? null : saved?.hiddenAt ? new Date(saved.hiddenAt) : null,
+          scrollTop: saved?.scrollTop ?? 0,
+          ...(subtreeNodeId === command.nodeId && command.x !== undefined ? { x: command.x } : {}),
+          ...(subtreeNodeId === command.nodeId && command.y !== undefined ? { y: command.y } : {})
         }
       });
     }

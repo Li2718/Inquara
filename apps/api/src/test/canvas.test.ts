@@ -215,6 +215,81 @@ describe("canvas command services", () => {
     expect(restoredChild.scrollTop).toBe(233);
   });
 
+  it("always makes the restored branch root visible even if its saved state was hidden", async () => {
+    await createNodeFromSelection(userId, {
+      type: "node.createFromSelection",
+      clientMutationId: "mutation-branch",
+      workspaceId,
+      sourceNodeId: rootNodeId,
+      sourceMessageId,
+      sourceQuote: "which context matters",
+      sourceRangeStart: 18,
+      sourceRangeEnd: 39,
+      x: 560,
+      y: 100
+    });
+    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { workspaceId, parentNodeId: rootNodeId } });
+    await prisma.canvasNode.update({
+      where: { id: childNode.id },
+      data: {
+        hiddenAt: new Date("2026-05-28T00:00:00.000Z"),
+        hiddenStateSnapshot: {
+          [childNode.id]: {
+            hiddenAt: "2026-05-28T00:00:00.000Z",
+            scrollTop: 144
+          }
+        }
+      }
+    });
+
+    await restoreNodeBranch(userId, {
+      type: "node.restoreBranch",
+      clientMutationId: "mutation-restore-root",
+      workspaceId,
+      nodeId: childNode.id
+    });
+
+    const restoredChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: childNode.id } });
+    expect(restoredChild.hiddenAt).toBeNull();
+    expect(restoredChild.scrollTop).toBe(144);
+  });
+
+  it("moves the restored branch root when a restore position is provided", async () => {
+    await createNodeFromSelection(userId, {
+      type: "node.createFromSelection",
+      clientMutationId: "mutation-branch",
+      workspaceId,
+      sourceNodeId: rootNodeId,
+      sourceMessageId,
+      sourceQuote: "which context matters",
+      sourceRangeStart: 18,
+      sourceRangeEnd: 39,
+      x: 560,
+      y: 100
+    });
+    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { workspaceId, parentNodeId: rootNodeId } });
+    await hideNodeSubtree(userId, {
+      type: "node.hideSubtree",
+      clientMutationId: "mutation-hide",
+      workspaceId,
+      nodeId: childNode.id
+    });
+
+    await restoreNodeBranch(userId, {
+      type: "node.restoreBranch",
+      clientMutationId: "mutation-restore-position",
+      workspaceId,
+      nodeId: childNode.id,
+      x: 860,
+      y: 240
+    });
+
+    const restoredChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: childNode.id } });
+    expect(restoredChild.hiddenAt).toBeNull();
+    expect(restoredChild.x).toBe(860);
+    expect(restoredChild.y).toBe(240);
+  });
+
   it("soft deletes and restores a node subtree", async () => {
     const createEvents = await createNodeAtPosition(userId, {
       type: "node.createAtPosition",

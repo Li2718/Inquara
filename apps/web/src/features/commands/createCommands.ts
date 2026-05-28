@@ -75,12 +75,13 @@ export function createCommands(workspaceId: string) {
         ...(scrollTop === undefined ? {} : { scrollTop })
       };
     },
-    restoreNodeBranch(nodeId: string): WorkspaceCommand {
+    restoreNodeBranch(nodeId: string, position?: { x: number; y: number }): WorkspaceCommand {
       return {
         type: "node.restoreBranch",
         clientMutationId: crypto.randomUUID(),
         workspaceId,
-        nodeId
+        nodeId,
+        ...(position ? { x: position.x, y: position.y } : {})
       };
     },
     deleteNodeSubtree(nodeId: string): WorkspaceCommand {

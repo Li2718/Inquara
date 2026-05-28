@@ -147,6 +147,94 @@ describe("applyWorkspaceEvent", () => {
     expect(afterEdge.edges).toHaveLength(1);
   });
 
+  it("applies related node updates that share the current workspace version", () => {
+    const snapshot: WorkspaceSnapshot = {
+      ...baseSnapshot,
+      nodes: [
+        {
+          id: "node-1",
+          workspaceId: "workspace-1",
+          title: "Parent",
+          x: 120,
+          y: 120,
+          width: 420,
+          height: 520,
+          collapsed: false,
+          hiddenAt: "2026-05-24T00:00:04.000Z",
+          deletedAt: null,
+          scrollTop: 0,
+          hiddenStateSnapshot: null,
+          parentNodeId: null,
+          sourceNodeId: null,
+          sourceMessageId: null,
+          sourceQuote: null,
+          sourceRangeStart: null,
+          sourceRangeEnd: null,
+          version: 1,
+          createdAt: "2026-05-24T00:00:02.000Z",
+          updatedAt: "2026-05-24T00:00:04.000Z"
+        },
+        {
+          id: "node-2",
+          workspaceId: "workspace-1",
+          title: "Child",
+          x: 660,
+          y: 120,
+          width: 420,
+          height: 520,
+          collapsed: false,
+          hiddenAt: "2026-05-24T00:00:04.000Z",
+          deletedAt: null,
+          scrollTop: 0,
+          hiddenStateSnapshot: null,
+          parentNodeId: "node-1",
+          sourceNodeId: "node-1",
+          sourceMessageId: "message-1",
+          sourceQuote: "selected text",
+          sourceRangeStart: 0,
+          sourceRangeEnd: 13,
+          version: 1,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:04.000Z"
+        }
+      ]
+    };
+    const firstUpdate: WorkspaceEvent = {
+      id: "event-node-1",
+      type: "workspace.node.updated",
+      workspaceId: "workspace-1",
+      version: 2,
+      clientMutationId: "mutation-restore",
+      createdAt: "2026-05-24T00:00:05.000Z",
+      node: {
+        ...snapshot.nodes[0],
+        hiddenAt: null,
+        updatedAt: "2026-05-24T00:00:05.000Z",
+        version: 2
+      }
+    };
+    const secondUpdate: WorkspaceEvent = {
+      id: "event-node-2",
+      type: "workspace.node.updated",
+      workspaceId: "workspace-1",
+      version: 2,
+      clientMutationId: "mutation-restore",
+      createdAt: "2026-05-24T00:00:05.000Z",
+      node: {
+        ...snapshot.nodes[1],
+        hiddenAt: null,
+        updatedAt: "2026-05-24T00:00:05.000Z",
+        version: 2
+      }
+    };
+
+    const afterFirst = applyWorkspaceEvent(snapshot, firstUpdate);
+    const afterSecond = applyWorkspaceEvent(afterFirst, secondUpdate);
+
+    expect(afterSecond.nodes.find(node => node.id === "node-1")?.hiddenAt).toBeNull();
+    expect(afterSecond.nodes.find(node => node.id === "node-2")?.hiddenAt).toBeNull();
+  });
+
   it("ignores events that are not newer than the current snapshot", () => {
     const event: WorkspaceEvent = {
       id: "event-3",

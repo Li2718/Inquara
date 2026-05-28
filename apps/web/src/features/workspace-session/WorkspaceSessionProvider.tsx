@@ -74,8 +74,8 @@ export function WorkspaceSessionProvider({
       state,
       commands,
       sendCommand(command) {
-        workspaceSessionStore.getState().markPending(command.clientMutationId);
-        realtimeRef.current?.sendCommand(command);
+        const sent = realtimeRef.current?.sendCommand(command) ?? false;
+        if (sent) workspaceSessionStore.getState().markPending(command.clientMutationId);
       }
     }),
     [commands, state]

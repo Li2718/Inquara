@@ -15,10 +15,11 @@ import {
   type OnNodeDrag
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
 import { FloatingCircleButton, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
+import { CanvasViewportProvider } from "./CanvasViewportContext";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
 import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
 
@@ -62,6 +63,13 @@ function CanvasFlow({
 }) {
   const { state, commands, sendCommand } = useWorkspaceSession();
   const { screenToFlowPosition } = useReactFlow();
+  const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
+  const placementViewportContext = useMemo(
+    () => ({
+      getPlacementViewport: () => placementViewportRef.current
+    }),
+    []
+  );
   const snapshot = state.snapshot;
   const workspaceId = snapshot?.workspace.id ?? null;
   const isShowingStaleSnapshot = Boolean(workspaceId && workspaceId !== routeWorkspaceId);
@@ -181,6 +189,9 @@ function CanvasFlow({
       workspaceId
     };
 
+    setExitingNodes(current => current.filter(node => !nextNodeMap.has(node.id)));
+    setExitingEdges(current => current.filter(edge => !nextEdgeMap.has(edge.id)));
+
     if (removedNodes.length === 0 && removedEdges.length === 0) return;
 
     const removedNodeIds = new Set(removedNodes.map(node => node.id));
@@ -220,6 +231,15 @@ function CanvasFlow({
   useLayoutEffect(() => {
     setNodes(renderedNodes);
   }, [renderedNodes]);
+
+  useEffect(() => {
+    if (exitingNodes.length === 0 && exitingEdges.length === 0) return;
+    const timeout = window.setTimeout(() => {
+      setExitingNodes([]);
+      setExitingEdges([]);
+    }, CANVAS_ITEM_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [exitingEdges.length, exitingNodes.length]);
 
   useEffect(() => {
     return () => {
@@ -275,22 +295,25 @@ function CanvasFlow({
             : "idle"
       }
     >
-      <ReactFlow
-        nodes={nodes}
-        edges={renderedEdges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onNodeDragStop={onNodeDragStop}
-        onPaneClick={() => setContextMenu(null)}
-        onPaneContextMenu={onPaneContextMenu}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        fitView
-        fitViewOptions={{ maxZoom: 0.72, padding: 0.24 }}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background gap={28} size={1} />
-      </ReactFlow>
+      <CanvasViewportProvider value={placementViewportContext}>
+        <ReactFlow
+          nodes={nodes}
+          edges={renderedEdges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onNodeDragStop={onNodeDragStop}
+          onPaneClick={() => setContextMenu(null)}
+          onPaneContextMenu={onPaneContextMenu}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          fitView
+          fitViewOptions={{ maxZoom: 0.72, padding: 0.24 }}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={28} size={1} />
+          <CanvasPlacementViewportTracker placementViewportRef={placementViewportRef} />
+        </ReactFlow>
+      </CanvasViewportProvider>
       <CanvasViewportControls firstRootNode={firstRootNode} isSidebarOpen={isSidebarOpen} />
       <PopupMenu
         className="canvas-context-menu"
@@ -305,6 +328,34 @@ function CanvasFlow({
       </PopupMenu>
     </div>
   );
+}
+
+function CanvasPlacementViewportTracker({
+  placementViewportRef
+}: {
+  placementViewportRef: MutableRefObject<ReturnType<typeof calculatePlacementViewport> | undefined>;
+}) {
+  const viewport = useViewport();
+
+  useLayoutEffect(() => {
+    placementViewportRef.current = calculatePlacementViewport(viewport);
+  }, [placementViewportRef, viewport]);
+
+  return null;
+}
+
+function calculatePlacementViewport(viewport: { x: number; y: number; zoom: number }) {
+  const stage = document.querySelector(".canvas-stage");
+  const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
+  const width = stageRect?.width ?? window.innerWidth;
+  const height = stageRect?.height ?? window.innerHeight;
+
+  return {
+    height: height / viewport.zoom,
+    width: width / viewport.zoom,
+    x: -viewport.x / viewport.zoom,
+    y: -viewport.y / viewport.zoom
+  };
 }
 
 function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNode: CanvasNode | null; isSidebarOpen: boolean }) {

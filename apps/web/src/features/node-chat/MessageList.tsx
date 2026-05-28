@@ -2,8 +2,10 @@
 
 import type { CanvasNode, NodeMessage } from "@inquara/domain";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useCanvasPlacementViewportGetter } from "../canvas/CanvasViewportContext";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
+import { findFollowupNodePosition, findRestoredNodePosition } from "./branchPlacement";
 import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 import { getLastVisibleSelectionRect, toViewportToolbarPoint } from "./selectionToolbarPosition";
 import { findSourceRange, getTextRangeInElement } from "./sourceRange";
@@ -19,6 +21,7 @@ type SelectionState = {
 
 export function MessageList({ node }: { node: CanvasNode }) {
   const { state, commands, sendCommand } = useWorkspaceSession();
+  const { getPlacementViewport } = useCanvasPlacementViewportGetter();
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -165,6 +168,7 @@ export function MessageList({ node }: { node: CanvasNode }) {
 
   function askFollowUp() {
     if (!selection) return;
+    const position = findFollowupNodePosition(node, state.snapshot?.nodes ?? [], getPlacementViewport());
     sendCommand(
       commands.createNodeFromSelection({
         sourceNodeId: node.id,
@@ -172,19 +176,20 @@ export function MessageList({ node }: { node: CanvasNode }) {
         sourceQuote: selection.quote,
         sourceRangeStart: selection.start,
         sourceRangeEnd: selection.end,
-        x: node.x + node.width + 120,
-        y: node.y + 40
+        x: position.x,
+        y: position.y
       })
     );
     setSelection(null);
   }
 
-  function toggleBranch(node: CanvasNode) {
-    if (node.hiddenAt) {
-      sendCommand(commands.restoreNodeBranch(node.id));
+  function toggleBranch(branchNode: CanvasNode) {
+    if (branchNode.hiddenAt) {
+      const position = findRestoredNodePosition(branchNode, state.snapshot?.nodes ?? [], getPlacementViewport());
+      sendCommand(commands.restoreNodeBranch(branchNode.id, position));
       return;
     }
-    sendCommand(commands.hideNodeSubtree(node.id, node.scrollTop));
+    sendCommand(commands.hideNodeSubtree(branchNode.id, branchNode.scrollTop));
   }
 
   return (
@@ -256,7 +261,14 @@ function MessageContent({
         tabIndex={0}
         className="source-highlight"
         data-hidden={branch.hiddenAt ? "true" : "false"}
+        onMouseDown={event => {
+          if (event.detail > 1) event.preventDefault();
+        }}
         onClick={() => onToggleBranch(branch)}
+        onDoubleClick={event => {
+          event.preventDefault();
+          window.getSelection()?.removeAllRanges();
+        }}
         onKeyDown={event => {
           if (event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();

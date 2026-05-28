@@ -3,7 +3,7 @@ import { WorkspaceCommandSchema, WorkspaceEventSchema, type WorkspaceCommand, ty
 const WS_ORIGIN = process.env.NEXT_PUBLIC_WS_ORIGIN ?? "ws://localhost:4000";
 
 export type RealtimeClient = {
-  sendCommand(command: WorkspaceCommand): void;
+  sendCommand(command: WorkspaceCommand): boolean;
   close(): void;
 };
 
@@ -39,8 +39,13 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
 
   return {
     sendCommand(command) {
+      if (socket.readyState !== WebSocket.OPEN) {
+        options.onStatusChange?.("disconnected");
+        return false;
+      }
       const parsedCommand = WorkspaceCommandSchema.parse(command);
       socket.send(JSON.stringify({ type: "command", command: parsedCommand }));
+      return true;
     },
     close() {
       socket.close();
