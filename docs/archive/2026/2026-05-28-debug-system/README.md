@@ -1,6 +1,6 @@
 # Debug System
 
-> status: active
+> status: archived
 > purpose: Design and implement a development-only debug information system for Inquara.
 
 ## Goal
@@ -34,12 +34,12 @@ The debug floating control now keeps display position separate from the user-pre
 
 ## Next Step
 
-- Archive this initiative after a final review if no additional debug surfaces are needed immediately.
+No active implementation work remains in this initiative.
 
 ## Related Documents
 
-- [Architecture](../../architecture.md)
-- [Documentation Standards](../../documentation-standards.md)
+- [Architecture](../../../architecture.md)
+- [Documentation Standards](../../../documentation-standards.md)
 
 ## Archive Criteria
 
