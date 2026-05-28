@@ -129,7 +129,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
 
   return (
     <section
-      className="canvas-node"
+      className={`canvas-node${data.isAppearing ? " canvas-node-appearing" : ""}`}
       data-testid="canvas-node"
       data-node-id={id}
       data-position={`${Math.round(data.x)},${Math.round(data.y)}`}

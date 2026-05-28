@@ -5,6 +5,7 @@ log/
 demo/config.js
 .references/
 node_modules/
+*.tsbuildinfo
 apps/web/.next/
 apps/web/test-results/
 apps/web/playwright-report/

@@ -15,17 +15,23 @@ import {
   type OnNodeDrag
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { FloatingCircleButton, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
+import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
 
-export type ChatFlowNode = Node<CanvasNode, "chatNode">;
+export type ChatFlowNodeData = CanvasNode & {
+  isAppearing?: boolean;
+};
+export type ChatFlowNode = Node<ChatFlowNodeData, "chatNode">;
 
 const nodeTypes: NodeTypes = {
   chatNode: CanvasNodeView
 };
+
+const CANVAS_CONTEXT_MENU_EXIT_MS = 110;
 
 export function CanvasView({
   isPreparingWorkspaceSwitch,
@@ -60,27 +66,46 @@ function CanvasFlow({
   const previousWorkspaceIdRef = useRef<string | null>(workspaceId);
   const [contextMenu, setContextMenu] = useState<null | { screenX: number; screenY: number; flowX: number; flowY: number }>(null);
   const [isSettlingWorkspace, setIsSettlingWorkspace] = useState(false);
+  const contextMenuCreateTimerRef = useRef<number | null>(null);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
+  const visibleNodes = useMemo(
+    () => (snapshot?.nodes ?? []).filter(node => !node.hiddenAt && !node.deletedAt),
+    [snapshot?.nodes]
+  );
+  const visibleEdges = useMemo(
+    () =>
+      (snapshot?.edges ?? []).filter(edge => {
+        const source = snapshot?.nodes.find(node => node.id === edge.sourceNodeId);
+        const target = snapshot?.nodes.find(node => node.id === edge.targetNodeId);
+        return source && target && !source.hiddenAt && !source.deletedAt && !target.hiddenAt && !target.deletedAt;
+      }),
+    [snapshot?.edges, snapshot?.nodes]
+  );
+  const visibleNodeIds = useMemo(() => visibleNodes.map(node => node.id), [visibleNodes]);
+  const visibleEdgeIds = useMemo(() => visibleEdges.map(edge => edge.id), [visibleEdges]);
+  const { appearingEdgeIds, appearingNodeIds } = useCanvasVisibilityMotion({
+    edgeIds: visibleEdgeIds,
+    nodeIds: visibleNodeIds,
+    workspaceId
+  });
 
   const snapshotNodes = useMemo<ChatFlowNode[]>(
     () =>
-      (snapshot?.nodes ?? [])
-        .filter(node => !node.hiddenAt && !node.deletedAt)
-        .map(node => ({
-          id: node.id,
-          type: "chatNode",
-          position: { x: node.x, y: node.y },
-          data: node,
-          style: { width: node.width, height: node.height },
-          width: node.width,
-          height: node.height,
-          dragHandle: ".canvas-node-header"
-        })),
-    [snapshot?.nodes]
+      visibleNodes.map(node => ({
+        id: node.id,
+        type: "chatNode",
+        position: { x: node.x, y: node.y },
+        data: { ...node, isAppearing: appearingNodeIds.has(node.id) },
+        style: { width: node.width, height: node.height },
+        width: node.width,
+        height: node.height,
+        dragHandle: ".canvas-node-header"
+      })),
+    [appearingNodeIds, visibleNodes]
   );
   const [nodes, setNodes] = useState<ChatFlowNode[]>(snapshotNodes);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setNodes(snapshotNodes);
   }, [snapshotNodes]);
 
@@ -100,20 +125,22 @@ function CanvasFlow({
 
   const edges = useMemo<Edge[]>(
     () =>
-      (snapshot?.edges ?? [])
-        .filter(edge => {
-          const source = snapshot?.nodes.find(node => node.id === edge.sourceNodeId);
-          const target = snapshot?.nodes.find(node => node.id === edge.targetNodeId);
-          return source && target && !source.hiddenAt && !source.deletedAt && !target.hiddenAt && !target.deletedAt;
-        })
-        .map(edge => ({
-          id: edge.id,
-          source: edge.sourceNodeId,
-          target: edge.targetNodeId,
-          className: "canvas-edge"
-        })),
-    [snapshot?.edges, snapshot?.nodes]
+      visibleEdges.map(edge => ({
+        id: edge.id,
+        source: edge.sourceNodeId,
+        target: edge.targetNodeId,
+        className: ["canvas-edge", appearingEdgeIds.has(edge.id) ? "canvas-edge-appearing" : ""]
+          .filter(Boolean)
+          .join(" ")
+      })),
+    [appearingEdgeIds, visibleEdges]
   );
+
+  useEffect(() => {
+    return () => {
+      if (contextMenuCreateTimerRef.current) window.clearTimeout(contextMenuCreateTimerRef.current);
+    };
+  }, []);
 
   const onNodeDragStop: OnNodeDrag = (_event, node) => {
     sendCommand(commands.updateNodePosition(node.id, node.position));
@@ -139,13 +166,13 @@ function CanvasFlow({
 
   const createNodeFromContextMenu = () => {
     if (!contextMenu) return;
-    sendCommand(
-      commands.createNodeAtPosition({
-        x: contextMenu.flowX,
-        y: contextMenu.flowY
-      })
-    );
+    const position = { x: contextMenu.flowX, y: contextMenu.flowY };
     setContextMenu(null);
+    if (contextMenuCreateTimerRef.current) window.clearTimeout(contextMenuCreateTimerRef.current);
+    contextMenuCreateTimerRef.current = window.setTimeout(() => {
+      sendCommand(commands.createNodeAtPosition(position));
+      contextMenuCreateTimerRef.current = null;
+    }, CANVAS_CONTEXT_MENU_EXIT_MS);
   };
 
   if (!snapshot) {

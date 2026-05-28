@@ -72,13 +72,24 @@ This initiative README is the source of truth for live task status. When an audi
 - Added shared confirmation dialog enter/exit motion while preserving Escape and backdrop close behavior.
 - Fixed confirmation dialog exit motion so it freezes the last open-state content during close instead of briefly showing cleared or loading text.
 - Added a global `prefers-reduced-motion: reduce` CSS guard for transitions and animations.
+- Verified the shared workspace navigation path in-browser for new canvas creation and current-canvas deletion; both returned through the shared canvas route transition path.
+- Added a visual-only opacity/blur reveal animation for newly visible canvas nodes and edges, including restored branches. It must not animate `transform`, because React Flow uses transforms for node positioning.
+- Moved newly visible node/edge reveal detection and React Flow node state synchronization into the layout phase so blank-node creation and source-highlight branch restore start from the same first visible frame.
+- Moved node reveal animation onto the product-owned `.canvas-node` element and kept reveal classes slightly longer than the CSS duration so follow-up node creation does not cancel the node animation when the edge event arrives.
+- Added render-time newly visible item detection so right-click-created root nodes receive their reveal state on the first visible render instead of flashing before the animation starts.
+- Extracted newly visible node/edge detection into one canvas visibility motion path so right-click node creation, follow-up creation, and restored branches share the same appear state instead of duplicating animation decisions in entry-specific UI code.
+- Delayed right-click canvas node creation until the context menu finishes its close motion, preventing the menu exit from visually overlapping the new root node's appear motion.
+- Browser-measured the right-click creation sequence: the context menu leaves the DOM before the new node is inserted, and the inserted node receives the shared `canvas-node-appearing` class.
+- Fixed edge appear cleanup so the temporary appear classes are removed after the animation lifetime instead of being reintroduced by first-frame detection.
+- Moved edge appear animation from the React Flow edge wrapper to the edge path's `stroke-opacity`, avoiding a wrapper `filter` change at animation completion.
+- Added a small source-highlight color transition for hover and active branch state changes.
+- Added a small workspace rename-form enter transition that does not animate typing or submitted content.
 
 ## Remaining Work
 
-- Review the shared workspace navigation path in-browser and tune the existing canvas leave/enter timing if create/delete still feels abrupt.
-- Evaluate and implement canvas node/branch show-hide motion if it can preserve data correctness and not confuse branch visibility.
-- Evaluate small inline transitions for workspace rename and source-highlight activation.
-- Verify with the browser on the current canvas page.
+- Evaluate branch hide/show and delete motion separately. Current implementation does not animate hidden/deleted nodes out.
+- If hide/delete exit motion is added, prefer a visual-only overlay based on the previous visible snapshot rather than delaying the real hidden/deleted data update.
+- Let the user compare the final shared node/edge reveal timing in the browser and tune the single shared duration only if it still feels off.
 - Update long-term UI documentation if reusable motion rules are introduced.
 
 ## Deferred Work
