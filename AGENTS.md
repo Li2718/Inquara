@@ -180,6 +180,10 @@ Before closing a UI task, verify:
 
 ## Test Database Rules
 
+All test creation, deletion, and modification must follow [docs/testing-standards.md](<repo-root-placeholder>/docs/testing-standards.md).
+
+Use these rules as hard constraints, not optional style guidance. Tests must reduce real product or engineering risk and should be judged by the value framework in the testing standard, not by mechanical coverage or incidental implementation details.
+
 Database-backed tests must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
 
 1. API, database integration, WebSocket, and Playwright e2e tests that write data must use the shared ephemeral PostgreSQL setup based on `testcontainers`.

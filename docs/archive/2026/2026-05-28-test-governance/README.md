@@ -1,6 +1,6 @@
 # Test Governance
 
-> status: active
+> status: archived
 > purpose: Clean up low-value tests and define practical standards for future test coverage.
 
 ## Goal
@@ -26,7 +26,7 @@ Make the test suite useful rather than performative. Tests should catch real reg
 
 ## Working Rule
 
-This initiative README is the source of truth for live task status. When audit, discussion, design, or implementation changes the task list, update the progress sections before continuing implementation.
+While active, this initiative README was the source of truth for live task status. It is now retained as historical context; the current testing rules live in [Testing Standards](../../../testing-standards.md).
 
 ## Completed Work
 
@@ -43,8 +43,8 @@ This initiative README is the source of truth for live task status. When audit, 
   - `apps/web/src/features/node-chat/sourceHighlightMarkup.test.ts`
 - Removed incidental debug floating-ball style assertions while keeping production/debug boundary guardrails.
 - Replaced the reset-view source/style structure test with behavior coverage for root viewport calculation in `rootNodeFocus.test.ts`.
-- Added the current long-term testing standard at [Testing Standards](../../testing-standards.md).
-- Registered the testing standard in [Documentation Standards](../../documentation-standards.md).
+- Added the current long-term testing standard at [Testing Standards](../../../testing-standards.md).
+- Registered the testing standard in [Documentation Standards](../../../documentation-standards.md).
 - Linked the architecture testing strategy to the durable testing standard.
 - Audited the remaining source-level tests and kept only boundary guardrails:
   - `apps/web/src/debug/debugProductionScan.test.ts` protects production debug pruning and global debug architecture.
@@ -62,27 +62,44 @@ This initiative README is the source of truth for live task status. When audit, 
   - Tests that duplicate coverage already provided by a higher-value API, domain, or e2e test.
 - Removed `apps/web/src/features/commands/createCommands.test.ts`; it only checked that a thin client command factory copied arguments into command-shaped objects, while the meaningful command shapes are already exercised by API/domain command handling tests.
 - Removed the weak `packages/db/src/schema.test.ts` assertion that merely checked model names exist; kept only the speculative-field data-model boundary guard.
-- Updated [Testing Standards](../../testing-standards.md) with the second-pass low-value test signals.
+- Updated [Testing Standards](../../../testing-standards.md) with the second-pass low-value test signals.
 - Verified the second cleanup pass: 18 test files and 70 tests passed.
+- Added the testing standard to `AGENTS.md` as a hard project rule for test creation, deletion, and modification.
+- Reworked [Testing Standards](../../../testing-standards.md) from a list of observed cases into a long-term value framework: tests must reduce real product or engineering risk, choose the right layer for that risk, and treat low-value examples as signals rather than an exhaustive blacklist.
+- Compared `<external-reference-root>/docs/architecture/testing-strategy.md` and incorporated reusable structure into [Testing Standards](../../../testing-standards.md): valuable-test categories, low-value categories with exceptions, existing-test audit outcomes, one-time migration sentinel handling, and minimum requirements before adding tests.
+- Referenced aitestkit's new test file placement rules and added an Inquara-specific [Test File Placement](../../../testing-standards.md#test-file-placement) section: default co-location, API/database-backed test harness placement, shared test helper placement, e2e placement, and avoided centralized structures.
+- Re-audited current test placement against the new rules:
+  - Ordinary web/package helper tests are colocated with the source they protect.
+  - `apps/api/src/test/` is the only centralized `test` directory and is justified by the shared API harness and ephemeral database lifecycle.
+  - `apps/web/e2e/` contains browser/cross-window coverage only.
+  - No broad root-level `tests/`, package-level catch-all `tests/`, or `__tests__` directories are present in project code.
+- Re-audited remaining source-scan tests:
+  - Kept debug production scans as architecture guardrails, with a future strengthening option to make debug alias configuration more structured.
+  - Kept database safety scans as destructive-test guardrails.
+  - Kept debug route path scan because it protects the `/debug/*` API boundary alongside behavior tests.
+  - Kept the `CanvasNode` schema scan as the explicit first-version data-model boundary against speculative generic node fields.
+- Re-audited shallow helper tests and kept them as pure regression rules for known UI/state risks: selection range, selection toolbar position, scroll stickiness, middle-button scroll velocity, root viewport calculation, node resize bounds, debug floating position, and pending mutation acknowledgement.
+- Verified after the re-audit: 18 test files and 70 tests passed.
 
 ## Remaining Work
 
-- Review whether the remaining shallow helper tests should stay as regression tests tied to known UI bugs or be replaced by higher-level browser coverage later.
+No active implementation work remains in this initiative.
 
 ## Deferred Work
 
 - Comprehensive frontend component testing strategy.
 - Full e2e coverage matrix.
 - Visual regression testing.
+- Replace selected debug source scans with structured configuration checks if the debug boundary grows enough to justify it.
 
 ## Related Documents
 
-- [Architecture](../../architecture.md)
-- [Documentation Standards](../../documentation-standards.md)
-- [Testing Standards](../../testing-standards.md)
+- [Architecture](../../../architecture.md)
+- [Documentation Standards](../../../documentation-standards.md)
+- [Testing Standards](../../../testing-standards.md)
 
 ## Archive Criteria
 
 - Low-value tests identified in the audit are removed, rewritten, or explicitly justified.
 - Test quality standards are documented in a current long-term doc.
-- Any durable testing rules that affect architecture or database safety are reflected in [Architecture](../../architecture.md).
+- Any durable testing rules that affect architecture or database safety are reflected in [Architecture](../../../architecture.md).
