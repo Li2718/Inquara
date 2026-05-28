@@ -37,6 +37,10 @@ If this repository uses `initiatives/`:
 - use `initiatives/<topic>/README.md` as the stable entrypoint
 - keep initiative structure minimal by default
 - update initiative status immediately when progress changes
+- treat the initiative README as the source of truth for live task lists
+- write audit, discussion, design, or implementation task-list changes into the initiative README before continuing implementation
+- do not leave active initiative tasks only in chat history or temporary summaries
+- for initiatives spanning more than one small change, keep explicit progress sections such as completed work, remaining work, and deferred or out-of-scope work
 - archive initiatives only after durable conclusions are written back into current docs
 
 ## Archive

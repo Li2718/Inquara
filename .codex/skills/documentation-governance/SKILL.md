@@ -58,7 +58,11 @@ If a repository uses `initiatives/`:
 2. Use `initiatives/<topic>/README.md` as the stable entrypoint.
 3. Keep initiative structure minimal by default.
 4. Make initiative status a live field that must be updated immediately when progress changes.
-5. When an initiative is archived, keep the same `README.md` and update it rather than switching to a separate archive-only template.
+5. Treat each active initiative README as the source of truth for that initiative's live task list.
+6. When an audit, discussion, design step, or implementation step creates or changes initiative tasks, update the initiative README before continuing further implementation.
+7. Do not leave active initiative task lists only in chat history, temporary summaries, or working memory.
+8. For initiatives spanning more than one small change, keep explicit progress sections such as completed work, remaining work, and deferred or out-of-scope work.
+9. When an initiative is archived, keep the same `README.md` and update it rather than switching to a separate archive-only template.
 
 ## Archive Rules
 

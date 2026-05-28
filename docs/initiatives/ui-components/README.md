@@ -27,7 +27,11 @@ Turn the current page and feature-local UI patterns into a clear, reusable compo
 - Admin UI implementation beyond reserving the correct future component layer.
 - Debug UI redesign, except where shared rules clarify product/debug boundaries.
 
-## Current Status
+## Working Rule
+
+This initiative must keep its live task list in this README. When a UI audit or discussion creates new component cleanup tasks, update the `Completed Work`, `Remaining Work`, or `Deferred Work` sections in the same change that changes the task reality.
+
+## Completed Work
 
 The UI governance rules have been migrated into long-term documentation. The shared component root exists with a component manual.
 
@@ -44,9 +48,18 @@ The first shared interaction extraction is underway:
 - `Button` now lives in `apps/web/src/shared/components/ui/`.
 - Confirmation dialog action buttons now consume the shared primary/secondary/danger action wrapper instead of raw button class names.
 
-## Next Step
+## Remaining Work
 
-- Decide whether the auth form, message composer, and workspace rename/create controls should adopt `Button` now or remain feature-local until their interaction patterns settle.
+- Create a shared icon source for routine product icons. Prioritize sidebars, reset-view controls, menu triggers, and other currently hand-drawn or text-symbol icons.
+- Evaluate whether the auth form, message composer, and workspace rename/create controls should adopt `Button` now or remain feature-local until their interaction patterns settle.
+- Evaluate whether workspace/canvas chrome should be promoted into `chrome/` or `product/` components. Current candidates include `WorkspaceSidebar`, the account entry, and canvas viewport controls.
+
+## Deferred Work
+
+- Full product redesign.
+- Dark mode.
+- Complete public design-system package.
+- Moving every feature component into shared layers without a concrete reuse need.
 
 ## Related Documents
 

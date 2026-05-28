@@ -56,6 +56,14 @@ Initiative docs explain:
 
 When an initiative's real status changes, update its `README.md` in the same change.
 
+Initiative docs are the source of truth for initiative progress. If an audit, discussion, or implementation step creates or changes a task list, write that task list into the initiative `README.md` before continuing with more implementation work. Do not leave active initiative tasks only in chat history.
+
+Each active initiative that spans more than one small change must keep explicit progress sections, such as:
+
+- completed work
+- remaining work
+- deferred or out-of-scope work
+
 ## Archive
 
 Archived docs live under `docs/archive/<year>/<yyyy-mm-dd-topic>/` when this repository needs retained historical context.

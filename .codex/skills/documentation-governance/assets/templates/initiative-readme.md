@@ -17,14 +17,21 @@
 
 - <What this initiative explicitly does not include>
 
-## Current Status
+## Working Rule
 
-<Describe the real state after the latest completed work.>
+This initiative README is the source of truth for live task status. When audit, discussion, design, or implementation changes the task list, update the progress sections before continuing implementation.
 
-## Next Step
+## Completed Work
 
-- <The next concrete action>
-- <If there is no next step yet, say so explicitly>
+- <Completed work item>
+
+## Remaining Work
+
+- <Remaining work item>
+
+## Deferred Work
+
+- <Deferred or out-of-scope work item>
 
 ## Related Documents
 
