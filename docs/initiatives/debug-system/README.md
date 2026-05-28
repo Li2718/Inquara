@@ -30,7 +30,7 @@ Create a global debug system that keeps product UI clean while making developmen
 
 Implementation is complete and verified. The first slice added a development-only web debug entrypoint, a canvas debug panel, `/debug/health`, production debug-marker scanning, and hard repository rules for future debug work.
 
-The debug floating control now keeps display position separate from the user-preferred stored position. Resize clamping and development-time remounts must not overwrite `inquara.debug_position`; only a completed user drag persists a new position.
+The debug floating control now keeps display position separate from the user-preferred stored position. Resize clamping and development-time remounts must not overwrite `inquara.debug_position`; only a completed user drag persists a new position. If the bubble is attached to the right or bottom edge, viewport growth keeps it attached to that edge.
 
 ## Next Step
 

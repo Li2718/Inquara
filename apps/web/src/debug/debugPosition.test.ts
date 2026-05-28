@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { clampDebugPosition, defaultDebugPosition, readStoredDebugPosition, shouldPersistDebugPosition } from "./debugPosition";
+import {
+  adaptDebugPositionToViewport,
+  clampDebugPosition,
+  defaultDebugPosition,
+  readStoredDebugPosition,
+  shouldPersistDebugPosition
+} from "./debugPosition";
 
 const viewport = { width: 1000, height: 700 };
 
@@ -25,5 +31,25 @@ describe("debug floating position", () => {
 
   it("keeps the bubble inside the screen gap", () => {
     expect(clampDebugPosition(-100, 900, viewport)).toEqual({ x: 8, y: 648 });
+  });
+
+  it("keeps the bubble attached to the right or bottom edge when the viewport grows", () => {
+    expect(
+      adaptDebugPositionToViewport(
+        { x: 648, y: 548 },
+        { width: 700, height: 600 },
+        { width: 1000, height: 800 }
+      )
+    ).toEqual({ x: 948, y: 748 });
+  });
+
+  it("does not move a free-floating bubble when the viewport grows", () => {
+    expect(
+      adaptDebugPositionToViewport(
+        { x: 320, y: 240 },
+        { width: 700, height: 600 },
+        { width: 1000, height: 800 }
+      )
+    ).toEqual({ x: 320, y: 240 });
   });
 });

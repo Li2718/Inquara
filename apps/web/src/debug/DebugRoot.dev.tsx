@@ -9,11 +9,13 @@ import {
   BUBBLE_WIDTH,
   DEBUG_POSITION_STORAGE_KEY,
   SCREEN_GAP,
+  adaptDebugPositionToViewport,
   clampDebugPosition,
   defaultDebugPosition,
   readStoredDebugPosition,
   shouldPersistDebugPosition,
-  type DebugPosition
+  type DebugPosition,
+  type DebugViewport
 } from "./debugPosition";
 import { useDebugPageSnapshot } from "./debugPageStore.dev";
 
@@ -30,6 +32,7 @@ export function DebugRootDev(props: DebugRootProps) {
   const hasDragged = useRef(false);
   const displayPositionRef = useRef<DebugPosition>(position ?? { x: SCREEN_GAP, y: SCREEN_GAP });
   const preferredPositionRef = useRef<DebugPosition>(position ?? { x: SCREEN_GAP, y: SCREEN_GAP });
+  const viewportRef = useRef<DebugViewport | null>(null);
   const dragRef = useRef<null | { pointerId: number; startX: number; startY: number; originX: number; originY: number }>(null);
 
   const updatePosition = (nextPosition: DebugPosition) => {
@@ -45,7 +48,10 @@ export function DebugRootDev(props: DebugRootProps) {
   useEffect(() => {
     const storedOpen = window.localStorage.getItem(DEBUG_OPEN_STORAGE_KEY);
 
-    if (!position) updatePreferredPosition(readInitialPosition());
+    if (!position) {
+      viewportRef.current = currentViewport();
+      updatePreferredPosition(readInitialPosition());
+    }
     if (storedOpen === "true") setIsOpen(true);
   }, [position]);
 
@@ -70,12 +76,20 @@ export function DebugRootDev(props: DebugRootProps) {
       dragRef.current = null;
       setIsDragging(false);
       updatePreferredPosition(settledPosition);
+      viewportRef.current = currentViewport();
       if (shouldPersistDebugPosition("drag-end")) {
         window.localStorage.setItem(DEBUG_POSITION_STORAGE_KEY, JSON.stringify(settledPosition));
       }
     };
 
-    const clampOnResize = () => updatePosition(settlePosition(preferredPositionRef.current));
+    const clampOnResize = () => {
+      const nextViewport = currentViewport();
+      const previousViewport = viewportRef.current ?? nextViewport;
+      const nextPreferredPosition = adaptDebugPositionToViewport(preferredPositionRef.current, previousViewport, nextViewport);
+      viewportRef.current = nextViewport;
+      preferredPositionRef.current = nextPreferredPosition;
+      updatePosition(nextPreferredPosition);
+    };
 
     window.addEventListener("pointermove", drag);
     window.addEventListener("pointerup", stopDrag);
