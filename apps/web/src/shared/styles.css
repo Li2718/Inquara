@@ -1444,7 +1444,7 @@ h2 {
     top: 60px;
     left: 10px;
     width: min(320px, calc(100vw - 20px));
-    height: min(calc(72svh - 50px), 560px);
+    height: calc(100svh - 70px);
     max-height: none;
     margin: 0;
   }
@@ -1456,6 +1456,6 @@ h2 {
 
   .workspace-sidebar[data-open="true"] {
     width: min(320px, calc(100vw - 20px));
-    height: min(calc(72svh - 50px), 560px);
+    height: calc(100svh - 70px);
   }
 }
