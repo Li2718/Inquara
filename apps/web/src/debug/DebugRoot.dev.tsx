@@ -179,7 +179,7 @@ function rawPosition(x: number, y: number): DebugPosition {
   return { x, y };
 }
 
-function readInitialPosition(): DebugPosition | null {
+function readInitialPosition(): DebugPosition {
   const storedPosition = window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY);
   const restored = readStoredDebugPosition(storedPosition, currentViewport());
   if (storedPosition && !restored) window.localStorage.removeItem(DEBUG_POSITION_STORAGE_KEY);

@@ -167,27 +167,26 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
             >
               <MoreVerticalIcon />
             </IconButton>
-            {isDangerOpen ? (
-              <PopupMenu
-                className="node-actions-menu nodrag nowheel"
-                aria-label="Node actions"
-                ignoreRef={menuTriggerRef}
-                onClose={() => setIsDangerOpen(false)}
+            <PopupMenu
+              className="node-actions-menu nodrag nowheel"
+              aria-label="Node actions"
+              ignoreRef={menuTriggerRef}
+              isOpen={isDangerOpen}
+              onClose={() => setIsDangerOpen(false)}
+            >
+              <PopupMenuItem onClick={startRenaming}>
+                Rename
+              </PopupMenuItem>
+              <PopupMenuItem
+                tone="danger"
+                onClick={() => {
+                  setIsDangerOpen(false);
+                  setIsDeleteDialogOpen(true);
+                }}
               >
-                <PopupMenuItem onClick={startRenaming}>
-                  Rename
-                </PopupMenuItem>
-                <PopupMenuItem
-                  tone="danger"
-                  onClick={() => {
-                    setIsDangerOpen(false);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                >
-                  Delete
-                </PopupMenuItem>
-              </PopupMenu>
-            ) : null}
+                Delete
+              </PopupMenuItem>
+            </PopupMenu>
           </div>
           <div className="canvas-node-actions">
             {canHideBranch ? (

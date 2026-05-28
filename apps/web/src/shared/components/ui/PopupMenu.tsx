@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
+
+const POPUP_MENU_EXIT_MS = 110;
 
 type PopupMenuProps = {
   "aria-label": string;
   children: ReactNode;
   className?: string;
   ignoreRef?: RefObject<HTMLElement | null>;
+  isOpen: boolean;
   onClose(): void;
   placement?: "bottom-start" | "bottom-end";
-  style?: CSSProperties;
+  style?: CSSProperties | undefined;
 };
 
 type PopupMenuItemProps = {
@@ -20,10 +23,27 @@ type PopupMenuItemProps = {
   tone?: "default" | "danger";
 };
 
-export function PopupMenu({ "aria-label": ariaLabel, children, className, ignoreRef, onClose, placement = "bottom-start", style }: PopupMenuProps) {
+export function PopupMenu({ "aria-label": ariaLabel, children, className, ignoreRef, isOpen, onClose, placement = "bottom-start", style }: PopupMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isPresent, setIsPresent] = useState(isOpen);
+  const [motionState, setMotionState] = useState<"open" | "closing">(isOpen ? "open" : "closing");
 
   useEffect(() => {
+    if (isOpen) {
+      setIsPresent(true);
+      setMotionState("open");
+      return;
+    }
+
+    if (!isPresent) return;
+    setMotionState("closing");
+    const timeout = window.setTimeout(() => setIsPresent(false), POPUP_MENU_EXIT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [isOpen, isPresent]);
+
+  useEffect(() => {
+    if (!isPresent || motionState === "closing") return;
+
     function closeFromOutside(event: PointerEvent) {
       const target = event.target as Node;
       if (menuRef.current?.contains(target)) return;
@@ -41,12 +61,15 @@ export function PopupMenu({ "aria-label": ariaLabel, children, className, ignore
       document.removeEventListener("pointerdown", closeFromOutside);
       document.removeEventListener("keydown", closeFromEscape);
     };
-  }, [ignoreRef, onClose]);
+  }, [ignoreRef, isPresent, motionState, onClose]);
+
+  if (!isPresent) return null;
 
   return (
     <div
       ref={menuRef}
       className={["ui-popup-menu", className].filter(Boolean).join(" ")}
+      data-state={motionState}
       data-placement={placement}
       role="menu"
       aria-label={ariaLabel}

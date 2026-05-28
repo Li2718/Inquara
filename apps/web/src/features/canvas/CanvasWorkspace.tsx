@@ -12,6 +12,10 @@ import { CanvasView } from "./CanvasView";
 
 const WORKSPACE_SWITCH_LEAVE_MS = 90;
 
+export type WorkspaceTransitionNavigateOptions = {
+  replace?: boolean;
+};
+
 type CurrentUser = {
   id: string;
   email: string;
@@ -133,26 +137,25 @@ function CanvasWorkspaceContent({
         >
           <span>{userInitial}</span>
         </FloatingCircleButton>
-        {isAccountMenuOpen ? (
-          <PopupMenu
-            className="canvas-account-menu"
-            aria-label="Account menu"
-            ignoreRef={accountMenuTriggerRef}
-            onClose={() => setIsAccountMenuOpen(false)}
-            placement="bottom-end"
+        <PopupMenu
+          className="canvas-account-menu"
+          aria-label="Account menu"
+          ignoreRef={accountMenuTriggerRef}
+          isOpen={isAccountMenuOpen}
+          onClose={() => setIsAccountMenuOpen(false)}
+          placement="bottom-end"
+        >
+          <PopupMenuItem
+            tone="danger"
+            onClick={() => {
+              setIsAccountMenuOpen(false);
+              setIsLogoutDialogOpen(true);
+            }}
+            disabled={isLoggingOut}
           >
-            <PopupMenuItem
-              tone="danger"
-              onClick={() => {
-                setIsAccountMenuOpen(false);
-                setIsLogoutDialogOpen(true);
-              }}
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? "Logging out..." : "Log out"}
-            </PopupMenuItem>
-          </PopupMenu>
-        ) : null}
+            {isLoggingOut ? "Logging out..." : "Log out"}
+          </PopupMenuItem>
+        </PopupMenu>
       </div>
       <ConfirmDialog
         isOpen={isLogoutDialogOpen}
@@ -168,7 +171,10 @@ function CanvasWorkspaceContent({
         currentWorkspaceId={workspaceId}
         isOpen={isSidebarOpen}
         onToggle={onToggleSidebar}
-        onWorkspaceSwitchStart={onWorkspaceSwitchStart}
+        onWorkspaceNavigate={async (targetWorkspaceId, options) => {
+          if (targetWorkspaceId === workspaceId) return;
+          await navigateWithWorkspaceTransition(router, targetWorkspaceId, onWorkspaceSwitchStart, options);
+        }}
       />
       <section className="canvas-stage" aria-label="Canvas">
         <CanvasView isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch} isSidebarOpen={isSidebarOpen} routeWorkspaceId={workspaceId} />
@@ -182,4 +188,19 @@ function CanvasWorkspaceContent({
       />
     </>
   );
+}
+
+export async function navigateWithWorkspaceTransition(
+  router: ReturnType<typeof useRouter>,
+  targetWorkspaceId: string,
+  startTransition: (targetWorkspaceId: string) => Promise<void>,
+  options: WorkspaceTransitionNavigateOptions = {}
+) {
+  await startTransition(targetWorkspaceId);
+  const href = `/workspaces/${targetWorkspaceId}`;
+  if (options.replace) {
+    router.replace(href);
+  } else {
+    router.push(href);
+  }
 }

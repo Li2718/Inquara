@@ -2,7 +2,6 @@
 
 import type { Workspace } from "@inquara/domain";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { apiJson } from "../../shared/api";
 import {
@@ -20,13 +19,12 @@ type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
   isOpen: boolean;
   onToggle(): void;
-  onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
+  onWorkspaceNavigate(targetWorkspaceId: string, options?: { replace?: boolean }): Promise<void>;
 };
 
 let workspaceListCache: Workspace[] | null = null;
 
-export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorkspaceSwitchStart }: WorkspaceSidebarProps) {
-  const router = useRouter();
+export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorkspaceNavigate }: WorkspaceSidebarProps) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => workspaceListCache ?? []);
   const [isLoading, setIsLoading] = useState(workspaceListCache === null);
   const [isCreating, setIsCreating] = useState(false);
@@ -68,7 +66,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
         workspaceListCache = nextWorkspaces;
         return nextWorkspaces;
       });
-      router.push(`/workspaces/${workspace.id}`);
+      await onWorkspaceNavigate(workspace.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not create canvas.");
     } finally {
@@ -125,7 +123,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
           workspaceListCache = [nextWorkspace];
           setWorkspaces([nextWorkspace]);
         }
-        router.replace(`/workspaces/${nextWorkspace.id}`);
+        await onWorkspaceNavigate(nextWorkspace.id, { replace: true });
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not delete canvas.");
@@ -177,10 +175,9 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
               currentWorkspaceId={currentWorkspaceId}
               onMenuToggle={setActiveMenuId}
               onRename={startRenaming}
-              onWorkspaceSwitchStart={onWorkspaceSwitchStart}
+              onWorkspaceNavigate={onWorkspaceNavigate}
               renamingId={renamingId}
               renameTitle={renameTitle}
-              router={router}
               setDeletingWorkspace={setDeletingWorkspace}
               setRenameTitle={setRenameTitle}
               setRenamingId={setRenamingId}
@@ -211,10 +208,9 @@ function WorkspaceSidebarItem({
   currentWorkspaceId,
   onMenuToggle,
   onRename,
-  onWorkspaceSwitchStart,
+  onWorkspaceNavigate,
   renamingId,
   renameTitle,
-  router,
   setDeletingWorkspace,
   setRenameTitle,
   setRenamingId,
@@ -225,10 +221,9 @@ function WorkspaceSidebarItem({
   currentWorkspaceId: string;
   onMenuToggle(activeMenuId: string | null): void;
   onRename(workspace: Workspace): void;
-  onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
+  onWorkspaceNavigate(targetWorkspaceId: string, options?: { replace?: boolean }): Promise<void>;
   renamingId: string | null;
   renameTitle: string;
-  router: ReturnType<typeof useRouter>;
   setDeletingWorkspace(workspace: Workspace): void;
   setRenameTitle(title: string): void;
   setRenamingId(workspaceId: string | null): void;
@@ -263,9 +258,7 @@ function WorkspaceSidebarItem({
             onClick={(event: MouseEvent<HTMLAnchorElement>) => {
               if (workspace.id === currentWorkspaceId) return;
               event.preventDefault();
-              void onWorkspaceSwitchStart(workspace.id).then(() => {
-                router.push(`/workspaces/${workspace.id}`);
-              });
+              void onWorkspaceNavigate(workspace.id);
             }}
           >
             <strong>{workspace.title}</strong>
@@ -281,27 +274,26 @@ function WorkspaceSidebarItem({
           >
             <MoreVerticalIcon />
           </button>
-          {isMenuOpen ? (
-            <PopupMenu
-              className="workspace-sidebar-item-menu"
-              aria-label={`Canvas actions for ${workspace.title}`}
-              ignoreRef={menuTriggerRef}
-              onClose={() => onMenuToggle(null)}
+          <PopupMenu
+            className="workspace-sidebar-item-menu"
+            aria-label={`Canvas actions for ${workspace.title}`}
+            ignoreRef={menuTriggerRef}
+            isOpen={isMenuOpen}
+            onClose={() => onMenuToggle(null)}
+          >
+            <PopupMenuItem onClick={() => onRename(workspace)}>
+              Rename
+            </PopupMenuItem>
+            <PopupMenuItem
+              tone="danger"
+              onClick={() => {
+                onMenuToggle(null);
+                setDeletingWorkspace(workspace);
+              }}
             >
-              <PopupMenuItem onClick={() => onRename(workspace)}>
-                Rename
-              </PopupMenuItem>
-              <PopupMenuItem
-                tone="danger"
-                onClick={() => {
-                  onMenuToggle(null);
-                  setDeletingWorkspace(workspace);
-                }}
-              >
-                Delete
-              </PopupMenuItem>
-            </PopupMenu>
-          ) : null}
+              Delete
+            </PopupMenuItem>
+          </PopupMenu>
         </>
       )}
     </div>

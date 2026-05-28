@@ -180,18 +180,17 @@ function CanvasFlow({
         <Background gap={28} size={1} />
       </ReactFlow>
       <CanvasViewportControls firstRootNode={firstRootNode} isSidebarOpen={isSidebarOpen} />
-      {contextMenu ? (
-        <PopupMenu
-          className="canvas-context-menu"
-          aria-label="Canvas actions"
-          onClose={() => setContextMenu(null)}
-          style={{ left: contextMenu.screenX, top: contextMenu.screenY }}
-        >
-          <PopupMenuItem onClick={createNodeFromContextMenu}>
-            New chat
-          </PopupMenuItem>
-        </PopupMenu>
-      ) : null}
+      <PopupMenu
+        className="canvas-context-menu"
+        aria-label="Canvas actions"
+        isOpen={Boolean(contextMenu)}
+        onClose={() => setContextMenu(null)}
+        style={contextMenu ? { left: contextMenu.screenX, top: contextMenu.screenY } : undefined}
+      >
+        <PopupMenuItem onClick={createNodeFromContextMenu}>
+          New chat
+        </PopupMenuItem>
+      </PopupMenu>
     </div>
   );
 }
