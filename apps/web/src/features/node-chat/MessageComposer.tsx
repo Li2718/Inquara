@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Button } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 
 export function MessageComposer({ nodeId }: { nodeId: string }) {
@@ -24,9 +25,9 @@ export function MessageComposer({ nodeId }: { nodeId: string }) {
         placeholder="Ask in this node"
         disabled={isDisconnected}
       />
-      <button type="submit" disabled={!content.trim() || isDisconnected}>
+      <Button type="submit" disabled={!content.trim() || isDisconnected}>
         Send
-      </button>
+      </Button>
     </form>
   );
 }

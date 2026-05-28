@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { apiJson } from "../../shared/api";
+import { Button } from "../../shared/components/ui";
 
 type LoginPageProps = {
   onLoggedIn(): void;
@@ -74,9 +75,9 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
             <input type="checkbox" checked={rememberMe} onChange={event => setRememberMe(event.target.checked)} />
             <span>Remember this device</span>
           </label>
-          <button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Working..." : mode === "login" ? "Login" : "Create account"}
-          </button>
+          </Button>
           {error ? <p className="error-text">{error}</p> : null}
         </form>
       </section>

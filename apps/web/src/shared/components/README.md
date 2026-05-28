@@ -132,7 +132,7 @@ When a new shared component is needed:
 
 Implemented shared components:
 
-- `ui/Button.tsx` provides the shared action button wrapper for primary, secondary, and danger actions while preserving the current button CSS contract.
+- `ui/Button.tsx` provides the shared action button wrapper for primary, secondary, and danger actions while preserving the current button CSS contract. Use it for ordinary text action buttons such as form submit and confirmation actions; keep segmented controls, morph controls, icon-only controls, and specialized canvas affordances on their dedicated components.
 - `ui/IconButton.tsx` provides the shared quiet square icon button wrapper for product toolbars and node headers.
 - `ui/FloatingCircleButton.tsx` provides the shared round floating control wrapper with fixed size presets.
 - `ui/PopupMenu.tsx` provides the shared opaque menu surface, outside-click handling, Escape handling, and menu item styling for product menus.

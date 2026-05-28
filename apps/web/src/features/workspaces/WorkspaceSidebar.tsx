@@ -5,7 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { apiJson } from "../../shared/api";
-import { ConfirmDialog, MoreVerticalIcon, PlusIcon, PopupMenu, PopupMenuItem, SidebarCollapseIcon, SidebarPanelIcon } from "../../shared/components/ui";
+import {
+  Button,
+  ConfirmDialog,
+  MoreVerticalIcon,
+  PlusIcon,
+  PopupMenu,
+  PopupMenuItem,
+  SidebarCollapseIcon,
+  SidebarPanelIcon
+} from "../../shared/components/ui";
 
 type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
@@ -243,7 +252,7 @@ function WorkspaceSidebarItem({
             autoFocus
             required
           />
-          <button type="submit">Save</button>
+          <Button type="submit">Save</Button>
         </form>
       ) : (
         <>

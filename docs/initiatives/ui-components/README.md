@@ -1,6 +1,6 @@
 # UI Components
 
-> status: active
+> status: ready-to-archive
 > purpose: Organize Inquara's reusable UI component system and gradually move repeated product UI into the shared component layers.
 
 ## Goal
@@ -49,11 +49,13 @@ The first shared interaction extraction is underway:
 - Confirmation dialog action buttons now consume the shared primary/secondary/danger action wrapper instead of raw button class names.
 - Routine product icons now have a shared source in `apps/web/src/shared/components/ui/icons.tsx`.
 - Sidebar, workspace create, menu trigger, hide-branch, and reset-view icons now consume the shared icon source instead of feature-local text symbols or inline SVG markup.
+- Auth submit, message composer submit, and workspace rename save actions now consume `Button` for ordinary text action semantics.
+- Segmented auth mode controls, sidebar morph/create/collapse controls, node icon buttons, and canvas resize affordances remain on feature-specific or dedicated icon/floating components because their interaction patterns are not ordinary text actions.
+- Workspace/canvas chrome has been evaluated and remains feature-owned for now. `WorkspaceSidebar` still owns workspace API/router behavior, the account entry owns auth/logout state, and canvas viewport controls depend directly on React Flow. Promoting them now would move coupling rather than create a reusable component boundary.
 
 ## Remaining Work
 
-- Evaluate whether the auth form, message composer, and workspace rename/create controls should adopt `Button` now or remain feature-local until their interaction patterns settle.
-- Evaluate whether workspace/canvas chrome should be promoted into `chrome/` or `product/` components. Current candidates include `WorkspaceSidebar`, the account entry, and canvas viewport controls.
+No active implementation work remains in this initiative.
 
 ## Deferred Work
 
@@ -61,6 +63,7 @@ The first shared interaction extraction is underway:
 - Dark mode.
 - Complete public design-system package.
 - Moving every feature component into shared layers without a concrete reuse need.
+- Revisit chrome/product extraction only after one of these becomes true: a second product surface needs the same shell, account controls are needed outside the canvas workspace, or the sidebar can be split into a reusable chrome shell plus feature-owned workspace data.
 
 ## Related Documents
 
