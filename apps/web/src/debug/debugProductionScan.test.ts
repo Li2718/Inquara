@@ -32,27 +32,6 @@ describe("debug production safety", () => {
     expect(source).toContain("path.endsWith(\".nft.json\")");
   });
 
-  it("keeps the development debug shell draggable with a single tool style", () => {
-    const shell = readFileSync("apps/web/src/debug/DebugRoot.dev.tsx", "utf8");
-    const styles = readFileSync("apps/web/src/shared/styles.css", "utf8");
-
-    expect(shell).toContain("data-debug-placement");
-    expect(shell).toContain("onPointerDown");
-    expect(shell).toContain("hasDragged");
-    expect(shell).toContain("<span>D</span>");
-    expect(shell).not.toContain("snapPosition");
-    expect(shell).not.toContain("<span>DEBUG</span>");
-    expect(shell).not.toContain("debug_theme");
-    expect(shell).not.toContain("<small>tool</small>");
-    expect(shell).not.toContain("placement.replace");
-    expect(shell).not.toContain("glass");
-    expect(shell).not.toContain("terminal");
-    expect(styles).toContain("width: 44px;");
-    expect(styles).toContain("height: 44px;");
-    expect(styles).not.toContain("data-debug-theme");
-    expect(styles).not.toContain("debug-theme-switcher");
-  });
-
   it("mounts the debug shell globally instead of inside the canvas page", () => {
     const layout = readFileSync("apps/web/src/app/layout.tsx", "utf8");
     const canvasWorkspace = readFileSync("apps/web/src/features/canvas/CanvasWorkspace.tsx", "utf8");

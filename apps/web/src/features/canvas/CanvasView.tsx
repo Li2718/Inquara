@@ -19,14 +19,13 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEven
 import { FloatingCircleButton, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
-import { findFirstVisibleRootNode } from "./rootNodeFocus";
+import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
 
 export type ChatFlowNode = Node<CanvasNode, "chatNode">;
 
 const nodeTypes: NodeTypes = {
   chatNode: CanvasNodeView
 };
-const ROOT_VIEWPORT_ZOOM = 1;
 
 export function CanvasView({
   isPreparingWorkspaceSwitch,
@@ -208,17 +207,13 @@ function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNod
     const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
     const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
     const reservedLeft = stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0;
-    const viewportWidth = stageRect?.width ?? window.innerWidth;
-    const viewportHeight = stageRect?.height ?? window.innerHeight;
-    const availableCenterX = reservedLeft + (viewportWidth - reservedLeft) / 2;
-    const rootCenterX = firstRootNode.x + firstRootNode.width / 2;
-    const rootCenterY = firstRootNode.y + firstRootNode.height / 2;
     void setViewport(
-      {
-        x: availableCenterX - rootCenterX * ROOT_VIEWPORT_ZOOM,
-        y: viewportHeight / 2 - rootCenterY * ROOT_VIEWPORT_ZOOM,
-        zoom: ROOT_VIEWPORT_ZOOM
-      },
+      calculateRootViewport({
+        rootNode: firstRootNode,
+        viewportWidth: stageRect?.width ?? window.innerWidth,
+        viewportHeight: stageRect?.height ?? window.innerHeight,
+        reservedLeft
+      }),
       { duration: 300 }
     );
   };

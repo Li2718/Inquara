@@ -867,6 +867,8 @@ Server behavior:
 
 ## Testing Strategy
 
+Detailed test quality rules live in `docs/testing-standards.md`. The architecture document keeps only the durable testing boundaries that affect system safety.
+
 Use tests at the boundaries where mistakes are most likely:
 
 - Domain tests for command validation and event reducers.

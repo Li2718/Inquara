@@ -1,6 +1,6 @@
 import type { CanvasNode } from "@inquara/domain";
 import { describe, expect, it } from "vitest";
-import { findFirstVisibleRootNode } from "./rootNodeFocus";
+import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
 
 const baseNode: CanvasNode = {
   id: "node-1",
@@ -49,5 +49,36 @@ describe("findFirstVisibleRootNode", () => {
     ]);
 
     expect(result?.id).toBe("visible-root");
+  });
+});
+
+describe("calculateRootViewport", () => {
+  it("centers the first root node at 100% zoom", () => {
+    expect(
+      calculateRootViewport({
+        rootNode: node({ x: 100, y: 160, width: 400, height: 300 }),
+        viewportWidth: 1000,
+        viewportHeight: 800
+      })
+    ).toEqual({
+      x: 200,
+      y: 90,
+      zoom: 1
+    });
+  });
+
+  it("keeps the root centered in the usable area when the sidebar is open", () => {
+    expect(
+      calculateRootViewport({
+        rootNode: node({ x: 100, y: 160, width: 400, height: 300 }),
+        viewportWidth: 1000,
+        viewportHeight: 800,
+        reservedLeft: 280
+      })
+    ).toEqual({
+      x: 340,
+      y: 90,
+      zoom: 1
+    });
   });
 });
