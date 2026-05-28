@@ -1,6 +1,6 @@
 # UI Components
 
-> status: ready-to-archive
+> status: archived
 > purpose: Organize Inquara's reusable UI component system and gradually move repeated product UI into the shared component layers.
 
 ## Goal
@@ -67,10 +67,10 @@ No active implementation work remains in this initiative.
 
 ## Related Documents
 
-- [UI System](../../ui-system.md)
-- [Architecture](../../architecture.md)
-- [Documentation Standards](../../documentation-standards.md)
-- [Components Manual](../../../apps/web/src/shared/components/README.md)
+- [UI System](../../../ui-system.md)
+- [Architecture](../../../architecture.md)
+- [Documentation Standards](../../../documentation-standards.md)
+- [Components Manual](../../../../apps/web/src/shared/components/README.md)
 
 ## Archive Criteria
 
