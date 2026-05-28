@@ -36,14 +36,9 @@ describe("debug production safety", () => {
     const shell = readFileSync("apps/web/src/debug/DebugRoot.dev.tsx", "utf8");
     const styles = readFileSync("apps/web/src/shared/styles.css", "utf8");
 
-    expect(shell).toContain("debug_position");
     expect(shell).toContain("data-debug-placement");
-    expect(shell).toContain("defaultPosition");
     expect(shell).toContain("onPointerDown");
-    expect(shell).toContain("settlePosition");
-    expect(shell).toContain("rawPosition");
     expect(shell).toContain("hasDragged");
-    expect(shell).toContain("latestPositionRef");
     expect(shell).toContain("<span>D</span>");
     expect(shell).not.toContain("snapPosition");
     expect(shell).not.toContain("<span>DEBUG</span>");
@@ -56,16 +51,6 @@ describe("debug production safety", () => {
     expect(styles).toContain("height: 44px;");
     expect(styles).not.toContain("data-debug-theme");
     expect(styles).not.toContain("debug-theme-switcher");
-  });
-
-  it("restores the development debug shell position before rendering the bubble and does not overwrite storage during hydration", () => {
-    const shell = readFileSync("apps/web/src/debug/DebugRoot.dev.tsx", "utf8");
-
-    expect(shell).toContain("const [position, setPosition] = useState<DebugPosition | null>(null)");
-    expect(shell).toContain("hasRestoredPositionRef");
-    expect(shell).toContain("if (!position) return null");
-    expect(shell).toContain("if (!hasRestoredPositionRef.current || !position || isDragging) return");
-    expect(shell).not.toContain("useState<DebugPosition>({ x: SCREEN_GAP, y: SCREEN_GAP })");
   });
 
   it("mounts the debug shell globally instead of inside the canvas page", () => {

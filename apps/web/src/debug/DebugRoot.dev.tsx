@@ -4,16 +4,22 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { CanvasDebugPanel } from "./CanvasDebugPanel.dev";
 import type { DebugRootProps } from "./debugTypes";
 import { DEBUG_MARKER } from "./debugGuards";
+import {
+  BUBBLE_HEIGHT,
+  BUBBLE_WIDTH,
+  DEBUG_POSITION_STORAGE_KEY,
+  SCREEN_GAP,
+  clampDebugPosition,
+  defaultDebugPosition,
+  readStoredDebugPosition,
+  shouldPersistDebugPosition,
+  type DebugPosition
+} from "./debugPosition";
 import { useDebugPageSnapshot } from "./debugPageStore.dev";
 
 type DebugPlacement = "right-down" | "right-up" | "left-down" | "left-up";
-type DebugPosition = { x: number; y: number };
 
-const DEBUG_POSITION_STORAGE_KEY = "inquara.debug_position";
 const DEBUG_OPEN_STORAGE_KEY = "inquara.debug_open";
-const BUBBLE_WIDTH = 44;
-const BUBBLE_HEIGHT = 44;
-const SCREEN_GAP = 8;
 const DRAG_CLICK_THRESHOLD = 5;
 
 export function DebugRootDev(props: DebugRootProps) {
@@ -22,32 +28,30 @@ export function DebugRootDev(props: DebugRootProps) {
   const [isDragging, setIsDragging] = useState(false);
   const pageSnapshot = useDebugPageSnapshot();
   const hasDragged = useRef(false);
-  const hasRestoredPositionRef = useRef(Boolean(position));
-  const latestPositionRef = useRef<DebugPosition>(position ?? { x: SCREEN_GAP, y: SCREEN_GAP });
+  const displayPositionRef = useRef<DebugPosition>(position ?? { x: SCREEN_GAP, y: SCREEN_GAP });
+  const preferredPositionRef = useRef<DebugPosition>(position ?? { x: SCREEN_GAP, y: SCREEN_GAP });
   const dragRef = useRef<null | { pointerId: number; startX: number; startY: number; originX: number; originY: number }>(null);
 
   const updatePosition = (nextPosition: DebugPosition) => {
-    latestPositionRef.current = nextPosition;
+    displayPositionRef.current = nextPosition;
     setPosition(nextPosition);
   };
 
+  const updatePreferredPosition = (nextPosition: DebugPosition) => {
+    preferredPositionRef.current = nextPosition;
+    updatePosition(nextPosition);
+  };
+
   useEffect(() => {
-    const storedPosition = window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY);
     const storedOpen = window.localStorage.getItem(DEBUG_OPEN_STORAGE_KEY);
 
-    if (!position) updatePosition(readInitialPosition());
-    hasRestoredPositionRef.current = true;
+    if (!position) updatePreferredPosition(readInitialPosition());
     if (storedOpen === "true") setIsOpen(true);
   }, [position]);
 
   useEffect(() => {
     window.localStorage.setItem(DEBUG_OPEN_STORAGE_KEY, String(isOpen));
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!hasRestoredPositionRef.current || !position || isDragging) return;
-    window.localStorage.setItem(DEBUG_POSITION_STORAGE_KEY, JSON.stringify(position));
-  }, [isDragging, position]);
 
   useEffect(() => {
     const drag = (event: globalThis.PointerEvent) => {
@@ -57,18 +61,21 @@ export function DebugRootDev(props: DebugRootProps) {
       const deltaX = event.clientX - activeDrag.startX;
       const deltaY = event.clientY - activeDrag.startY;
       if (Math.abs(deltaX) > DRAG_CLICK_THRESHOLD || Math.abs(deltaY) > DRAG_CLICK_THRESHOLD) hasDragged.current = true;
-      updatePosition(rawPosition(activeDrag.originX + deltaX, activeDrag.originY + deltaY));
+      updatePreferredPosition(rawPosition(activeDrag.originX + deltaX, activeDrag.originY + deltaY));
     };
 
     const stopDrag = (event: globalThis.PointerEvent) => {
       if (dragRef.current?.pointerId !== event.pointerId) return;
-      const settledPosition = settlePosition(latestPositionRef.current);
+      const settledPosition = settlePosition(preferredPositionRef.current);
       dragRef.current = null;
       setIsDragging(false);
-      updatePosition(settledPosition);
+      updatePreferredPosition(settledPosition);
+      if (shouldPersistDebugPosition("drag-end")) {
+        window.localStorage.setItem(DEBUG_POSITION_STORAGE_KEY, JSON.stringify(settledPosition));
+      }
     };
 
-    const clampOnResize = () => updatePosition(settlePosition(latestPositionRef.current));
+    const clampOnResize = () => updatePosition(settlePosition(preferredPositionRef.current));
 
     window.addEventListener("pointermove", drag);
     window.addEventListener("pointerup", stopDrag);
@@ -90,8 +97,8 @@ export function DebugRootDev(props: DebugRootProps) {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: latestPositionRef.current.x,
-      originY: latestPositionRef.current.y
+      originX: displayPositionRef.current.x,
+      originY: displayPositionRef.current.y
     };
   };
 
@@ -159,36 +166,14 @@ function rawPosition(x: number, y: number): DebugPosition {
 }
 
 function readInitialPosition(): DebugPosition | null {
-  return readStoredPosition(window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY)) ?? defaultPosition();
-}
-
-function readStoredPosition(storedPosition: string | null): DebugPosition | null {
-  if (!storedPosition) return null;
-  try {
-    const parsed = JSON.parse(storedPosition) as { x?: unknown; y?: unknown };
-    if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-      return clampPosition(parsed.x, parsed.y);
-    }
-  } catch {
-    window.localStorage.removeItem(DEBUG_POSITION_STORAGE_KEY);
-  }
-  return null;
+  const storedPosition = window.localStorage.getItem(DEBUG_POSITION_STORAGE_KEY);
+  const restored = readStoredDebugPosition(storedPosition, currentViewport());
+  if (storedPosition && !restored) window.localStorage.removeItem(DEBUG_POSITION_STORAGE_KEY);
+  return restored ?? defaultDebugPosition(currentViewport());
 }
 
 function clampPosition(x: number, y: number): DebugPosition {
-  if (typeof window === "undefined") return { x, y };
-  return {
-    x: Math.min(Math.max(SCREEN_GAP, x), Math.max(SCREEN_GAP, window.innerWidth - BUBBLE_WIDTH - SCREEN_GAP)),
-    y: Math.min(Math.max(SCREEN_GAP, y), Math.max(SCREEN_GAP, window.innerHeight - BUBBLE_HEIGHT - SCREEN_GAP))
-  };
-}
-
-function defaultPosition(): DebugPosition {
-  if (typeof window === "undefined") return { x: SCREEN_GAP, y: SCREEN_GAP };
-  return {
-    x: window.innerWidth - BUBBLE_WIDTH - SCREEN_GAP,
-    y: SCREEN_GAP
-  };
+  return clampDebugPosition(x, y, currentViewport());
 }
 
 function settlePosition(position: DebugPosition): DebugPosition {
@@ -200,4 +185,9 @@ function getPlacement(position: DebugPosition): DebugPlacement {
   const horizontal = position.x + BUBBLE_WIDTH / 2 < window.innerWidth / 2 ? "right" : "left";
   const vertical = position.y + BUBBLE_HEIGHT / 2 < window.innerHeight / 2 ? "down" : "up";
   return `${horizontal}-${vertical}` as DebugPlacement;
+}
+
+function currentViewport() {
+  if (typeof window === "undefined") return { width: BUBBLE_WIDTH + SCREEN_GAP * 2, height: BUBBLE_HEIGHT + SCREEN_GAP * 2 };
+  return { width: window.innerWidth, height: window.innerHeight };
 }
