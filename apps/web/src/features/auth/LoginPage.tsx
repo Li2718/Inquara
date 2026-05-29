@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { apiJson } from "../../shared/api";
 import { Button } from "../../shared/components/ui";
 
@@ -12,9 +12,28 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("demo@inquara.local");
   const [password, setPassword] = useState("");
+  const [redemptionCode, setRedemptionCode] = useState("");
+  const [isCodeFieldOpen, setIsCodeFieldOpen] = useState(false);
+  const [isInvitationOnly, setIsInvitationOnly] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiJson<{ invitationOnly: boolean }>("/auth/registration-settings")
+      .then(settings => {
+        if (!isMounted) return;
+        setIsInvitationOnly(settings.invitationOnly);
+        setIsCodeFieldOpen(settings.invitationOnly);
+      })
+      .catch(() => {
+        if (isMounted) setIsInvitationOnly(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -23,7 +42,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
     try {
       await apiJson(mode === "login" ? "/auth/login" : "/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password, rememberMe })
+        body: JSON.stringify({ email, password, rememberMe, redemptionCode })
       });
       onLoggedIn();
     } catch (caught) {
@@ -71,6 +90,35 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
             minLength={mode === "login" ? 1 : 6}
             required
           />
+          {mode === "register" ? (
+            <div className="redemption-code-field" data-open={isCodeFieldOpen || isInvitationOnly}>
+              {isInvitationOnly ? (
+                <label htmlFor="redemption-code">Invitation code</label>
+              ) : (
+                <button
+                  type="button"
+                  className="redemption-code-toggle"
+                  aria-expanded={isCodeFieldOpen}
+                  onClick={() => setIsCodeFieldOpen(value => !value)}
+                >
+                  More
+                  <span aria-hidden="true" />
+                </button>
+              )}
+              {isCodeFieldOpen || isInvitationOnly ? (
+                <>
+                  {!isInvitationOnly ? <label htmlFor="redemption-code">Invitation code</label> : null}
+                  <input
+                    id="redemption-code"
+                    value={redemptionCode}
+                    onChange={event => setRedemptionCode(event.target.value)}
+                    autoComplete="one-time-code"
+                    required={isInvitationOnly}
+                  />
+                </>
+              ) : null}
+            </div>
+          ) : null}
           <label className="checkbox-row">
             <input type="checkbox" checked={rememberMe} onChange={event => setRememberMe(event.target.checked)} />
             <span>Remember this device</span>

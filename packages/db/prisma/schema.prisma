@@ -14,6 +14,8 @@ model User {
   avatarUrl    String?        @map("avatar_url")
   role         String         @default("user")
   passwordHash String?        @map("password_hash")
+  createdCodes RedemptionCode[] @relation("RedemptionCodeCreator")
+  redemptions   RedemptionCodeRedemption[]
   identities   UserIdentity[]
   sessions     UserSession[]
   workspaces   Workspace[]
@@ -54,6 +56,50 @@ model UserSession {
 
   @@index([userId, revokedAt, expiresAt])
   @@map("user_sessions")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+model RedemptionCode {
+  id             String                     @id @default(cuid())
+  code           String                     @unique
+  target         String
+  source         String
+  note           String?
+  maxRedemptions Int                        @default(1) @map("max_redemptions")
+  expiresAt      DateTime?                  @map("expires_at")
+  disabledAt     DateTime?                  @map("disabled_at")
+  createdById    String?                    @map("created_by_id")
+  createdBy      User?                      @relation("RedemptionCodeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  redemptions    RedemptionCodeRedemption[]
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+
+  @@index([target, disabledAt, expiresAt])
+  @@index([createdById])
+  @@map("redemption_codes")
+}
+
+model RedemptionCodeRedemption {
+  id               String         @id @default(cuid())
+  redemptionCodeId String         @map("redemption_code_id")
+  redemptionCode   RedemptionCode @relation(fields: [redemptionCodeId], references: [id], onDelete: Cascade)
+  userId           String         @map("user_id")
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target           String
+  action           String
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@unique([redemptionCodeId, userId, target])
+  @@index([userId])
+  @@map("redemption_code_redemptions")
 }
 
 model Workspace {

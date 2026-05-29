@@ -103,6 +103,33 @@ Related account concepts:
 - `User.role` distinguishes regular users from admins. The first admin can be bootstrapped from seed environment variables.
 - Refresh-token style access can be added later by attaching refresh token records to a session/device family; the current web app does not need access tokens for first-party cookie auth.
 
+### SystemSetting
+
+Stores product-wide switches and small structured settings that should not become environment-only behavior.
+
+Settings are deliberately generic at the database layer, but not at the service boundary. Each setting must have a typed accessor that owns its key, default value, and value parsing. Feature code should call the typed accessor instead of reading arbitrary `SystemSetting` rows directly.
+
+The first setting is `registration.invitationOnly`. When the row does not exist, local development and test default to open registration, while production defaults to invitation-only registration.
+
+### RedemptionCode
+
+Represents a code that can be redeemed for a structured target.
+
+The product may call registration-eligibility codes "invitation codes" in user-facing copy, but code, database, API, service, and tests should use redemption-code naming. The first supported target is `registration_eligibility`; future targets may represent privileges, balance, referral attribution, or other benefits.
+
+Important fields:
+
+- `code`: normalized unique plaintext code. Admin UI may display this value.
+- `target`: the redeemable target, initially `registration_eligibility`.
+- `source`: where the code came from, initially administrator generation.
+- `createdById`: the administrator or future issuer user when applicable.
+- `note`
+- `maxRedemptions`
+- `expiresAt`
+- `disabledAt`
+
+`RedemptionCodeRedemption` stores each redemption separately from the code so multi-use codes and future reward histories do not overload a single `usedByUserId` field. Registration must validate and record the redemption in the same transaction that creates or attaches the user password identity.
+
 ### Workspace
 
 Represents one saved canvas owned by one user. A user can own many workspaces.
@@ -200,6 +227,33 @@ user_sessions
   created_at
   updated_at
 
+system_settings
+  key
+  value
+  created_at
+  updated_at
+
+redemption_codes
+  id
+  code
+  target
+  source
+  note
+  max_redemptions
+  expires_at
+  disabled_at
+  created_by_id
+  created_at
+  updated_at
+
+redemption_code_redemptions
+  id
+  redemption_code_id
+  user_id
+  target
+  action
+  created_at
+
 workspaces
   id
   owner_id
@@ -253,6 +307,9 @@ node_messages
 Indexes:
 
 - `workspaces(owner_id, updated_at)`
+- `redemption_codes(code)` unique
+- `redemption_codes(target, disabled_at, expires_at)`
+- `redemption_code_redemptions(redemption_code_id, user_id, target)` unique
 - `canvas_nodes(workspace_id)`
 - `canvas_edges(workspace_id)`
 - `node_messages(node_id, created_at)`
@@ -896,6 +953,16 @@ When implementation work modifies the Prisma schema or adds/changes a database m
 - If a local development server is running, apply the development database migration before the user continues using the browser app.
 - Do not leave a running development server connected to a database that lacks the new schema shape.
 - If the migration cannot be applied, report the blocker clearly instead of letting stale database errors surface through the product UI.
+
+## Development Server Build Rule
+
+The local Next development server and production web build both use `apps/web/.next` by default. Running a production build while `next dev` is serving the browser can rewrite that directory underneath the active dev process, causing missing chunk or module errors such as `Cannot find module './901.js'`.
+
+- Before running a production web build such as `npm --workspace @inquara/web run build`, check whether a local Next development server for this repository is running.
+- Do not run a production Next build against `apps/web/.next` while `next dev` is serving the browser.
+- If the build is required while the user is actively using the local app, first stop the development server, or use an explicitly isolated output/build environment.
+- After a production build touches `apps/web/.next`, restart `npm run dev` before handing the browser app back to the user.
+- If the browser shows missing Next chunk/module errors after build verification, treat it as a corrupted/stale dev build artifact, restart the development server, and verify the affected route in the browser.
 
 ## Migration From The Demo
 

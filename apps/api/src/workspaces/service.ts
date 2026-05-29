@@ -3,6 +3,8 @@ import type { CanvasEdge, CanvasNode, NodeMessage, Workspace, WorkspaceSnapshot 
 import type { Prisma } from "@prisma/client";
 import { hashPassword, verifyPassword } from "../auth/password";
 import { createUserSession, type CreateSessionOptions } from "../auth/session";
+import { redeemRegistrationCodeForUser } from "../redemption-codes/service";
+import { getInvitationOnlyRegistration } from "../settings/service";
 
 const rootAssistantText = "Ask me anything. Select part of an answer to branch into a focused follow-up.";
 
@@ -31,11 +33,17 @@ export class AuthError extends Error {
 export async function registerWithPassword(
   email: string,
   password: string,
-  options: CreateSessionOptions = {}
+  options: CreateSessionOptions & { redemptionCode?: string } = {}
 ): Promise<AuthResult> {
   const normalizedEmail = normalizeEmail(email);
   const passwordHash = await hashPassword(password);
   const user = await prisma.$transaction(async tx => {
+    const invitationOnly = await getInvitationOnlyRegistration(tx);
+    const redemptionCode = options.redemptionCode?.trim() ?? "";
+    if (invitationOnly && !redemptionCode) {
+      throw new AuthError("Invitation code is unavailable or expired.", 403);
+    }
+
     const existing = await tx.user.findUnique({ where: { email: normalizedEmail } });
     if (existing?.passwordHash) {
       throw new AuthError("Account already has a password.", 409);
@@ -65,6 +73,10 @@ export async function registerWithPassword(
             }
           }
         });
+
+    if (redemptionCode) {
+      await redeemRegistrationCodeForUser(tx, redemptionCode, saved.id);
+    }
 
     return saved;
   });

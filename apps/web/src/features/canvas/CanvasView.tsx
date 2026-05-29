@@ -15,7 +15,7 @@ import {
   type OnNodeDrag
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
 import { FloatingCircleButton, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
@@ -39,15 +39,22 @@ const CANVAS_ITEM_EXIT_MS = 150;
 export function CanvasView({
   isPreparingWorkspaceSwitch,
   isSidebarOpen,
+  resetViewportRequest,
   routeWorkspaceId
 }: {
   isPreparingWorkspaceSwitch: boolean;
   isSidebarOpen: boolean;
+  resetViewportRequest: number;
   routeWorkspaceId: string;
 }) {
   return (
     <ReactFlowProvider>
-      <CanvasFlow isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch} isSidebarOpen={isSidebarOpen} routeWorkspaceId={routeWorkspaceId} />
+      <CanvasFlow
+        isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch}
+        isSidebarOpen={isSidebarOpen}
+        resetViewportRequest={resetViewportRequest}
+        routeWorkspaceId={routeWorkspaceId}
+      />
     </ReactFlowProvider>
   );
 }
@@ -55,10 +62,12 @@ export function CanvasView({
 function CanvasFlow({
   isPreparingWorkspaceSwitch,
   isSidebarOpen,
+  resetViewportRequest,
   routeWorkspaceId
 }: {
   isPreparingWorkspaceSwitch: boolean;
   isSidebarOpen: boolean;
+  resetViewportRequest: number;
   routeWorkspaceId: string;
 }) {
   const { state, commands, sendCommand } = useWorkspaceSession();
@@ -314,7 +323,11 @@ function CanvasFlow({
           <CanvasPlacementViewportTracker placementViewportRef={placementViewportRef} />
         </ReactFlow>
       </CanvasViewportProvider>
-      <CanvasViewportControls firstRootNode={firstRootNode} isSidebarOpen={isSidebarOpen} />
+      <CanvasViewportControls
+        firstRootNode={firstRootNode}
+        isSidebarOpen={isSidebarOpen}
+        resetViewportRequest={resetViewportRequest}
+      />
       <PopupMenu
         className="canvas-context-menu"
         aria-label="Canvas actions"
@@ -358,11 +371,19 @@ function calculatePlacementViewport(viewport: { x: number; y: number; zoom: numb
   };
 }
 
-function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNode: CanvasNode | null; isSidebarOpen: boolean }) {
+function CanvasViewportControls({
+  firstRootNode,
+  isSidebarOpen,
+  resetViewportRequest
+}: {
+  firstRootNode: CanvasNode | null;
+  isSidebarOpen: boolean;
+  resetViewportRequest: number;
+}) {
   const { setViewport } = useReactFlow();
   const { zoom } = useViewport();
   const zoomPercent = Math.round(zoom * 100);
-  const resetViewportToRoot = () => {
+  const resetViewportToRoot = useCallback(() => {
     if (!firstRootNode) return;
     const stage = document.querySelector(".canvas-stage");
     const sidebar = isSidebarOpen ? document.querySelector(".workspace-sidebar") : null;
@@ -378,7 +399,12 @@ function CanvasViewportControls({ firstRootNode, isSidebarOpen }: { firstRootNod
       }),
       { duration: 300 }
     );
-  };
+  }, [firstRootNode, isSidebarOpen, setViewport]);
+
+  useEffect(() => {
+    if (resetViewportRequest === 0) return;
+    resetViewportToRoot();
+  }, [resetViewportRequest, resetViewportToRoot]);
 
   return (
     <div className="canvas-viewport-controls" aria-label="Canvas zoom controls">

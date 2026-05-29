@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
-import { apiJson } from "../../shared/api";
-import { ConfirmDialog, FloatingCircleButton, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { AppTopBar } from "../../shared/components/chrome";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
@@ -16,17 +15,11 @@ export type WorkspaceTransitionNavigateOptions = {
   replace?: boolean;
 };
 
-type CurrentUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-};
-
 export function CanvasWorkspace({ workspaceId }: { workspaceId: string }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPreparingWorkspaceSwitch, setIsPreparingWorkspaceSwitch] = useState(false);
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
+  const [resetViewportRequest, setResetViewportRequest] = useState(0);
 
   return (
     <main className="canvas-page" data-sidebar-open={isSidebarOpen} aria-label="Canvas workspace">
@@ -36,7 +29,9 @@ export function CanvasWorkspace({ workspaceId }: { workspaceId: string }) {
           isSidebarOpen={isSidebarOpen}
           isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch}
           pendingWorkspaceId={pendingWorkspaceId}
+          resetViewportRequest={resetViewportRequest}
           onToggleSidebar={() => setIsSidebarOpen(value => !value)}
+          onResetViewportRequest={() => setResetViewportRequest(value => value + 1)}
           onWorkspaceSwitchReady={() => {
             setIsPreparingWorkspaceSwitch(false);
             setPendingWorkspaceId(null);
@@ -57,7 +52,9 @@ function CanvasWorkspaceContent({
   isSidebarOpen,
   isPreparingWorkspaceSwitch,
   pendingWorkspaceId,
+  resetViewportRequest,
   onToggleSidebar,
+  onResetViewportRequest,
   onWorkspaceSwitchReady,
   onWorkspaceSwitchStart
 }: {
@@ -65,17 +62,14 @@ function CanvasWorkspaceContent({
   isSidebarOpen: boolean;
   isPreparingWorkspaceSwitch: boolean;
   pendingWorkspaceId: string | null;
+  resetViewportRequest: number;
   onToggleSidebar(): void;
+  onResetViewportRequest(): void;
   onWorkspaceSwitchReady(): void;
   onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
 }) {
   const router = useRouter();
   const { state } = useWorkspaceSession();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!pendingWorkspaceId) return;
@@ -84,89 +78,9 @@ function CanvasWorkspaceContent({
     onWorkspaceSwitchReady();
   }, [onWorkspaceSwitchReady, pendingWorkspaceId, state.snapshot?.workspace.id, workspaceId]);
 
-  useEffect(() => {
-    let isMounted = true;
-    apiJson<CurrentUser>("/auth/me")
-      .then(user => {
-        if (isMounted) setCurrentUser(user);
-      })
-      .catch(() => {
-        if (isMounted) setCurrentUser(null);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  async function logOut() {
-    if (isLoggingOut) return;
-    setIsLoggingOut(true);
-    try {
-      await apiJson<void>("/auth/logout", { method: "POST" });
-      router.replace("/");
-      router.refresh();
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }
-
-  const userLabel = currentUser?.name || currentUser?.email || "Account";
-  const userInitial = useMemo(() => {
-    const source = currentUser?.name || currentUser?.email || "";
-    return source.trim().slice(0, 1).toUpperCase() || "A";
-  }, [currentUser]);
-
   return (
     <>
-      <div className="canvas-brand" aria-label="Inquara">
-        <span className="canvas-brand-name">
-          Inquara
-          <span className="canvas-brand-badge">Alpha</span>
-        </span>
-      </div>
-      <div className="canvas-account">
-        <FloatingCircleButton
-          ref={accountMenuTriggerRef}
-          className="canvas-account-button"
-          size="md"
-          aria-label={`Account: ${userLabel}`}
-          aria-expanded={isAccountMenuOpen}
-          aria-haspopup="menu"
-          title={userLabel}
-          onClick={() => setIsAccountMenuOpen(value => !value)}
-        >
-          <span>{userInitial}</span>
-        </FloatingCircleButton>
-        <PopupMenu
-          className="canvas-account-menu"
-          aria-label="Account menu"
-          ignoreRef={accountMenuTriggerRef}
-          isOpen={isAccountMenuOpen}
-          onClose={() => setIsAccountMenuOpen(false)}
-          placement="bottom-end"
-        >
-          <PopupMenuItem
-            tone="danger"
-            onClick={() => {
-              setIsAccountMenuOpen(false);
-              setIsLogoutDialogOpen(true);
-            }}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut ? "Logging out..." : "Log out"}
-          </PopupMenuItem>
-        </PopupMenu>
-      </div>
-      <ConfirmDialog
-        isOpen={isLogoutDialogOpen}
-        title="Log out?"
-        description="You will need to sign in again on this device."
-        confirmLabel={isLoggingOut ? "Logging out..." : "Log out"}
-        confirmTone="danger"
-        isConfirming={isLoggingOut}
-        onCancel={() => setIsLogoutDialogOpen(false)}
-        onConfirm={logOut}
-      />
+      <AppTopBar onCanvasLogoClick={onResetViewportRequest} />
       <WorkspaceSidebar
         currentWorkspaceId={workspaceId}
         isOpen={isSidebarOpen}
@@ -177,7 +91,12 @@ function CanvasWorkspaceContent({
         }}
       />
       <section className="canvas-stage" aria-label="Canvas">
-        <CanvasView isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch} isSidebarOpen={isSidebarOpen} routeWorkspaceId={workspaceId} />
+        <CanvasView
+          isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch}
+          isSidebarOpen={isSidebarOpen}
+          resetViewportRequest={resetViewportRequest}
+          routeWorkspaceId={workspaceId}
+        />
       </section>
       <DebugCanvasSource
         page="canvas"

@@ -112,7 +112,14 @@ async function dispatchCommand(
     });
   }
   if (command.type === "node.restoreBranch") {
-    return restoreNodeBranch(userId, command);
+    return restoreNodeBranch(userId, {
+      type: command.type,
+      clientMutationId: command.clientMutationId,
+      workspaceId: command.workspaceId,
+      nodeId: command.nodeId,
+      ...(command.x !== undefined ? { x: command.x } : {}),
+      ...(command.y !== undefined ? { y: command.y } : {})
+    });
   }
   if (command.type === "node.deleteSubtree") {
     return deleteNodeSubtree(userId, command);

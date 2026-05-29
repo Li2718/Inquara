@@ -45,7 +45,7 @@ export function findFollowupNodePosition(
     mode: "followup",
     obstacles: visibleNodeRects(nodes),
     size: { width: DEFAULT_BRANCH_WIDTH, height: DEFAULT_BRANCH_HEIGHT },
-    viewport
+    ...(viewport !== undefined ? { viewport } : {})
   });
 }
 
@@ -56,7 +56,7 @@ export function findRestoredNodePosition(node: CanvasNode, nodes: CanvasNode[], 
     mode: "restore",
     obstacles: visibleNodeRects(nodes).filter(rect => rect.id !== node.id),
     size: { width: node.width, height: node.height },
-    viewport
+    ...(viewport !== undefined ? { viewport } : {})
   });
 }
 
@@ -98,7 +98,10 @@ function findOpenNodePosition({
     for (let yIndex = 0; yIndex < sortedY.length; yIndex += 1) {
       if (blockedY[yIndex]) continue;
 
-      const point = { x, y: sortedY[yIndex] };
+      const y = sortedY[yIndex];
+      if (y === undefined) continue;
+
+      const point = { x, y };
       const score = scoreCandidate({ ...point, height: size.height, width: size.width }, ideal, mode, viewport);
       if (!best || score < best.score) best = { point, score };
     }
@@ -158,14 +161,14 @@ function blockedYIndexesForX(
     const endIndex = bottomIndex;
     if (startIndex >= endIndex) continue;
 
-    changes[startIndex] += 1;
-    changes[endIndex] -= 1;
+    changes[startIndex] = (changes[startIndex] ?? 0) + 1;
+    changes[endIndex] = (changes[endIndex] ?? 0) - 1;
   }
 
   const blocked: boolean[] = [];
   let activeBlocks = 0;
   for (let index = 0; index < yCount; index += 1) {
-    activeBlocks += changes[index];
+    activeBlocks += changes[index] ?? 0;
     blocked[index] = activeBlocks > 0;
   }
 

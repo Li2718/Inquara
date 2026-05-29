@@ -8,6 +8,16 @@ import {
   verifySessionToken
 } from "../auth/session";
 import {
+  createRegistrationRedemptionCode,
+  disableRegistrationRedemptionCode,
+  listRegistrationRedemptionCodes,
+  RedemptionCodeError
+} from "../redemption-codes/service";
+import {
+  getInvitationOnlyRegistration,
+  setInvitationOnlyRegistration
+} from "../settings/service";
+import {
   archiveWorkspace,
   AuthError,
   createWorkspace,
@@ -26,6 +36,7 @@ const rememberedSessionMaxAgeSeconds = 30 * 24 * 60 * 60;
 const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  redemptionCode: z.string().optional().default(""),
   rememberMe: z.boolean().optional().default(false)
 });
 
@@ -41,6 +52,17 @@ const UpdateWorkspaceSchema = z.object({
   title: z.string().min(1).max(120)
 });
 
+const UpdateRegistrationSettingsSchema = z.object({
+  invitationOnly: z.boolean()
+});
+
+const CreateRedemptionCodeSchema = z.object({
+  expiresAt: z.string().datetime().nullable().optional(),
+  maxRedemptions: z.number().int().min(1).optional(),
+  note: z.string().max(240).nullable().optional(),
+  validDays: z.number().int().min(1).optional()
+});
+
 export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig): Promise<void> {
   const app = _app;
   app.get("/healthz", async () => ({ ok: true }));
@@ -50,6 +72,7 @@ export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig)
     try {
       const { user, session } = await registerWithPassword(body.email, body.password, {
         rememberMe: body.rememberMe,
+        redemptionCode: body.redemptionCode,
         ipAddress: request.ip,
         ...(request.headers["user-agent"] !== undefined ? { userAgent: request.headers["user-agent"] } : {})
       });
@@ -58,6 +81,10 @@ export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig)
     } catch (error) {
       return handleAuthError(error, reply);
     }
+  });
+
+  app.get("/auth/registration-settings", async () => {
+    return { invitationOnly: await getInvitationOnlyRegistration() };
   });
 
   app.post("/auth/login", async (request, reply) => {
@@ -110,6 +137,50 @@ export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig)
     const user = await getUser(userId);
     if (!user) return reply.code(401).send({ error: "Unauthorized" });
     return user;
+  });
+
+  app.get("/admin/codes", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    return listRegistrationRedemptionCodes();
+  });
+
+  app.post("/admin/codes", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    const body = CreateRedemptionCodeSchema.parse(request.body ?? {});
+    try {
+      return await createRegistrationRedemptionCode(admin.userId, {
+        expiresAt: resolveExpiresAt(body),
+        ...(body.maxRedemptions !== undefined ? { maxRedemptions: body.maxRedemptions } : {}),
+        ...(body.note !== undefined ? { note: body.note } : {})
+      });
+    } catch (error) {
+      if (error instanceof RedemptionCodeError) {
+        return reply.code(error.statusCode).send({ error: error.message });
+      }
+      throw error;
+    }
+  });
+
+  app.post("/admin/codes/:code/disable", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    const params = request.params as { code: string };
+    return disableRegistrationRedemptionCode(params.code);
+  });
+
+  app.get("/admin/settings/registration", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    return { invitationOnly: await getInvitationOnlyRegistration() };
+  });
+
+  app.put("/admin/settings/registration", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    const body = UpdateRegistrationSettingsSchema.parse(request.body);
+    return setInvitationOnlyRegistration(body.invitationOnly);
   });
 
   app.get("/workspaces", async (request, reply) => {
@@ -178,6 +249,17 @@ async function requireUserId(request: FastifyRequest, reply: FastifyReply): Prom
   return session?.userId ?? null;
 }
 
+async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<{ userId: string } | null> {
+  const session = await requireSession(request, reply);
+  if (!session) return null;
+  const user = await getUser(session.userId);
+  if (!user || user.role !== "admin") {
+    await reply.code(403).send({ error: "Forbidden" });
+    return null;
+  }
+  return { userId: session.userId };
+}
+
 async function requireSession(
   request: FastifyRequest,
   reply: FastifyReply
@@ -219,5 +301,18 @@ function handleAuthError(error: unknown, reply: FastifyReply) {
   if (error instanceof AuthError) {
     return reply.code(error.statusCode).send({ error: error.message });
   }
+  if (error instanceof RedemptionCodeError) {
+    return reply.code(error.statusCode).send({ error: error.message });
+  }
   throw error;
+}
+
+function resolveExpiresAt(body: z.infer<typeof CreateRedemptionCodeSchema>): Date | null {
+  if (body.expiresAt) return new Date(body.expiresAt);
+  if (body.validDays) {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + body.validDays);
+    return expiresAt;
+  }
+  return null;
 }
