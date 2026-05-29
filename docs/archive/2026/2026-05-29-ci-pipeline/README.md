@@ -1,6 +1,6 @@
 # CI Pipeline
 
-> status: active
+> status: archived
 > purpose: Bring the aitestkit-style CI workflow to the GitHub-hosted Inquara repository.
 
 ## Goal
@@ -71,11 +71,12 @@ Inquara should keep this job shape unless a repository-specific requirement make
 - Verified `npm run lint`.
 - Verified `npm run typecheck`.
 - Verified `npm test`.
+- Pushed the CI workflow and follow-up Node 24 alignment fixes to GitHub.
+- Confirmed the GitHub Actions workflow passes on GitHub.
 
 ## Remaining Work
 
-- Push to GitHub and confirm the workflow runs there.
-- Decide whether to archive this initiative after the GitHub workflow passes.
+- No remaining work for this initiative.
 
 ## Local Verification Notes
 
