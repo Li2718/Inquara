@@ -14,3 +14,5 @@ export async function replacePrismaClient(): Promise<void> {
 }
 
 export type { PrismaClient };
+export { createSetupAccount, SetupError, hasCompletedSetup } from "./setup.ts";
+export { hashPassword, verifyPassword } from "./password.ts";

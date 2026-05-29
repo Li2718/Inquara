@@ -1,8 +1,5 @@
 import type { PrismaClient } from "./client";
-import { randomBytes, scrypt } from "node:crypto";
-import { promisify } from "node:util";
-
-const scryptAsync = promisify(scrypt);
+import { hashPassword } from "./password.ts";
 
 export async function seedAdminUser(
   prisma: PrismaClient,
@@ -45,10 +42,4 @@ export async function seedPasswordUser(
       }
     }
   });
-}
-
-async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString("base64url");
-  const derived = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `scrypt:${salt}:${derived.toString("base64url")}`;
 }

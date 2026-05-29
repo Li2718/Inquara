@@ -9,7 +9,6 @@
     "typecheck": "tsc --noEmit",
     "generate": "prisma generate --schema prisma/schema.prisma",
     "migrate": "prisma migrate dev --schema prisma/schema.prisma",
-    "seed": "tsx src/seed.ts",
     "test": "vitest run src"
   },
   "dependencies": {

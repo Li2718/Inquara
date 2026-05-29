@@ -15,8 +15,8 @@ describe("loadConfig", () => {
     expect(config.WEB_ORIGIN).toBe("http://localhost:3000");
     expect(config.API_ORIGIN).toBe("http://localhost:4000");
     expect(config.AI_PROVIDER).toBe("fake");
-    expect(config.ADMIN_EMAIL).toBe("");
-    expect(config.ADMIN_PASSWORD).toBe("");
+    expect(config).not.toHaveProperty("ADMIN_EMAIL");
+    expect(config).not.toHaveProperty("ADMIN_PASSWORD");
   });
 
   it("rejects a short session secret", () => {
@@ -24,22 +24,6 @@ describe("loadConfig", () => {
       loadConfig({
         ...validEnv,
         SESSION_SECRET: "short"
-      })
-    ).toThrow();
-  });
-
-  it("requires admin email and password to be configured together", () => {
-    expect(() =>
-      loadConfig({
-        ...validEnv,
-        ADMIN_EMAIL: "admin@inquara.local"
-      })
-    ).toThrow();
-
-    expect(() =>
-      loadConfig({
-        ...validEnv,
-        ADMIN_PASSWORD: "correct horse battery staple"
       })
     ).toThrow();
   });

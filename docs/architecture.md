@@ -100,8 +100,18 @@ Related account concepts:
 
 - `UserIdentity` records a login provider such as `password`, and later `google` or `github`.
 - `UserSession` records one browser/device session with a hashed opaque token, `rememberMe`, device metadata, expiry, and revocation state.
-- `User.role` distinguishes regular users from admins. The first admin can be bootstrapped from seed environment variables.
+- `User.role` distinguishes regular users from admins. Initial account creation belongs to the dedicated setup flow.
 - Refresh-token style access can be added later by attaching refresh token records to a session/device family; the current web app does not need access tokens for first-party cookie auth.
+
+### Setup
+
+Self-managed deployments initialize through a startup-selected setup app.
+
+The deployed web entrypoint checks whether setup is complete. Fresh deployments start the setup app; initialized deployments start the normal Next.js web app. The setup app completes initialization directly through the database-backed setup service, then exits so the process supervisor can restart the web runtime into normal mode.
+
+The first setup step stores the initial account as a normal password user with `role = "admin"` and a password identity. The setup service serializes concurrent setup attempts and re-checks inside the transaction that setup is still incomplete before inserting the account.
+
+Ordinary registration, redemption-code gating, and admin management pages are separate from setup.
 
 ### SystemSetting
 

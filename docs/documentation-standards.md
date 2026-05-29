@@ -32,6 +32,7 @@ Current docs must not be named with dates, milestone codes, sprint labels, or te
 Current docs in this repository:
 
 - `docs/architecture.md`
+- `docs/deployment.md`
 - `docs/documentation-standards.md`
 - `docs/testing-standards.md`
 - `docs/ui-system.md`
