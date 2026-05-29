@@ -42,7 +42,7 @@ The aitestkit workflow runs two jobs on `push` to `main` and on `pull_request`:
 - `quality`: checkout, setup Node 20 with npm cache, `npm ci`, `npm run lint`, `npm run typecheck`
 - `full-tests`: checkout, setup Node 20 with npm cache, `npm ci`, `npm test`
 
-Inquara should keep this shape unless a repository-specific requirement makes a direct step invalid.
+Inquara should keep this job shape unless a repository-specific requirement makes a direct step invalid. The Node version is intentionally different from the aitestkit baseline: Inquara uses Node 24 for both local development and CI.
 
 ## Known Obstacles
 
@@ -52,7 +52,7 @@ Inquara should keep this shape unless a repository-specific requirement makes a 
 - Existing typecheck debt may need to be fixed before the quality job can pass.
 - A clean CI install likely needs `npm run db:generate` before typecheck or tests because Inquara uses Prisma.
 - Database-backed tests require Docker/testcontainers support in the CI environment.
-- The CI Node version must be chosen deliberately. aitestkit uses Node 20, while local development has recently used Node 24.
+- The CI Node version must stay aligned with the repository engine policy and local development baseline.
 
 ## Completed Work
 
@@ -61,7 +61,7 @@ Inquara should keep this shape unless a repository-specific requirement makes a 
 - Pointed the local `origin` remote at `https://github.com/Li2718/Inquara.git`.
 - Recorded the aitestkit CI baseline and Inquara-specific obstacles.
 - Added a GitHub Actions workflow at `.github/workflows/ci.yml` with separate quality and full-test jobs.
-- Set the repository Node engine policy to `>=20.9.0` and configured CI to run on Node 20.
+- Set the repository Node engine policy to `>=24.0.0` and configured CI to run on Node 24.
 - Added root `lint`, `lint:fix`, and `typecheck` scripts.
 - Added workspace `typecheck` scripts for API, web, config, db, and domain packages.
 - Added ESLint flat config and lint dependencies.
