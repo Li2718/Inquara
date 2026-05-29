@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { resetTestDatabase, stopEphemeralTestDatabase } from "../../api/src/test/database";
 
 test.beforeEach(async () => {
@@ -9,7 +9,7 @@ test.afterAll(async () => {
   await stopEphemeralTestDatabase();
 });
 
-test("streams chat updates into two open workspace windows", async ({ page, browser }) => {
+test("streams chat updates into two open workspace windows", async ({ page }) => {
   await clearDebugPosition(page);
   await page.goto("/");
   await register(page);
@@ -74,7 +74,8 @@ test("streams chat updates into two open workspace windows", async ({ page, brow
   await expect(followupButton).toBeVisible();
   const selectionBox = await page.evaluate(() => {
     const range = window.getSelection()?.rangeCount ? window.getSelection()?.getRangeAt(0) : null;
-    const rect = Array.from(range?.getClientRects() ?? []).findLast(item => item.width > 0 && item.height > 0);
+    const rects = Array.from(range?.getClientRects() ?? []);
+    const rect = rects.reverse().find((item: DOMRect) => item.width > 0 && item.height > 0);
     return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null;
   });
   const followupBox = await followupButton.boundingBox();
@@ -151,14 +152,14 @@ test("confirms node deletion with an in-app modal", async ({ page }) => {
   await expect(page.getByTestId("canvas-node")).toHaveCount(0);
 });
 
-async function register(page: Parameters<typeof clearDebugPosition>[0]) {
+async function register(page: Page) {
   await page.getByRole("button", { name: "Register" }).click();
   await page.getByLabel("Email").fill(`e2e-${Date.now()}@inquara.local`);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Create account" }).click();
 }
 
-async function clearDebugPosition(page: { addInitScript: (script: () => void) => Promise<void> }) {
+async function clearDebugPosition(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.removeItem("inquara.debug_position");
     window.localStorage.removeItem("inquara.debug_open");

@@ -4,9 +4,53 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
 import { createApiTestEnv, resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
-let userId = "";
 let workspaceId = "";
 let nodeId = "";
+
+type TestRealtimeMessage = {
+  type?: string;
+  error?: string;
+  event?: {
+    type?: string;
+    clientMutationId?: string | null;
+    node?: {
+      x?: number;
+      y?: number;
+    };
+    message?: {
+      id: string;
+      role: string;
+      content: string;
+      status: string;
+    };
+    messageId?: string;
+    delta?: string;
+  };
+};
+
+function expectEvent(message: TestRealtimeMessage): NonNullable<TestRealtimeMessage["event"]> {
+  if (!message.event) throw new Error("Expected realtime event message.");
+  return message.event;
+}
+
+function expectNodeEvent(message: TestRealtimeMessage): NonNullable<NonNullable<TestRealtimeMessage["event"]>["node"]> {
+  const event = expectEvent(message);
+  if (!event.node) throw new Error("Expected realtime node event.");
+  return event.node;
+}
+
+function expectMessageEvent(
+  message: TestRealtimeMessage
+): NonNullable<NonNullable<TestRealtimeMessage["event"]>["message"]> {
+  const event = expectEvent(message);
+  if (!event.message) throw new Error("Expected realtime message event.");
+  return event.message;
+}
+
+function expectRealtimeMessage(message: TestRealtimeMessage | undefined): TestRealtimeMessage {
+  if (!message) throw new Error("Expected realtime message.");
+  return message;
+}
 
 beforeEach(async () => {
   await resetTestDatabase();
@@ -14,7 +58,6 @@ beforeEach(async () => {
   const user = await prisma.user.create({
     data: { email: "realtime@inquara.local", name: "Realtime User" }
   });
-  userId = user.id;
   const workspace = await prisma.workspace.create({
     data: { ownerId: user.id, title: "Realtime Canvas" }
   });
@@ -72,9 +115,9 @@ describe("workspace realtime websocket", () => {
       waitForMessage(second, "workspace.node.updated")
     ]);
 
-    expect(firstEvent.event.node.x).toBe(240);
-    expect(secondEvent.event.node.y).toBe(120);
-    expect(secondEvent.event.clientMutationId).toBe("mutation-ws-position");
+    expect(expectNodeEvent(firstEvent).x).toBe(240);
+    expect(expectNodeEvent(secondEvent).y).toBe(120);
+    expect(expectEvent(secondEvent).clientMutationId).toBe("mutation-ws-position");
 
     first.close();
     second.close();
@@ -115,16 +158,23 @@ describe("workspace realtime websocket", () => {
     const delta = await deltaPromise;
     const updated = await updatedPromise;
 
-    expect(userCreated.event.message.role).toBe("user");
-    expect(userCreated.event.message.content).toBe("What is attention?");
-    expect(userCreated.event.clientMutationId).toBe("mutation-send-message");
-    expect(assistantCreated.event.message.role).toBe("assistant");
-    expect(assistantCreated.event.message.status).toBe("streaming");
-    expect(delta.event.delta.length).toBeGreaterThan(0);
-    expect(delta.event.messageId).toBe(assistantCreated.event.message.id);
-    expect(updated.event.message.id).toBe(assistantCreated.event.message.id);
-    expect(updated.event.message.status).toBe("complete");
-    expect(updated.event.message.content).toContain("What is attention?");
+    const userCreatedMessage = expectRealtimeMessage(userCreated);
+    const assistantCreatedMessage = expectRealtimeMessage(assistantCreated);
+    const userMessage = expectMessageEvent(userCreatedMessage);
+    const assistantMessage = expectMessageEvent(assistantCreatedMessage);
+    const deltaEvent = expectEvent(delta);
+    const updatedMessage = expectMessageEvent(updated);
+
+    expect(userMessage.role).toBe("user");
+    expect(userMessage.content).toBe("What is attention?");
+    expect(expectEvent(userCreatedMessage).clientMutationId).toBe("mutation-send-message");
+    expect(assistantMessage.role).toBe("assistant");
+    expect(assistantMessage.status).toBe("streaming");
+    expect(deltaEvent.delta?.length).toBeGreaterThan(0);
+    expect(deltaEvent.messageId).toBe(assistantMessage.id);
+    expect(updatedMessage.id).toBe(assistantMessage.id);
+    expect(updatedMessage.status).toBe("complete");
+    expect(updatedMessage.content).toContain("What is attention?");
 
     socket.close();
     await app.close();
@@ -179,10 +229,10 @@ function connect(url: string, session: string): Promise<WebSocket> {
   });
 }
 
-function waitForMessage(socket: WebSocket, type: string): Promise<any> {
+function waitForMessage(socket: WebSocket, type: string): Promise<TestRealtimeMessage> {
   return new Promise(resolve => {
     const handler = (data: WebSocket.RawData) => {
-      const parsed = JSON.parse(data.toString());
+      const parsed = JSON.parse(data.toString()) as TestRealtimeMessage;
       if (parsed.type === type || parsed.event?.type === type) {
         socket.off("message", handler);
         resolve(parsed);
@@ -192,11 +242,11 @@ function waitForMessage(socket: WebSocket, type: string): Promise<any> {
   });
 }
 
-function waitForMessages(socket: WebSocket, type: string, count: number): Promise<any[]> {
+function waitForMessages(socket: WebSocket, type: string, count: number): Promise<TestRealtimeMessage[]> {
   return new Promise(resolve => {
-    const messages: any[] = [];
+    const messages: TestRealtimeMessage[] = [];
     const handler = (data: WebSocket.RawData) => {
-      const parsed = JSON.parse(data.toString());
+      const parsed = JSON.parse(data.toString()) as TestRealtimeMessage;
       if (parsed.type === type || parsed.event?.type === type) {
         messages.push(parsed);
         if (messages.length === count) {

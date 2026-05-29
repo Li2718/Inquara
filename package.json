@@ -1,6 +1,9 @@
 {
   "name": "inquara",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -10,6 +13,9 @@
     "dev:api": "node --env-file=.env scripts/run-workspace.mjs @inquara/api dev",
     "dev:web": "node --env-file=.env scripts/run-workspace.mjs @inquara/web dev",
     "build": "npm run build --workspaces",
+    "lint": "eslint . --cache --cache-location ./.cache/eslint/",
+    "lint:fix": "eslint . --fix --cache --cache-location ./.cache/eslint/",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:debug-free": "node scripts/verify-debug-free.mjs",
@@ -18,12 +24,17 @@
     "db:seed": "npm --workspace @inquara/db run seed"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.2.6",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.20.0",
+    "eslint": "^10.4.0",
+    "globals": "^17.6.0",
     "npm-run-all": "^4.1.5",
     "pg": "^8.21.0",
     "testcontainers": "^12.0.0",
     "typescript": "^5.8.0",
+    "typescript-eslint": "^8.60.0",
     "vitest": "^3.0.0"
   }
 }

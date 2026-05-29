@@ -1,6 +1,5 @@
 "use client";
 
-import type { CanvasNode } from "@inquara/domain";
 import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
 import { CheckIcon, ConfirmDialog, IconButton, MoreVerticalIcon, PopupMenu, PopupMenuItem } from "../../shared/components/ui";

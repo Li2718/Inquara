@@ -1,7 +1,7 @@
 import type { AppConfig } from "@inquara/config";
 import { WorkspaceCommandSchema, type WorkspaceCommand, type WorkspaceEvent } from "@inquara/domain";
 import type { FastifyInstance } from "fastify";
-import type { RawData, WebSocket } from "ws";
+import type { WebSocket } from "ws";
 import { z } from "zod";
 import { createAIProvider } from "../ai/factory";
 import { verifySessionToken } from "../auth/session";

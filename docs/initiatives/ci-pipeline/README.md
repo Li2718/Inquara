@@ -60,18 +60,27 @@ Inquara should keep this shape unless a repository-specific requirement makes a 
 - Decided to use GitHub hosting instead of the previous local Gitea repository.
 - Pointed the local `origin` remote at `https://github.com/Li2718/Inquara.git`.
 - Recorded the aitestkit CI baseline and Inquara-specific obstacles.
+- Added a GitHub Actions workflow at `.github/workflows/ci.yml` with separate quality and full-test jobs.
+- Set the repository Node engine policy to `>=20.9.0` and configured CI to run on Node 20.
+- Added root `lint`, `lint:fix`, and `typecheck` scripts.
+- Added workspace `typecheck` scripts for API, web, config, db, and domain packages.
+- Added ESLint flat config and lint dependencies.
+- Added Prisma client generation as an explicit CI setup step before quality and test jobs.
+- Fixed typecheck debt in Playwright e2e helpers and workspace/domain test fixtures.
+- Fixed lint debt in realtime tests and unused imports.
+- Verified `npm run lint`.
+- Verified `npm run typecheck`.
+- Verified `npm test`.
 
 ## Remaining Work
 
-- Decide the CI Node version and, if needed, add an `engines.node` policy.
-- Add or adapt root `lint` support.
-- Add root and workspace `typecheck` scripts.
-- Fix any typecheck debt exposed by the new scripts.
-- Add Prisma generation to the CI flow where required.
-- Add the GitHub Actions workflow under `.github/workflows/ci.yml`.
-- Verify the quality job locally as far as practical.
-- Verify the full test job locally, including testcontainers-backed tests.
 - Push to GitHub and confirm the workflow runs there.
+- Decide whether to archive this initiative after the GitHub workflow passes.
+
+## Local Verification Notes
+
+- `npm run db:generate` failed locally while the development server was running because Prisma could not rename the generated Windows query engine DLL. The CI workflow still runs `npm run db:generate` explicitly because GitHub Actions uses a clean install without a long-running local dev server holding that file.
+- The full test suite passed locally with testcontainers-backed PostgreSQL.
 
 ## Deferred Work
 

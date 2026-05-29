@@ -2,6 +2,7 @@
 .env
 log/
 .tmp/
+.cache/
 demo/config.js
 .references/
 node_modules/
