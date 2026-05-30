@@ -1,0 +1,171 @@
+import { existsSync } from "node:fs";
+import { createServer } from "node:net";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const DEFAULT_SERVER_PORT_SCAN_LIMIT = 1_000;
+
+export function resolveRepoRootFromScript(scriptUrl) {
+  const normalizedScriptPath = fileURLToPath(scriptUrl);
+  return path.resolve(path.dirname(normalizedScriptPath), "..");
+}
+
+export function getDevEnvironmentPaths(rootDir) {
+  const runtimeDir = path.join(rootDir, ".local", "dev");
+
+  return {
+    rootDir,
+    devComposePath: path.join(rootDir, "docker-compose.dev.yml"),
+    devComposeExamplePath: path.join(rootDir, "docker-compose.dev.example.yml"),
+    runtimeDir,
+    apiPidPath: path.join(runtimeDir, "api.pid"),
+    apiLogPath: path.join(runtimeDir, "api.log"),
+    webPidPath: path.join(runtimeDir, "web.pid"),
+    webLogPath: path.join(runtimeDir, "web.log")
+  };
+}
+
+export function ensureDevComposeExists(rootDir) {
+  const paths = getDevEnvironmentPaths(rootDir);
+
+  if (!existsSync(paths.devComposePath)) {
+    throw new Error(
+      "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml and adjust it for your machine first."
+    );
+  }
+
+  return paths;
+}
+
+export function parseComposePsJson(rawOutput) {
+  const trimmed = rawOutput.trim();
+
+  if (trimmed.length === 0) {
+    return [];
+  }
+
+  if (trimmed.startsWith("[")) {
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  }
+
+  return trimmed
+    .split(/\r?\n/u)
+    .filter(line => line.trim().length > 0)
+    .map(line => JSON.parse(line));
+}
+
+function isReadyState(row) {
+  const state = String(row.State ?? "").toLowerCase();
+  const health = row.Health ? String(row.Health).toLowerCase() : null;
+
+  if (state !== "running") {
+    return false;
+  }
+
+  if (health && health !== "healthy") {
+    return false;
+  }
+
+  return true;
+}
+
+export function areRequiredServicesReady(rows) {
+  const requiredServices = ["postgres"];
+
+  return requiredServices.every(serviceName => {
+    const row = rows.find(entry => entry.Service === serviceName);
+    return row ? isReadyState(row) : false;
+  });
+}
+
+export function getDevCommandPlan({ hasDevComposeFile, infraReady }) {
+  if (!hasDevComposeFile) {
+    throw new Error(
+      "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml and adjust it for your machine first."
+    );
+  }
+
+  if (!infraReady) {
+    return ["bootstrap", "start"];
+  }
+
+  return ["start"];
+}
+
+export function getExistingServiceAction({ pidRunning }) {
+  return pidRunning ? "reuse" : "restart";
+}
+
+export function getUrlFromEnv(env, key, fallback) {
+  return new URL(env[key] ?? fallback);
+}
+
+export function getUrlPort(url) {
+  if (url.port) {
+    return Number(url.port);
+  }
+
+  return url.protocol === "https:" ? 443 : 80;
+}
+
+export function getServerConfigFromUrl(url) {
+  return {
+    host: url.hostname,
+    port: getUrlPort(url)
+  };
+}
+
+export function withUrlPort(url, port) {
+  const nextUrl = new URL(url.toString());
+  nextUrl.port = String(port);
+  return nextUrl;
+}
+
+export function getHealthCheckHost(host) {
+  return host === "0.0.0.0" || host === "::" || host === "localhost" ? "127.0.0.1" : host;
+}
+
+export function getHttpHealthUrl({ host, port }, pathName) {
+  return new URL(pathName, `http://${getHealthCheckHost(host)}:${port}`);
+}
+
+export async function checkTcpPortAvailable(host, port) {
+  return new Promise(resolve => {
+    const server = createServer();
+
+    server.once("error", () => {
+      resolve(false);
+    });
+
+    server.once("listening", () => {
+      server.close(() => {
+        resolve(true);
+      });
+    });
+
+    server.listen(port, host);
+  });
+}
+
+export async function resolveAvailableServerConfig(
+  serverConfig,
+  {
+    isPortAvailable = checkTcpPortAvailable,
+    scanLimit = DEFAULT_SERVER_PORT_SCAN_LIMIT
+  } = {}
+) {
+  const preferredPort = serverConfig.port;
+  const maxPort = Math.min(65_535, preferredPort + scanLimit);
+
+  for (let port = preferredPort; port <= maxPort; port += 1) {
+    if (await isPortAvailable(serverConfig.host, port)) {
+      return {
+        ...serverConfig,
+        port
+      };
+    }
+  }
+
+  throw new Error(`No available local app port found from ${preferredPort} to ${maxPort}`);
+}

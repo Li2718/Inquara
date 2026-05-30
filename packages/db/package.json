@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "generate": "prisma generate --schema prisma/schema.prisma",
     "migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
     "test": "vitest run src"
   },
   "dependencies": {
