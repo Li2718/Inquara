@@ -134,6 +134,189 @@ h2 {
   line-height: 1.6;
 }
 
+.ui-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.ui-loading-state[data-has-copy="false"] {
+  justify-content: center;
+}
+
+.ui-loading-mark {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ui-loading-mark span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: ui-loading-pulse var(--ui-loading-duration, 1500ms) ease-in-out infinite;
+}
+
+.ui-loading-mark span:nth-child(2) {
+  animation-delay: var(--ui-loading-delay-2, 250ms);
+}
+
+.ui-loading-mark span:nth-child(3) {
+  animation-delay: var(--ui-loading-delay-3, 500ms);
+}
+
+.ui-loading-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ui-loading-copy strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.ui-loading-copy span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ui-loading-state-inline {
+  gap: 8px;
+}
+
+.ui-loading-state-inline .ui-loading-mark {
+  width: 32px;
+  height: 18px;
+  gap: 4px;
+}
+
+.ui-loading-state-inline .ui-loading-mark span {
+  width: 4px;
+  height: 4px;
+}
+
+.ui-loading-state-inline .ui-loading-copy strong {
+  font-size: 12px;
+}
+
+.ui-loading-state-panel {
+  padding: 4px 0;
+}
+
+.ui-loading-state-page,
+.ui-loading-state-canvas {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.ui-loading-state-page {
+  min-height: calc(100svh - 104px);
+}
+
+.ui-loading-state-page .ui-loading-mark,
+.ui-loading-state-canvas .ui-loading-mark {
+  width: 40px;
+  height: 22px;
+  gap: 5px;
+}
+
+.ui-loading-state-page .ui-loading-mark span,
+.ui-loading-state-canvas .ui-loading-mark span {
+  width: 5px;
+  height: 5px;
+}
+
+.ui-loading-state-page .ui-loading-copy strong {
+  font-size: 22px;
+}
+
+.ui-loading-state-canvas .ui-loading-copy strong {
+  font-size: 15px;
+}
+
+.ui-skeleton-block {
+  display: grid;
+  gap: 10px;
+}
+
+.ui-skeleton-row {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  height: 14px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 64%);
+}
+
+.ui-skeleton-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(57 183 165 / 13%), transparent);
+  transform: translateX(-100%);
+  animation: ui-skeleton-shimmer 1300ms ease-in-out infinite;
+}
+
+.ui-skeleton-row:nth-child(2) {
+  width: 86%;
+}
+
+.ui-skeleton-row:nth-child(3) {
+  width: 72%;
+}
+
+.ui-skeleton-row:nth-child(4) {
+  width: 92%;
+}
+
+.ui-skeleton-block-list {
+  gap: 8px;
+}
+
+.ui-skeleton-block-list .ui-skeleton-row {
+  width: 100%;
+  height: 66px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 44%);
+}
+
+.ui-skeleton-block-panel .ui-skeleton-row {
+  height: 46px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 58%);
+}
+
+@keyframes ui-loading-pulse {
+  0%,
+  100% {
+    opacity: var(--ui-loading-min-opacity, 0.5);
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(var(--ui-loading-lift, -0.75px));
+  }
+}
+
+@keyframes ui-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .app-shell {
   min-height: 100svh;
   padding: clamp(14px, 3vw, 30px);
@@ -516,6 +699,131 @@ h2 {
 .workspace-panel {
   min-height: calc(100svh - 56px);
   padding: 24px;
+}
+
+.workspace-loading-panel {
+  min-height: calc(100svh - 60px);
+  display: grid;
+  place-items: center;
+}
+
+.workspace-loading-panel .ui-loading-state-page {
+  min-height: auto;
+}
+
+.loading-demo-page {
+  min-height: 100svh;
+  display: grid;
+  align-items: center;
+  padding: 28px;
+}
+
+.loading-demo-panel {
+  width: min(1120px, 100%);
+  display: grid;
+  gap: 20px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgb(255 255 255 / 82%);
+  box-shadow: var(--shadow);
+}
+
+.loading-demo-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.loading-demo-header h1 {
+  font-size: 38px;
+}
+
+.loading-demo-header code {
+  padding: 7px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 68%);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.loading-demo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.loading-demo-card {
+  min-height: 220px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: var(--surface-mist);
+}
+
+.loading-demo-card h2 {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.loading-demo-card > div {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.loading-demo-card .ui-loading-state-page {
+  min-height: auto;
+}
+
+.loading-demo-card .ui-skeleton-block {
+  width: 100%;
+}
+
+.loading-demo-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.loading-demo-control {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 58%);
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.loading-demo-control span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.loading-demo-control strong {
+  color: var(--ink);
+}
+
+.loading-demo-control input {
+  min-height: 20px;
+  width: 100%;
+  padding: 0;
+  accent-color: var(--accent);
 }
 
 .canvas-page {
@@ -1146,6 +1454,11 @@ h2 {
   gap: 8px;
   overflow: auto;
   padding-top: 2px;
+}
+
+.workspace-sidebar-loading {
+  display: grid;
+  gap: 10px;
 }
 
 .workspace-sidebar-item-shell {
@@ -1939,5 +2252,9 @@ h2 {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .ui-skeleton-row::after {
+    opacity: 0;
   }
 }

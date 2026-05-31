@@ -136,6 +136,7 @@ Implemented shared components:
 - `ui/Button.tsx` provides the shared action button wrapper for primary, secondary, and danger actions while preserving the current button CSS contract. Use it for ordinary text action buttons such as form submit and confirmation actions; keep segmented controls, morph controls, icon-only controls, and specialized canvas affordances on their dedicated components.
 - `ui/IconButton.tsx` provides the shared quiet square icon button wrapper for product toolbars and node headers.
 - `ui/FloatingCircleButton.tsx` provides the shared round floating control wrapper with fixed size presets.
+- `ui/LoadingState.tsx` provides shared loading presentation variants and skeleton blocks for page, panel, inline, and canvas loading states.
 - `ui/PopupMenu.tsx` provides the shared opaque menu surface, outside-click handling, Escape handling, and menu item styling for product menus.
 - `ui/ConfirmDialog.tsx` provides the shared confirmation modal pattern, portal mounting, Escape/backdrop close behavior, accessible dialog attributes, and confirm/cancel actions for destructive or irreversible product actions.
 - `ui/icons.tsx` provides the shared routine product icon source for current sidebar, menu, check, plus, and reset-view icons. Prefer this file before adding inline SVG or text-symbol icons in feature code.

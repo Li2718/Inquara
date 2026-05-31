@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { apiJson } from "../../shared/api";
 import { AppTopBar } from "../../shared/components/chrome";
-import { Button } from "../../shared/components/ui";
+import { Button, LoadingState, SkeletonBlock } from "../../shared/components/ui";
 
 type RedemptionCode = {
   code: string;
@@ -128,7 +128,10 @@ export function RedemptionCodesAdminPage() {
   if (isLoading) {
     return (
       <AdminShell>
-        <section className="admin-panel">Loading admin...</section>
+        <section className="admin-panel">
+          <LoadingState variant="panel" aria-label="Loading admin" />
+          <SkeletonBlock variant="panel" rows={4} />
+        </section>
       </AdminShell>
     );
   }

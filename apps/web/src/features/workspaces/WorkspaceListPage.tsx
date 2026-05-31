@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LoginPage } from "../auth/LoginPage";
 import { apiJson } from "../../shared/api";
+import { LoadingState } from "../../shared/components/ui";
 
 export function WorkspaceListPage() {
   const router = useRouter();
@@ -39,9 +40,8 @@ export function WorkspaceListPage() {
   if (isLoading) {
     return (
       <main className="app-shell">
-        <section className="workspace-panel">
-          <p className="eyebrow">Inquara</p>
-          <h1>Opening canvas...</h1>
+        <section className="workspace-panel workspace-loading-panel">
+          <LoadingState variant="page" aria-label="Opening canvas" />
         </section>
       </main>
     );
@@ -53,9 +53,8 @@ export function WorkspaceListPage() {
 
   return (
     <main className="app-shell">
-      <section className="workspace-panel">
-        <p className="eyebrow">Inquara</p>
-        <h1>Opening canvas...</h1>
+      <section className="workspace-panel workspace-loading-panel">
+        <LoadingState variant="page" aria-label="Opening canvas" />
         {error ? <p className="error-text">{error}</p> : null}
       </section>
     </main>

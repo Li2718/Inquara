@@ -16,7 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
-import { FloatingCircleButton, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
+import { FloatingCircleButton, LoadingState, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
@@ -290,7 +290,11 @@ function CanvasFlow({
   };
 
   if (!snapshot) {
-    return <div className="canvas-loading">Loading canvas...</div>;
+    return (
+      <div className="canvas-loading">
+        <LoadingState variant="canvas" aria-label="Loading canvas" />
+      </div>
+    );
   }
 
   return (

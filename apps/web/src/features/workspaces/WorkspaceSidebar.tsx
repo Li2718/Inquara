@@ -7,10 +7,12 @@ import { apiJson } from "../../shared/api";
 import {
   Button,
   ConfirmDialog,
+  LoadingState,
   MoreVerticalIcon,
   PlusIcon,
   PopupMenu,
   PopupMenuItem,
+  SkeletonBlock,
   SidebarCollapseIcon,
   SidebarPanelIcon
 } from "../../shared/components/ui";
@@ -164,7 +166,12 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
         </header>
 
         <div className="workspace-sidebar-list" aria-label="Canvas list">
-          {isLoading ? <p className="workspace-sidebar-note">Loading canvases...</p> : null}
+          {isLoading ? (
+            <div className="workspace-sidebar-loading">
+              <LoadingState variant="inline" aria-label="Loading canvases" />
+              <SkeletonBlock variant="list" rows={3} />
+            </div>
+          ) : null}
           {!isLoading && workspaces.length === 0 ? (
             <p className="workspace-sidebar-note">No canvases yet.</p>
           ) : null}
