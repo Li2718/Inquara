@@ -4,8 +4,8 @@
 
 All documentation work in this repository must follow:
 
-- [docs/documentation-standards.md](<repo-root-placeholder>/docs/documentation-standards.md)
-- [.codex/skills/documentation-governance/SKILL.md](<repo-root-placeholder>/.codex/skills/documentation-governance/SKILL.md)
+- [docs/documentation-standards.md](docs/documentation-standards.md)
+- [.codex/skills/documentation-governance/SKILL.md](.codex/skills/documentation-governance/SKILL.md)
 
 Use these rules as hard constraints, not optional style guidance.
 
@@ -51,7 +51,7 @@ If the repository uses `docs/archive/`:
 
 ## Debug Rules
 
-Debug implementation work must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+Debug implementation work must follow the hard rules in [docs/architecture.md](docs/architecture.md).
 
 1. Web debug UI must be mounted once from `apps/web/src/app/layout.tsx` through `apps/web/src/debug/DebugRoot.tsx`.
 2. Product pages may publish page-specific debug data only through product-safe debug source entrypoints such as `apps/web/src/debug/DebugCanvasSource.tsx`; they must not render debug UI directly.
@@ -67,8 +67,8 @@ Debug implementation work must follow the hard rules in [docs/architecture.md](<
 
 All UI work must follow:
 
-- [docs/ui-system.md](<repo-root-placeholder>/docs/ui-system.md)
-- [apps/web/src/shared/components/README.md](<repo-root-placeholder>/apps/web/src/shared/components/README.md)
+- [docs/ui-system.md](docs/ui-system.md)
+- [apps/web/src/shared/components/README.md](apps/web/src/shared/components/README.md)
 
 Use these rules as hard constraints, not optional style guidance.
 
@@ -109,7 +109,7 @@ Then follow these rules:
 
 Before creating or editing UI, follow this search order:
 
-1. Read [apps/web/src/shared/components/README.md](<repo-root-placeholder>/apps/web/src/shared/components/README.md).
+1. Read [apps/web/src/shared/components/README.md](apps/web/src/shared/components/README.md).
 2. Check relevant barrel exports under `apps/web/src/shared/components/**/index.ts` when they exist.
 3. Search `apps/web/src/shared/components/` for likely names and usages.
 4. Search `apps/web/src/features/` for feature-owned components that may need to remain private or be promoted.
@@ -180,11 +180,11 @@ Before closing a UI task, verify:
 
 ## Test Database Rules
 
-All test creation, deletion, and modification must follow [docs/testing-standards.md](<repo-root-placeholder>/docs/testing-standards.md).
+All test creation, deletion, and modification must follow [docs/testing-standards.md](docs/testing-standards.md).
 
 Use these rules as hard constraints, not optional style guidance. Tests must reduce real product or engineering risk and should be judged by the value framework in the testing standard, not by mechanical coverage or incidental implementation details.
 
-Database-backed tests must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+Database-backed tests must follow the hard rules in [docs/architecture.md](docs/architecture.md).
 
 1. API, database integration, WebSocket, and Playwright e2e tests that write data must use the shared ephemeral PostgreSQL setup based on `testcontainers`.
 2. Do not let destructive tests default to the development `DATABASE_URL` from `.env`.
@@ -194,7 +194,7 @@ Database-backed tests must follow the hard rules in [docs/architecture.md](<repo
 
 ## Development Database Rules
 
-Development database changes must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+Development database changes must follow the hard rules in [docs/architecture.md](docs/architecture.md).
 
 1. After modifying the Prisma schema or adding/changing a database migration, check whether a local development server is running.
 2. If a local development server is running, apply the development database migration before asking the user to continue using the app.
@@ -203,7 +203,7 @@ Development database changes must follow the hard rules in [docs/architecture.md
 
 ## Development Server Build Rules
 
-Development server and build verification work must follow the hard rules in [docs/architecture.md](<repo-root-placeholder>/docs/architecture.md).
+Development server and build verification work must follow the hard rules in [docs/architecture.md](docs/architecture.md).
 
 1. Before running a production web build such as `npm --workspace @inquara/web run build`, check whether a local Next development server is running for this repository.
 2. Do not run a production Next build against `apps/web/.next` while `next dev` is serving the browser, because the build can rewrite `.next` and break the active dev server with missing chunk errors.

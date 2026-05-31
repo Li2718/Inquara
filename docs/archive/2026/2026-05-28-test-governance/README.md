@@ -66,7 +66,7 @@ While active, this initiative README was the source of truth for live task statu
 - Verified the second cleanup pass: 18 test files and 70 tests passed.
 - Added the testing standard to `AGENTS.md` as a hard project rule for test creation, deletion, and modification.
 - Reworked [Testing Standards](../../../testing-standards.md) from a list of observed cases into a long-term value framework: tests must reduce real product or engineering risk, choose the right layer for that risk, and treat low-value examples as signals rather than an exhaustive blacklist.
-- Compared `<external-reference-root>/docs/architecture/testing-strategy.md` and incorporated reusable structure into [Testing Standards](../../../testing-standards.md): valuable-test categories, low-value categories with exceptions, existing-test audit outcomes, one-time migration sentinel handling, and minimum requirements before adding tests.
+- Compared aitestkit's testing strategy documentation and incorporated reusable structure into [Testing Standards](../../../testing-standards.md): valuable-test categories, low-value categories with exceptions, existing-test audit outcomes, one-time migration sentinel handling, and minimum requirements before adding tests.
 - Referenced aitestkit's new test file placement rules and added an Inquara-specific [Test File Placement](../../../testing-standards.md#test-file-placement) section: default co-location, API/database-backed test harness placement, shared test helper placement, e2e placement, and avoided centralized structures.
 - Re-audited current test placement against the new rules:
   - Ordinary web/package helper tests are colocated with the source they protect.

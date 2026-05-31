@@ -17,7 +17,7 @@ describe("web startup selector", () => {
   });
 
   it("recognizes the script entrypoint on Windows paths", () => {
-    expect(isMainModule("file:///<repo-root-placeholder>/scripts/web-start.mjs", "<repo-root-placeholder>---\\scripts\\web-start.mjs")).toBe(true);
+    expect(isMainModule("file:///Z:/fixture/inquara/scripts/web-start.mjs", "Z:\\fixture\\inquara\\scripts\\web-start.mjs")).toBe(true);
   });
 
   it("starts the setup server when no user exists", async () => {

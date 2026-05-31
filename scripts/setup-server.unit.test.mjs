@@ -23,7 +23,7 @@ describe("setup server", () => {
   });
 
   it("recognizes the script entrypoint on Windows paths", () => {
-    expect(isMainModule("file:///<repo-root-placeholder>/scripts/setup-server.mjs", "<repo-root-placeholder>---\\scripts\\setup-server.mjs")).toBe(true);
+    expect(isMainModule("file:///Z:/fixture/inquara/scripts/setup-server.mjs", "Z:\\fixture\\inquara\\scripts\\setup-server.mjs")).toBe(true);
   });
 
   it("does not reflect submitted passwords when validation fails", async () => {
