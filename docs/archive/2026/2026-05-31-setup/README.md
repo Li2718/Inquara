@@ -1,6 +1,6 @@
 # Setup
 
-> status: active
+> status: archived
 > purpose: Design and implement the first-run setup flow for self-managed Inquara deployments.
 
 ## Goal
@@ -166,7 +166,7 @@ The important ideas to preserve are:
 
 ## Remaining Work
 
-- Push and verify CI.
+- None.
 
 ## Deferred Work
 
@@ -179,10 +179,10 @@ The important ideas to preserve are:
 
 ## Related Documents
 
-- [Architecture](../../architecture.md)
-- [Deployment](../../deployment.md)
-- [Documentation Standards](../../documentation-standards.md)
-- [Redemption Codes](../redemption-codes/README.md)
+- [Architecture](../../../architecture.md)
+- [Deployment](../../../deployment.md)
+- [Documentation Standards](../../../documentation-standards.md)
+- [Redemption Codes](../2026-05-31-redemption-codes/README.md)
 
 ## Archive Criteria
 

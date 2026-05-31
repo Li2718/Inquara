@@ -1,6 +1,6 @@
 # Production Deployment
 
-> status: active
+> status: archived
 > purpose: Design and implement Inquara's first self-managed production deployment baseline.
 
 ## Goal
@@ -86,7 +86,7 @@ The important deployment idea is that production is started through Docker Compo
 
 ## Remaining Work
 
-- Decide whether to archive this initiative after review.
+- None.
 
 ## Deferred Work
 
@@ -99,9 +99,9 @@ The important deployment idea is that production is started through Docker Compo
 
 ## Related Documents
 
-- [Deployment](../../deployment.md)
-- [Architecture](../../architecture.md)
-- [Setup](../setup/README.md)
+- [Deployment](../../../deployment.md)
+- [Architecture](../../../architecture.md)
+- [Setup](../2026-05-31-setup/README.md)
 
 ## Archive Criteria
 

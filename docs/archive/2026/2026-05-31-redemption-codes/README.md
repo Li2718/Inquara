@@ -1,6 +1,6 @@
 # Redemption Codes
 
-> status: active
+> status: archived
 > purpose: Add registration gating on top of an extensible redemption code system.
 
 ## Goal
@@ -16,7 +16,7 @@ The first implementation should stay intentionally small, but the domain model m
 - Require a registration-eligibility redemption code during password registration when registration is invitation-only.
 - Add an administrator setting for whether registration is invitation-only.
 - Local development and test environments default invitation-only registration to off, except in tests or manual sessions that explicitly enable this feature.
-- Production must default invitation-only registration to on; deployment/config handling for this is noted as a follow-up if the current deployment path is not ready yet.
+- Production defaults invitation-only registration to on through the production deployment configuration.
 - Validate redemption code status before creating an account.
 - Consume or record redemption code usage atomically with user creation.
 - Add administrator-only redemption code generation in the admin surface.
@@ -125,10 +125,6 @@ This initiative README is the source of truth for live task status. When design 
 - Avoid assuming all codes are single-use forever, even if the first product behavior is single-use.
 - Avoid coupling redemption validation to password-only auth, because OAuth registration may later need the same gate.
 
-## Open Deployment Note
-
-- Production must default invitation-only registration to on, but deployment configuration is not formalized yet. Do not block the first local implementation on this; revisit when deployment configuration is designed.
-
 ## Completed Work
 
 - Created the invitation codes initiative.
@@ -154,10 +150,11 @@ This initiative README is the source of truth for live task status. When design 
 - Added behavior-focused API tests for default-open test behavior, invitation-only gating, code redemption/exhaustion, admin listing/disable behavior, and non-admin rejection.
 - Updated long-term architecture documentation with system setting and redemption code rules.
 - Added tests following `docs/testing-standards.md`.
+- Connected the production default invitation-only behavior through the production deployment configuration.
 
 ## Remaining Work
 
-- No remaining first-slice implementation work after local verification.
+- None.
 
 ## Deferred Work
 
@@ -169,14 +166,13 @@ This initiative README is the source of truth for live task status. When design 
 - Campaign management.
 - Redemption code privilege grants.
 - Removing the registration code requirement.
-- Production deployment wiring for the default invitation-only setting.
 
 ## Related Documents
 
-- [Architecture](../../architecture.md)
-- [Testing Standards](../../testing-standards.md)
-- [UI System](../../ui-system.md)
-- [Documentation Standards](../../documentation-standards.md)
+- [Architecture](../../../architecture.md)
+- [Testing Standards](../../../testing-standards.md)
+- [UI System](../../../ui-system.md)
+- [Documentation Standards](../../../documentation-standards.md)
 
 ## Archive Criteria
 
