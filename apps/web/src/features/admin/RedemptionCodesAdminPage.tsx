@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { apiJson } from "../../shared/api";
 import { AppTopBar } from "../../shared/components/chrome";
-import { Button, LoadingState, SkeletonBlock } from "../../shared/components/ui";
+import { Button, CheckIcon, ChevronDownIcon, ConfirmDialog, CopyIcon, EditIcon, IconButton, InlineIconButton, LoadingState, SkeletonBlock, Toast, TrashIcon } from "../../shared/components/ui";
 
 type RedemptionCode = {
   code: string;
@@ -22,6 +22,8 @@ type RedemptionCode = {
   source: string;
 };
 
+type CodeStatus = "active" | "disabled" | "expired" | "exhausted" | "used";
+
 export function RedemptionCodesAdminPage() {
   const [codes, setCodes] = useState<RedemptionCode[]>([]);
   const [invitationOnly, setInvitationOnly] = useState(false);
@@ -30,7 +32,12 @@ export function RedemptionCodesAdminPage() {
   const [expiresAt, setExpiresAt] = useState("");
   const [maxRedemptions, setMaxRedemptions] = useState("1");
   const [expandedCode, setExpandedCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [editingNoteCode, setEditingNoteCode] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState("");
+  const [deletingCode, setDeletingCode] = useState<RedemptionCode | null>(null);
   const [error, setError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -111,7 +118,68 @@ export function RedemptionCodesAdminPage() {
     }
   }
 
-  const activeCount = useMemo(() => codes.filter(code => !code.disabledAt && code.redemptionCount < code.maxRedemptions).length, [codes]);
+  async function enableCode(code: string) {
+    setError("");
+    try {
+      await apiJson<RedemptionCode>(`/admin/codes/${code}/enable`, { method: "POST" });
+      await refreshCodes();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to enable code.");
+    }
+  }
+
+  async function confirmDeleteCode() {
+    if (!deletingCode) return;
+    setError("");
+    setIsDeleting(true);
+    try {
+      await apiJson<void>(`/admin/codes/${deletingCode.code}`, { method: "DELETE" });
+      setCodes(current => current.filter(code => code.code !== deletingCode.code));
+      setDeletingCode(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to delete code.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function copyCode(code: string) {
+    setError("");
+    try {
+      await copyText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode(current => (current === code ? null : current)), 1600);
+    } catch {
+      setError("Failed to copy code.");
+    }
+  }
+
+  function startEditingNote(code: RedemptionCode) {
+    setEditingNoteCode(code.code);
+    setEditingNote(code.note ?? "");
+  }
+
+  function cancelEditingNote() {
+    setEditingNoteCode(null);
+    setEditingNote("");
+  }
+
+  async function saveNote(code: string) {
+    setError("");
+    try {
+      const updated = await apiJson<RedemptionCode>(`/admin/codes/${code}/note`, {
+        method: "PATCH",
+        body: JSON.stringify({ note: editingNote || null })
+      });
+      setCodes(current => current.map(item => (item.code === code ? updated : item)));
+      setEditingNoteCode(null);
+      setEditingNote("");
+    } catch {
+      setError("Failed to update note.");
+    }
+  }
+
+  const activeCount = useMemo(() => codes.filter(code => getCodeStatus(code) === "active").length, [codes]);
 
   if (isLoading) {
     return (
@@ -127,6 +195,7 @@ export function RedemptionCodesAdminPage() {
   return (
     <AdminShell>
       <section className="admin-panel">
+        <Toast message={error || null} onDismiss={() => setError("")} />
         <div className="admin-header">
           <div>
             <p className="eyebrow">Admin</p>
@@ -173,18 +242,80 @@ export function RedemptionCodesAdminPage() {
           </Button>
         </form>
 
-        {error ? <p className="error-text">{error}</p> : null}
-
         <div className="admin-code-list">
-          {codes.map(code => (
-            <article key={code.code} className="admin-code-row" data-disabled={Boolean(code.disabledAt)}>
+          {codes.map(code => {
+            const status = getCodeStatus(code);
+            const isUsed = code.redemptionCount > 0;
+            const canToggleDisabled = status === "active" || status === "used" || status === "disabled";
+            const showStateButton = status !== "expired";
+            const canDelete = code.redemptionCount === 0;
+
+            return (
+            <article key={code.code} className="admin-code-row" data-status={status} data-used={isUsed}>
               <div>
-                <strong>{code.code}</strong>
-                <span>{code.note || "No note"}</span>
+                <div className="admin-code-primary">
+                  <button type="button" className="admin-code-copy-button" onClick={() => copyCode(code.code)} aria-label={`Copy invitation code ${code.code}`} title="Copy code">
+                    <strong>{code.code}</strong>
+                    <span className="admin-code-copy-icon" aria-hidden="true">
+                      <CopyIcon />
+                    </span>
+                  </button>
+                  {copiedCode === code.code ? <span className="admin-code-copied">Copied</span> : null}
+                </div>
+                {editingNoteCode === code.code ? (
+                  <form
+                    className="admin-code-note-editor"
+                    onSubmit={event => {
+                      event.preventDefault();
+                      void saveNote(code.code);
+                    }}
+                    onBlur={event => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        cancelEditingNote();
+                      }
+                    }}
+                    onKeyDown={event => {
+                      if (event.key === "Escape") {
+                        cancelEditingNote();
+                      }
+                    }}
+                  >
+                    <input value={editingNote} onChange={event => setEditingNote(event.target.value)} maxLength={240} aria-label={`Note for ${code.code}`} autoFocus />
+                    <IconButton className="admin-code-note-save" type="submit" aria-label={`Save note for ${code.code}`} title="Save note">
+                      <CheckIcon />
+                    </IconButton>
+                  </form>
+                ) : (
+                  <div className="admin-code-note-line">
+                    {code.note ? <span>{code.note}</span> : null}<InlineIconButton className="admin-code-note-edit" aria-label={`Edit note for ${code.code}`} title="Edit note" onClick={() => startEditingNote(code)}>
+                      <EditIcon />
+                    </InlineIconButton>
+                  </div>
+                )}
               </div>
-              <div>
+              <div className="admin-code-redemption-cell">
                 <span>{code.redemptionCount}/{code.maxRedemptions} used</span>
-                <span>{formatRedemptionUsers(code)}</span>
+                <span className="admin-code-redemption-summary">
+                  <span>{formatFirstRedemptionUser(code)}</span>
+                  {code.redemptions.length > 1 ? (
+                    <InlineIconButton
+                      className="admin-code-users-toggle"
+                      aria-expanded={expandedCode === code.code}
+                      aria-label={`${expandedCode === code.code ? "Hide" : "Show"} users for invitation code ${code.code}`}
+                      title={expandedCode === code.code ? "Hide users" : "Show users"}
+                      onClick={() => setExpandedCode(expandedCode === code.code ? null : code.code)}
+                    >
+                      <ChevronDownIcon />
+                    </InlineIconButton>
+                  ) : null}
+                </span>
+                {expandedCode === code.code ? (
+                  <ul className="admin-redemption-users">
+                    {code.redemptions.map(redemption => (
+                      <li key={redemption.id}>{redemption.user.name || redemption.user.email}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
               <div>
                 <span>Source: {code.source}</span>
@@ -192,31 +323,97 @@ export function RedemptionCodesAdminPage() {
               </div>
               <div>
                 <span>{code.expiresAt ? `Expires ${new Date(code.expiresAt).toLocaleString()}` : "No expiry"}</span>
-                <span>{code.disabledAt ? "Disabled" : "Enabled"}</span>
+                <span className="admin-code-status" data-status={status}>{formatCodeStatus(status)}</span>
               </div>
               <div className="admin-code-actions">
-                {code.redemptions.length > 1 ? (
-                  <button type="button" className="secondary-button" onClick={() => setExpandedCode(expandedCode === code.code ? null : code.code)}>
-                    {expandedCode === code.code ? "Hide users" : "Show users"}
-                  </button>
-                ) : null}
-                <button type="button" className="danger-button" disabled={Boolean(code.disabledAt)} onClick={() => disableCode(code.code)}>
-                  Disable
-                </button>
+                {showStateButton ? (
+                  status === "disabled" ? (
+                    <Button type="button" className="admin-code-state-button" variant="secondary" disabled={!canToggleDisabled} onClick={() => enableCode(code.code)}>
+                      Enable
+                    </Button>
+                  ) : (
+                    <Button type="button" className="admin-code-state-button" variant="danger" disabled={!canToggleDisabled} onClick={() => disableCode(code.code)}>
+                      Disable
+                    </Button>
+                  )
+                ) : (
+                  <span className="admin-code-state-placeholder" aria-hidden="true" />
+                )}
+                {canDelete ? (
+                  <InlineIconButton className="admin-code-delete-button" aria-label={`Delete invitation code ${code.code}`} title="Delete code" onClick={() => setDeletingCode(code)}>
+                    <TrashIcon />
+                  </InlineIconButton>
+                ) : (
+                  <span className="admin-code-delete-placeholder" aria-hidden="true" />
+                )}
               </div>
-              {expandedCode === code.code ? (
-                <ul className="admin-redemption-users">
-                  {code.redemptions.map(redemption => (
-                    <li key={redemption.id}>{redemption.user.name || redemption.user.email}</li>
-                  ))}
-                </ul>
-              ) : null}
             </article>
-          ))}
+            );
+          })}
         </div>
+        <ConfirmDialog
+          isOpen={Boolean(deletingCode)}
+          title="Delete invitation code?"
+          description={deletingCode ? `${deletingCode.code} will be permanently deleted. This is only allowed for unused codes.` : undefined}
+          confirmLabel={isDeleting ? "Deleting" : "Delete"}
+          confirmTone="danger"
+          isConfirming={isDeleting}
+          onCancel={() => setDeletingCode(null)}
+          onConfirm={confirmDeleteCode}
+        />
       </section>
     </AdminShell>
   );
+}
+
+async function copyText(text: string) {
+  if (copyTextWithSelection(text)) return;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    throw new Error("Copy command failed.");
+  }
+}
+
+function copyTextWithSelection(text: string) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  document.body.append(textarea);
+  textarea.select();
+  const didCopy = document.execCommand("copy");
+  textarea.remove();
+  return didCopy;
+}
+
+function getCodeStatus(code: RedemptionCode): CodeStatus {
+  if (code.redemptionCount >= code.maxRedemptions) return "exhausted";
+  if (code.redemptionCount > 0) return "used";
+  if (code.expiresAt && new Date(code.expiresAt).getTime() <= Date.now()) return "expired";
+  if (code.disabledAt) return "disabled";
+  return "active";
+}
+
+function formatCodeStatus(status: CodeStatus): string {
+  switch (status) {
+    case "active":
+      return "Active";
+    case "disabled":
+      return "Disabled";
+    case "expired":
+      return "Expired";
+    case "exhausted":
+      return "Exhausted";
+    case "used":
+      return "Used";
+  }
 }
 
 function AdminShell({ children }: { children: ReactNode }) {
@@ -238,10 +435,8 @@ function AdminShell({ children }: { children: ReactNode }) {
   );
 }
 
-function formatRedemptionUsers(code: RedemptionCode): string {
+function formatFirstRedemptionUser(code: RedemptionCode): string {
   if (code.redemptions.length === 0) return "Unused";
   const firstUser = code.redemptions[0]?.user;
-  const firstLabel = firstUser?.name || firstUser?.email || "Unknown user";
-  if (code.redemptions.length === 1) return firstLabel;
-  return `${firstLabel} and ${code.redemptions.length - 1} others`;
+  return firstUser?.name || firstUser?.email || "Unknown user";
 }

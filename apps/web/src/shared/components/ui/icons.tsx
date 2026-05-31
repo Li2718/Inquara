@@ -42,11 +42,48 @@ export function CheckIcon({ className = "ui-check-icon", ...props }: IconProps) 
   );
 }
 
+export function ChevronDownIcon({ className = "ui-chevron-down-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 export function ResetViewIcon({ className = "canvas-reset-view-icon", ...props }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
       <path d="M12 4v16M4 12h16" />
       <circle cx="12" cy="12" r="4.35" />
+    </svg>
+  );
+}
+
+export function CopyIcon({ className = "ui-copy-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <rect x="8" y="8" width="11" height="11" rx="2" />
+      <path d="M5 16V7a2 2 0 0 1 2-2h9" />
+    </svg>
+  );
+}
+
+export function EditIcon({ className = "ui-edit-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path d="M4 20h4.4L19 9.4 14.6 5 4 15.6V20Z" />
+      <path d="m13.5 6.1 4.4 4.4" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ className = "ui-trash-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path d="M4 7h16" />
+      <path d="M9 7V5h6v2" />
+      <path d="M7 7l1 13h8l1-13" />
+      <path d="M10 11v5M14 11v5" />
     </svg>
   );
 }

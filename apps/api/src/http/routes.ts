@@ -9,9 +9,12 @@ import {
 } from "../auth/session";
 import {
   createRegistrationRedemptionCode,
+  deleteRegistrationRedemptionCode,
   disableRegistrationRedemptionCode,
+  enableRegistrationRedemptionCode,
   listRegistrationRedemptionCodes,
-  RedemptionCodeError
+  RedemptionCodeError,
+  updateRegistrationRedemptionCodeNote
 } from "../redemption-codes/service";
 import {
   getInvitationOnlyRegistration,
@@ -61,6 +64,10 @@ const CreateRedemptionCodeSchema = z.object({
   maxRedemptions: z.number().int().min(1).optional(),
   note: z.string().max(240).nullable().optional(),
   validDays: z.number().int().min(1).optional()
+});
+
+const UpdateRedemptionCodeNoteSchema = z.object({
+  note: z.string().max(240).nullable()
 });
 
 export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig): Promise<void> {
@@ -167,7 +174,51 @@ export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig)
     const admin = await requireAdmin(request, reply);
     if (!admin) return;
     const params = request.params as { code: string };
-    return disableRegistrationRedemptionCode(params.code);
+    try {
+      return await disableRegistrationRedemptionCode(params.code);
+    } catch (error) {
+      if (error instanceof RedemptionCodeError) {
+        return reply.code(error.statusCode).send({ error: error.message });
+      }
+      throw error;
+    }
+  });
+
+  app.post("/admin/codes/:code/enable", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    const params = request.params as { code: string };
+    try {
+      return await enableRegistrationRedemptionCode(params.code);
+    } catch (error) {
+      if (error instanceof RedemptionCodeError) {
+        return reply.code(error.statusCode).send({ error: error.message });
+      }
+      throw error;
+    }
+  });
+
+  app.delete("/admin/codes/:code", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    const params = request.params as { code: string };
+    try {
+      await deleteRegistrationRedemptionCode(params.code);
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof RedemptionCodeError) {
+        return reply.code(error.statusCode).send({ error: error.message });
+      }
+      throw error;
+    }
+  });
+
+  app.patch("/admin/codes/:code/note", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    const params = request.params as { code: string };
+    const body = UpdateRedemptionCodeNoteSchema.parse(request.body ?? {});
+    return updateRegistrationRedemptionCodeNote(params.code, body.note);
   });
 
   app.get("/admin/settings/registration", async (request, reply) => {

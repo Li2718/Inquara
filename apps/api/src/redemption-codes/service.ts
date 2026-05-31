@@ -85,12 +85,55 @@ export async function listRegistrationRedemptionCodes() {
 
 export async function disableRegistrationRedemptionCode(code: string) {
   const normalizedCode = normalizeRedemptionCode(code);
+  const existing = await findRegistrationRedemptionCode(normalizedCode);
+  assertCodeExists(existing);
+  assertCodeIsNotExpired(existing);
+  assertCodeIsNotExhausted(existing);
+
   const disabled = await prisma.redemptionCode.update({
     where: { code: normalizedCode },
     data: { disabledAt: new Date() },
     include: redemptionCodeInclude
   });
   return toRedemptionCodeDto(disabled);
+}
+
+export async function enableRegistrationRedemptionCode(code: string) {
+  const normalizedCode = normalizeRedemptionCode(code);
+  const existing = await findRegistrationRedemptionCode(normalizedCode);
+  assertCodeExists(existing);
+  assertCodeIsNotExpired(existing);
+  assertCodeIsNotExhausted(existing);
+
+  const enabled = await prisma.redemptionCode.update({
+    where: { code: normalizedCode },
+    data: { disabledAt: null },
+    include: redemptionCodeInclude
+  });
+  return toRedemptionCodeDto(enabled);
+}
+
+export async function deleteRegistrationRedemptionCode(code: string) {
+  const normalizedCode = normalizeRedemptionCode(code);
+  const existing = await findRegistrationRedemptionCode(normalizedCode);
+  assertCodeExists(existing);
+  if (existing.redemptions.length > 0) {
+    throw new RedemptionCodeError("Only unused invitation codes can be deleted.", 400);
+  }
+
+  await prisma.redemptionCode.delete({
+    where: { code: normalizedCode }
+  });
+}
+
+export async function updateRegistrationRedemptionCodeNote(code: string, note: string | null | undefined) {
+  const normalizedCode = normalizeRedemptionCode(code);
+  const updated = await prisma.redemptionCode.update({
+    where: { code: normalizedCode },
+    data: { note: normalizeNote(note) },
+    include: redemptionCodeInclude
+  });
+  return toRedemptionCodeDto(updated);
 }
 
 export async function redeemRegistrationCodeForUser(
@@ -147,6 +190,33 @@ async function isCodeLengthNamespaceCrowded(length: number): Promise<boolean> {
 function normalizeNote(value: string | null | undefined): string | null {
   const normalized = value?.trim() ?? "";
   return normalized || null;
+}
+
+async function findRegistrationRedemptionCode(code: string) {
+  return prisma.redemptionCode.findUnique({
+    where: { code },
+    include: redemptionCodeInclude
+  });
+}
+
+function assertCodeExists(
+  value: Prisma.RedemptionCodeGetPayload<{ include: typeof redemptionCodeInclude }> | null
+): asserts value is Prisma.RedemptionCodeGetPayload<{ include: typeof redemptionCodeInclude }> {
+  if (!value || value.target !== registrationEligibilityTarget) {
+    throw new RedemptionCodeError("Invitation code not found.", 404);
+  }
+}
+
+function assertCodeIsNotExpired(value: Prisma.RedemptionCodeGetPayload<{ include: typeof redemptionCodeInclude }>) {
+  if (value.expiresAt && value.expiresAt <= new Date()) {
+    throw new RedemptionCodeError("Expired invitation codes cannot be changed.", 400);
+  }
+}
+
+function assertCodeIsNotExhausted(value: Prisma.RedemptionCodeGetPayload<{ include: typeof redemptionCodeInclude }>) {
+  if (value.redemptions.length >= value.maxRedemptions) {
+    throw new RedemptionCodeError("Exhausted invitation codes cannot be changed.", 400);
+  }
 }
 
 async function lockRedemptionCodeRow(client: RedemptionCodeClient, code: string): Promise<void> {

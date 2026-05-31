@@ -9,6 +9,7 @@ export default tseslint.config(
       ".cache/**",
       ".next/**",
       ".references/**",
+      ".worktrees/**",
       "coverage/**",
       "dist/**",
       "node_modules/**",
@@ -26,6 +27,9 @@ export default tseslint.config(
       globals: {
         ...globals.browser,
         ...globals.node
+      },
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname
       }
     },
     plugins: {

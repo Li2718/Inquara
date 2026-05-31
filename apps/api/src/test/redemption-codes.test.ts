@@ -72,7 +72,7 @@ describe("redemption codes", () => {
     await app.close();
   });
 
-  it("lets administrators list sources, redemption users, and disable codes", async () => {
+  it("lets administrators list sources, redemption users, disable, and re-enable codes", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
     const adminCookie = await signInAdmin(app);
 
@@ -117,6 +117,15 @@ describe("redemption codes", () => {
     });
     expect(listed?.redemptions[0]?.user.email).toBe("first@inquara.local");
 
+    const noteUpdate = await app.inject({
+      method: "PATCH",
+      url: `/admin/codes/${listed?.code}/note`,
+      cookies: { inquara_session: adminCookie },
+      payload: { note: "Updated note" }
+    });
+    expect(noteUpdate.statusCode).toBe(200);
+    expect(noteUpdate.json<{ note: string | null }>().note).toBe("Updated note");
+
     const disabled = await app.inject({
       method: "POST",
       url: `/admin/codes/${listed?.code}/disable`,
@@ -130,6 +139,114 @@ describe("redemption codes", () => {
       payload: { email: "second@inquara.local", password: "111111", redemptionCode: code }
     });
     expect(blocked.statusCode).toBe(403);
+
+    const enabled = await app.inject({
+      method: "POST",
+      url: `/admin/codes/${listed?.code}/enable`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(enabled.statusCode).toBe(200);
+    expect(enabled.json<{ disabledAt: string | null }>().disabledAt).toBeNull();
+
+    const second = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { email: "second@inquara.local", password: "111111", redemptionCode: code }
+    });
+    expect(second.statusCode).toBe(200);
+
+    const exhaustedDisable = await app.inject({
+      method: "POST",
+      url: `/admin/codes/${listed?.code}/disable`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(exhaustedDisable.statusCode).toBe(400);
+    expect(exhaustedDisable.json()).toEqual({ error: "Exhausted invitation codes cannot be changed." });
+
+    const exhaustedEnable = await app.inject({
+      method: "POST",
+      url: `/admin/codes/${listed?.code}/enable`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(exhaustedEnable.statusCode).toBe(400);
+    expect(exhaustedEnable.json()).toEqual({ error: "Exhausted invitation codes cannot be changed." });
+
+    await app.close();
+  });
+
+  it("hard-deletes only unused registration codes", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const adminCookie = await signInAdmin(app);
+
+    const unused = await app.inject({
+      method: "POST",
+      url: "/admin/codes",
+      cookies: { inquara_session: adminCookie },
+      payload: {}
+    });
+    const unusedCode = unused.json<{ code: string }>().code;
+
+    const deleted = await app.inject({
+      method: "DELETE",
+      url: `/admin/codes/${unusedCode}`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(deleted.statusCode).toBe(204);
+    await expect(prisma.redemptionCode.findUnique({ where: { code: unusedCode } })).resolves.toBeNull();
+
+    const used = await app.inject({
+      method: "POST",
+      url: "/admin/codes",
+      cookies: { inquara_session: adminCookie },
+      payload: {}
+    });
+    const usedCode = used.json<{ code: string }>().code;
+
+    const registered = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { email: "used-delete@inquara.local", password: "111111", redemptionCode: usedCode }
+    });
+    expect(registered.statusCode).toBe(200);
+
+    const blockedDelete = await app.inject({
+      method: "DELETE",
+      url: `/admin/codes/${usedCode}`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(blockedDelete.statusCode).toBe(400);
+    expect(blockedDelete.json()).toEqual({ error: "Only unused invitation codes can be deleted." });
+
+    await app.close();
+  });
+
+  it("does not allow expired registration codes to be disabled or re-enabled", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const adminCookie = await signInAdmin(app);
+
+    const generated = await app.inject({
+      method: "POST",
+      url: "/admin/codes",
+      cookies: { inquara_session: adminCookie },
+      payload: { expiresAt: new Date(Date.now() - 1000).toISOString() }
+    });
+    const code = generated.json<{ code: string }>().code;
+
+    const disabled = await app.inject({
+      method: "POST",
+      url: `/admin/codes/${code}/disable`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(disabled.statusCode).toBe(400);
+    expect(disabled.json()).toEqual({ error: "Expired invitation codes cannot be changed." });
+
+    const enabled = await app.inject({
+      method: "POST",
+      url: `/admin/codes/${code}/enable`,
+      cookies: { inquara_session: adminCookie }
+    });
+    expect(enabled.statusCode).toBe(400);
+    expect(enabled.json()).toEqual({ error: "Expired invitation codes cannot be changed." });
 
     await app.close();
   });
