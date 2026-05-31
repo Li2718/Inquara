@@ -142,6 +142,7 @@ Implemented shared components:
 - `ui/ConfirmDialog.tsx` provides the shared confirmation modal pattern, portal mounting, Escape/backdrop close behavior, accessible dialog attributes, and confirm/cancel actions for destructive or irreversible product actions.
 - `ui/Toast.tsx` provides the shared transient notification surface for non-blocking success and error feedback.
 - `ui/icons.tsx` provides the shared routine product icon source for current sidebar, menu, check, plus, and reset-view icons. Prefer this file before adding inline SVG or text-symbol icons in feature code.
+- `product/ErrorScreen.tsx` provides the shared product error fallback used by app-level and global Next.js error boundaries.
 
 The project currently has several feature-owned UI pieces that may be promoted into shared components as reuse becomes clear:
 
