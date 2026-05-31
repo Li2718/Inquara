@@ -52,19 +52,17 @@ After setup succeeds, the setup app exits. Docker restarts the `web` service bec
 
 ## Environment
 
-Copy `.env.example` to `.env` and set production values before starting the Compose stack.
+Production deployment has two kinds of values:
 
-Required production values:
+- Deployment environment values: set these in Dokploy or `.env` because they are secrets, public origins, or provider choices.
+- Compose-owned values: keep these in [docker-compose.yml](../docker-compose.yml) because they are internal service wiring and should not vary per deployment.
+
+Required deployment environment values:
 
 ```dotenv
 SESSION_SECRET=replace-with-at-least-32-random-characters
 POSTGRES_PASSWORD=replace-with-a-strong-password
-```
-
-Important public URL:
-
-```dotenv
-WEB_ORIGIN=http://localhost:3000
+WEB_ORIGIN=https://your-inquara-domain.example
 ```
 
 Browser API calls use same-origin `/api/*` by default. The production proxy strips the `/api` prefix and forwards those requests to the internal API service. Browser WebSocket traffic uses the same origin as well:
@@ -75,13 +73,37 @@ Browser API calls use same-origin `/api/*` by default. The production proxy stri
 
 `API_ORIGIN`, `NEXT_PUBLIC_API_ORIGIN`, and `NEXT_PUBLIC_WS_ORIGIN` are not part of the default Docker Compose and Dokploy deployment path. Split-origin deployments should use a separate Compose override instead of adding those values to the default production environment.
 
+Optional deployment environment values:
+
+```dotenv
+WEB_PORT=3000
+AI_PROVIDER=fake
+OPENAI_COMPATIBLE_BASE_URL=
+OPENAI_COMPATIBLE_API_KEY=
+OPENAI_COMPATIBLE_MODEL=
+```
+
+Leave `WEB_PORT` unset when a deployment platform such as Dokploy routes by domain. Docker then assigns a random host port, avoiding fixed-port conflicts.
+
+Set the OpenAI-compatible values only when `AI_PROVIDER=openai-compatible`.
+
+The Compose file owns internal wiring values:
+
+| Value | Compose-owned value |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | `postgresql://inquara:<POSTGRES_PASSWORD>@postgres:5432/inquara?schema=public` |
+| `POSTGRES_DB` | `inquara` |
+| `POSTGRES_USER` | `inquara` |
+| API container port | `4000` |
+| Web container port | `3000` |
+| Web-to-API internal origin | `http://api:4000` |
+
 The Compose file creates the internal container database URL automatically:
 
 ```text
-postgresql://inquara:<POSTGRES_PASSWORD>@postgres:5432/<POSTGRES_DB>?schema=public
+postgresql://inquara:<POSTGRES_PASSWORD>@postgres:5432/inquara?schema=public
 ```
-
-`POSTGRES_DB` defaults to `inquara`.
 
 ## Commands
 
@@ -167,9 +189,6 @@ SESSION_SECRET=replace-with-at-least-32-random-characters
 POSTGRES_PASSWORD=replace-with-a-strong-password
 WEB_ORIGIN=https://your-inquara-domain.example
 AI_PROVIDER=fake
-OPENAI_COMPATIBLE_BASE_URL=
-OPENAI_COMPATIBLE_API_KEY=
-OPENAI_COMPATIBLE_MODEL=
 ```
 
 When using a real OpenAI-compatible provider, set:

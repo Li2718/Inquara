@@ -13,7 +13,6 @@ describe("loadConfig", () => {
     expect(config.DATABASE_URL).toBe(validEnv.DATABASE_URL);
     expect(config.SESSION_SECRET).toBe(validEnv.SESSION_SECRET);
     expect(config.WEB_ORIGIN).toBe("http://localhost:3000");
-    expect(config.API_ORIGIN).toBe("http://localhost:4000");
     expect(config.AI_PROVIDER).toBe("fake");
     expect(config).not.toHaveProperty("ADMIN_EMAIL");
     expect(config).not.toHaveProperty("ADMIN_PASSWORD");
