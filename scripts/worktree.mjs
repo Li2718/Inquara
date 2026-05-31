@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import { Client } from "pg";
-import { loadDevelopmentEnv } from "./dev-env.mjs";
+import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
 import { getCloneDbPlan, getCreatePlan, getRemovePlan, parseWorktreeCommand } from "./worktree-cli.mjs";
 import {
   buildWorktreeDatabaseAdminUrl,
@@ -20,6 +20,7 @@ const rootDir = getManagedWorktreeRootDir(process.cwd());
 const currentDir = process.cwd();
 
 loadDevelopmentEnv(rootDir);
+ensureDatabaseUrl(process.env);
 
 function quoteWindowsArg(value) {
   if (value.length === 0) {
