@@ -22,14 +22,8 @@ type RedemptionCode = {
   source: string;
 };
 
-type CurrentUser = {
-  email: string;
-  role: string;
-};
-
 export function RedemptionCodesAdminPage() {
   const [codes, setCodes] = useState<RedemptionCode[]>([]);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [invitationOnly, setInvitationOnly] = useState(false);
   const [note, setNote] = useState("");
   const [validDays, setValidDays] = useState("");
@@ -40,16 +34,10 @@ export function RedemptionCodesAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isAdmin = currentUser?.role === "admin";
-
   useEffect(() => {
     let isMounted = true;
     async function load() {
       try {
-        const user = await apiJson<CurrentUser>("/auth/me");
-        if (!isMounted) return;
-        setCurrentUser(user);
-        if (user.role !== "admin") return;
         const [settings, codeList] = await Promise.all([
           apiJson<{ invitationOnly: boolean }>("/admin/settings/registration"),
           apiJson<RedemptionCode[]>("/admin/codes")
@@ -131,18 +119,6 @@ export function RedemptionCodesAdminPage() {
         <section className="admin-panel">
           <LoadingState variant="panel" aria-label="Loading admin" />
           <SkeletonBlock variant="panel" rows={4} />
-        </section>
-      </AdminShell>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <AdminShell>
-        <section className="admin-panel">
-          <p className="eyebrow">Admin</p>
-          <h1>Access denied</h1>
-          <p className="muted">This page is only available to administrators.</p>
         </section>
       </AdminShell>
     );

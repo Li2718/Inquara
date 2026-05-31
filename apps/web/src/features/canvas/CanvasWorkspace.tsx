@@ -7,6 +7,7 @@ import { AppTopBar } from "../../shared/components/chrome";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
+import { WORKSPACE_SIDEBAR_OPEN_COOKIE, WORKSPACE_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
 import { CanvasView } from "./CanvasView";
 
 const WORKSPACE_SWITCH_LEAVE_MS = 90;
@@ -15,11 +16,19 @@ export type WorkspaceTransitionNavigateOptions = {
   replace?: boolean;
 };
 
-export function CanvasWorkspace({ workspaceId }: { workspaceId: string }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+export function CanvasWorkspace({ initialSidebarOpen, workspaceId }: { initialSidebarOpen: boolean; workspaceId: string }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(initialSidebarOpen);
   const [isPreparingWorkspaceSwitch, setIsPreparingWorkspaceSwitch] = useState(false);
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
   const [resetViewportRequest, setResetViewportRequest] = useState(0);
+
+  function toggleSidebar() {
+    setIsSidebarOpen(value => {
+      const nextValue = !value;
+      storeSidebarOpen(nextValue);
+      return nextValue;
+    });
+  }
 
   return (
     <main className="canvas-page" data-sidebar-open={isSidebarOpen} aria-label="Canvas workspace">
@@ -30,7 +39,7 @@ export function CanvasWorkspace({ workspaceId }: { workspaceId: string }) {
           isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch}
           pendingWorkspaceId={pendingWorkspaceId}
           resetViewportRequest={resetViewportRequest}
-          onToggleSidebar={() => setIsSidebarOpen(value => !value)}
+          onToggleSidebar={toggleSidebar}
           onResetViewportRequest={() => setResetViewportRequest(value => value + 1)}
           onWorkspaceSwitchReady={() => {
             setIsPreparingWorkspaceSwitch(false);
@@ -45,6 +54,15 @@ export function CanvasWorkspace({ workspaceId }: { workspaceId: string }) {
       </WorkspaceSessionProvider>
     </main>
   );
+}
+
+function storeSidebarOpen(isOpen: boolean): void {
+  try {
+    window.localStorage.setItem(WORKSPACE_SIDEBAR_OPEN_STORAGE_KEY, String(isOpen));
+  } catch {
+    // Sidebar persistence is a convenience; interaction should still work if storage is unavailable.
+  }
+  document.cookie = `${WORKSPACE_SIDEBAR_OPEN_COOKIE}=${String(isOpen)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 
 function CanvasWorkspaceContent({
