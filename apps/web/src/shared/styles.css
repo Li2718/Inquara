@@ -18,6 +18,15 @@
 
 * {
   box-sizing: border-box;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[draggable="true"],
+[data-native-drag="true"] {
+  -webkit-user-drag: auto;
 }
 
 body {
@@ -43,7 +52,8 @@ a {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -86,6 +96,13 @@ input {
     border-color 150ms ease,
     box-shadow 150ms ease,
     background 150ms ease;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 input[type="checkbox"] {
@@ -1919,6 +1936,7 @@ h2 {
   overscroll-behavior: contain;
   scrollbar-color: rgb(111 135 148 / 32%) transparent;
   scrollbar-width: thin;
+  -webkit-user-select: text;
   user-select: text;
   cursor: auto;
   font-size: 14px;
@@ -1958,6 +1976,7 @@ h2 {
   padding: 11px 13px;
   font-size: 14px;
   line-height: 1.48;
+  -webkit-user-select: text;
   user-select: text;
   box-shadow: 0 10px 24px rgb(51 118 145 / 7%);
   cursor: auto;
@@ -1965,8 +1984,14 @@ h2 {
 
 .message-bubble p {
   white-space: pre-wrap;
+  -webkit-user-select: text;
   user-select: text;
   cursor: text;
+}
+
+.message-bubble p * {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .source-highlight {
@@ -1986,11 +2011,18 @@ h2 {
   letter-spacing: inherit;
   vertical-align: baseline;
   white-space: inherit;
+  -webkit-user-select: none;
+  user-select: none;
   cursor: pointer;
   transition:
     background-color 140ms ease,
     box-shadow 140ms ease,
     color 140ms ease;
+}
+
+.message-bubble p .source-highlight {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .source-highlight:focus-visible {
