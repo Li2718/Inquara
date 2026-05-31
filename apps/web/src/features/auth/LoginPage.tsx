@@ -10,7 +10,7 @@ type LoginPageProps = {
 
 export function LoginPage({ onLoggedIn }: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("demo@inquara.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [redemptionCode, setRedemptionCode] = useState("");
   const [isCodeFieldOpen, setIsCodeFieldOpen] = useState(false);

@@ -319,12 +319,15 @@ function CanvasFlow({
           onPaneContextMenu={onPaneContextMenu}
           nodesConnectable={false}
           elementsSelectable={false}
-          fitView
-          fitViewOptions={{ maxZoom: 0.72, padding: 0.24 }}
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={28} size={1} />
           <CanvasPlacementViewportTracker placementViewportRef={placementViewportRef} />
+          <CanvasInitialViewport
+            firstRootNode={firstRootNode}
+            isSidebarOpen={isSidebarOpen}
+            workspaceId={workspaceId}
+          />
         </ReactFlow>
       </CanvasViewportProvider>
       <CanvasViewportControls
@@ -345,6 +348,44 @@ function CanvasFlow({
       </PopupMenu>
     </div>
   );
+}
+
+function CanvasInitialViewport({
+  firstRootNode,
+  isSidebarOpen,
+  workspaceId
+}: {
+  firstRootNode: CanvasNode | null;
+  isSidebarOpen: boolean;
+  workspaceId: string | null;
+}) {
+  const { setViewport } = useReactFlow();
+  const initializedWorkspaceIdRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!workspaceId || !firstRootNode || initializedWorkspaceIdRef.current === workspaceId) return;
+    initializedWorkspaceIdRef.current = workspaceId;
+    const frame = window.requestAnimationFrame(() => {
+      const stage = document.querySelector(".canvas-stage");
+      const sidebar = isSidebarOpen ? document.querySelector(".workspace-sidebar") : null;
+      const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
+      const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
+      const reservedLeft = stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0;
+      void setViewport(
+        calculateRootViewport({
+          rootNode: firstRootNode,
+          viewportWidth: stageRect?.width ?? window.innerWidth,
+          viewportHeight: stageRect?.height ?? window.innerHeight,
+          reservedLeft
+        }),
+        { duration: 0 }
+      );
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [firstRootNode, isSidebarOpen, setViewport, workspaceId]);
+
+  return null;
 }
 
 function CanvasPlacementViewportTracker({
