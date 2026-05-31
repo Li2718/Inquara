@@ -30,7 +30,7 @@ export function ensureDevComposeExists(rootDir) {
 
   if (!existsSync(paths.devComposePath)) {
     throw new Error(
-      "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml and adjust it for your machine first."
+      "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml, then copy .env.dev.example to .env.dev and adjust them for your machine first."
     );
   }
 
@@ -82,7 +82,7 @@ export function areRequiredServicesReady(rows) {
 export function getDevCommandPlan({ hasDevComposeFile, infraReady }) {
   if (!hasDevComposeFile) {
     throw new Error(
-      "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml and adjust it for your machine first."
+      "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml, then copy .env.dev.example to .env.dev and adjust them for your machine first."
     );
   }
 

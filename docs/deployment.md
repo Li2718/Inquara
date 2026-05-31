@@ -15,7 +15,7 @@ The root [docker-compose.yml](../docker-compose.yml) is the production Compose e
 - `web`
 - `proxy`
 
-Local development uses `docker-compose.dev.yml` and `npm run dev`; it is separate from this production deployment path.
+Local development uses `.env.dev`, `docker-compose.dev.yml`, and `npm run dev`; it is separate from this production deployment path.
 
 ## Services
 
@@ -52,7 +52,7 @@ After setup succeeds, the setup app exits. Docker restarts the `web` service bec
 
 ## Environment
 
-Production deployment has two kinds of values:
+Production deployment uses `.env.example` as its template. It has two kinds of values:
 
 - Deployment environment values: set these in Dokploy or `.env` because they are secrets, public origins, or provider choices.
 - Compose-owned values: keep these in [docker-compose.yml](../docker-compose.yml) because they are internal service wiring and should not vary per deployment.
@@ -104,6 +104,44 @@ The Compose file creates the internal container database URL automatically:
 ```text
 postgresql://inquara:<POSTGRES_PASSWORD>@postgres:5432/inquara?schema=public
 ```
+
+Do not add `DATABASE_URL` to the default production `.env`. The production Compose file owns that internal connection string so deployers only need to provide the database password.
+
+## Local Development Environment
+
+Local development uses [.env.dev.example](../.env.dev.example), not the production [.env.example](../.env.example).
+
+Create a local `.env.dev` from the development example and adjust only the values that need to differ on your machine:
+
+```dotenv
+POSTGRES_USER=inquara
+POSTGRES_PASSWORD=inquara
+POSTGRES_DB=inquara
+POSTGRES_HOST=localhost
+POSTGRES_PORT=55432
+POSTGRES_SCHEMA=public
+SESSION_SECRET=replace-with-at-least-32-random-characters
+WEB_ORIGIN=http://localhost:3000
+API_ORIGIN=http://localhost:4000
+AI_PROVIDER=fake
+```
+
+The local development scripts load development env files in this order:
+
+```text
+.env.dev.local
+.env.dev
+```
+
+The first loaded value wins. Production `.env` is intentionally not loaded by local development commands.
+
+The development scripts compose `DATABASE_URL` from the split `POSTGRES_*` values before running Prisma, the API, or workspace dev commands:
+
+```text
+postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@<POSTGRES_HOST>:<POSTGRES_PORT>/<POSTGRES_DB>?schema=<POSTGRES_SCHEMA>
+```
+
+This keeps local database settings editable without requiring application code or Prisma schema changes.
 
 ## Commands
 

@@ -1,4 +1,11 @@
 import { spawn } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
+
+const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+loadDevelopmentEnv(rootDir);
+ensureDatabaseUrl(process.env);
 
 const [workspace, scriptName, ...scriptArgs] = process.argv.slice(2);
 

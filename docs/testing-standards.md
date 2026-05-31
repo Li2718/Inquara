@@ -214,7 +214,7 @@ When adding a source-level guardrail, the test name must describe the risk, not 
 Database-backed tests must follow the architecture rules:
 
 - API, database integration, WebSocket, and Playwright e2e tests that write data must use the shared ephemeral PostgreSQL setup based on `testcontainers`.
-- Destructive tests must not default to the development `DATABASE_URL`.
+- Destructive tests must not default to the local development database URL from `.env.dev` or any developer-local env file.
 - Direct database cleanup such as `deleteMany()` belongs in the shared test database helper, not individual test files.
 - If Docker or `testcontainers` fails, stop and report the blocker instead of replacing it with a simplified local workaround.
 

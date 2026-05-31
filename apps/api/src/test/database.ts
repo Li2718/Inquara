@@ -168,7 +168,7 @@ function quoteWindowsArg(value: string): string {
 }
 
 async function assertConnectedToEphemeralDatabase(): Promise<void> {
-  const result = await prisma.$queryRaw<Array<{ current_database: string }>>`select current_database()`;
+  const result = await prisma.$queryRaw<Array<{ current_database: string }>>`select current_database()::text`;
   const currentDatabase = result[0]?.current_database ?? "";
   if (!currentDatabase.includes("test")) {
     throw new Error(`Prisma is connected to non-test database "${currentDatabase}".`);

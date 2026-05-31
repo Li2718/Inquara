@@ -1,5 +1,8 @@
 .playwright-mcp/
 .env
+.env.local
+.env.dev
+.env.dev.local
 log/
 .tmp/
 .local/

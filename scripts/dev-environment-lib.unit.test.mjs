@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildDatabaseUrl, ensureDatabaseUrl } from "./dev-env.mjs";
 import {
   areRequiredServicesReady,
   getDevCommandPlan,
@@ -63,5 +64,27 @@ describe("dev environment helpers", () => {
     );
 
     expect(server).toEqual({ host: "localhost", port: 3002 });
+  });
+
+  it("builds a local database URL from split postgres settings", () => {
+    expect(
+      buildDatabaseUrl({
+        POSTGRES_USER: "dev_user",
+        POSTGRES_PASSWORD: "dev password",
+        POSTGRES_HOST: "localhost",
+        POSTGRES_PORT: "55433",
+        POSTGRES_DB: "inquara_dev",
+        POSTGRES_SCHEMA: "custom"
+      })
+    ).toBe("postgresql://dev_user:dev%20password@localhost:55433/inquara_dev?schema=custom");
+  });
+
+  it("preserves an explicit database URL", () => {
+    const env = {
+      DATABASE_URL: "postgresql://explicit.example/inquara"
+    };
+
+    expect(ensureDatabaseUrl(env)).toBe("postgresql://explicit.example/inquara");
+    expect(env.DATABASE_URL).toBe("postgresql://explicit.example/inquara");
   });
 });

@@ -13,6 +13,7 @@
     "test": "vitest run src"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.0.0"
   },
   "devDependencies": {

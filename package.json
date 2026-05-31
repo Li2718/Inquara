@@ -9,13 +9,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "node --env-file=.env scripts/dev.mjs",
-    "dev:infra:up": "node --env-file=.env scripts/dev.mjs infra-up",
-    "dev:infra:down": "node --env-file=.env scripts/dev.mjs infra-down",
-    "dev:start": "node --env-file=.env scripts/dev.mjs start",
-    "dev:stop": "node --env-file=.env scripts/dev.mjs stop",
-    "dev:api": "node --env-file=.env scripts/run-workspace.mjs @inquara/api dev",
-    "dev:web": "node --env-file=.env scripts/run-workspace.mjs @inquara/web dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:infra:up": "node scripts/dev.mjs infra-up",
+    "dev:infra:down": "node scripts/dev.mjs infra-down",
+    "dev:start": "node scripts/dev.mjs start",
+    "dev:stop": "node scripts/dev.mjs stop",
+    "dev:api": "node scripts/run-workspace.mjs @inquara/api dev",
+    "dev:web": "node scripts/run-workspace.mjs @inquara/web dev",
     "prod:up": "docker compose up --build -d",
     "prod:down": "docker compose down",
     "prod:logs": "docker compose logs -f proxy web api migrate",
@@ -26,9 +26,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:debug-free": "node scripts/verify-debug-free.mjs",
-    "db:generate": "npm --workspace @inquara/db run generate",
-    "db:migrate": "npm --workspace @inquara/db run migrate",
-    "db:migrate:deploy": "npm --workspace @inquara/db run migrate:deploy"
+    "db:generate": "node scripts/run-workspace.mjs @inquara/db generate",
+    "db:migrate": "node scripts/run-workspace.mjs @inquara/db migrate",
+    "db:migrate:deploy": "node scripts/run-workspace.mjs @inquara/db migrate:deploy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

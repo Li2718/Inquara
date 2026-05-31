@@ -1,8 +1,8 @@
-import { config } from "dotenv";
 import { existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
+import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
 import {
   areRequiredServicesReady,
   ensureDevComposeExists,
@@ -23,19 +23,8 @@ const paths = getDevEnvironmentPaths(rootDir);
 const command = process.argv[2] ?? "dev";
 let runtimeUrls = null;
 
-loadRootEnv(rootDir);
-
-function loadRootEnv(currentRootDir) {
-  const envFiles = [".env.local", ".env"];
-
-  for (const fileName of envFiles) {
-    const filePath = path.join(currentRootDir, fileName);
-
-    if (existsSync(filePath)) {
-      config({ path: filePath, override: false, quiet: true });
-    }
-  }
-}
+loadDevelopmentEnv(rootDir);
+ensureDatabaseUrl(process.env);
 
 function getNpmCommand() {
   const npmBinaryName = process.platform === "win32" ? "npm.cmd" : "npm";
