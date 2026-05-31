@@ -5,6 +5,7 @@ log/
 .local/
 .cache/
 demo/config.js
+docker-compose.dev.yml
 .references/
 node_modules/
 *.tsbuildinfo
