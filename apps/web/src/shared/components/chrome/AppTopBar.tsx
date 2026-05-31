@@ -3,6 +3,7 @@
 import type { Workspace } from "@inquara/domain";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
+import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "../../api";
 import { ConfirmDialog, FloatingCircleButton, InquaraBrandIcon, PopupMenu, PopupMenuItem } from "../ui";
@@ -94,7 +95,6 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
         className="app-top-brand"
         aria-label={isCanvasRoute ? "Reset canvas view" : "Back to canvas"}
         title={isCanvasRoute ? "Reset view" : "Back to canvas"}
-        disabled={!isCanvasRoute && isOpeningCanvas}
         onClick={handleBrandClick}
       >
         <InquaraBrandIcon className="app-top-brand-mark" />
