@@ -5,16 +5,21 @@ import process from "node:process";
 import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
 import {
   areRequiredServicesReady,
+  createDevRuntimeState,
+  doesRuntimeStateMatchExpectation,
   ensureDevComposeExists,
   getDevCommandPlan,
   getDevEnvironmentPaths,
   getExistingServiceAction,
   getHttpHealthUrl,
+  getReusableServiceOrigin,
+  getServiceStateExpectation,
   getServerConfigFromUrl,
   getUrlFromEnv,
   parseComposePsJson,
   resolveAvailableServerConfig,
   resolveRepoRootFromScript,
+  toOriginString,
   withUrlPort
 } from "./dev-environment-lib.mjs";
 
@@ -22,6 +27,7 @@ const rootDir = resolveRepoRootFromScript(import.meta.url);
 const paths = getDevEnvironmentPaths(rootDir);
 const command = process.argv[2] ?? "dev";
 let runtimeUrls = null;
+let runtimeState = null;
 
 loadDevelopmentEnv(rootDir);
 ensureDatabaseUrl(process.env);
@@ -176,27 +182,39 @@ async function resolveRuntimeUrls() {
     return runtimeUrls;
   }
 
+  const previousState = readRuntimeState();
   const configuredApiUrl = getUrlFromEnv(process.env, "API_ORIGIN", "http://localhost:4000");
   const configuredWebUrl = getUrlFromEnv(process.env, "WEB_ORIGIN", "http://localhost:3000");
-  const apiServer = await resolveAvailableServerConfig(getServerConfigFromUrl(configuredApiUrl));
-  const apiUrl = withUrlPort(configuredApiUrl, apiServer.port);
-  process.env.API_ORIGIN = apiUrl.toString().replace(/\/$/u, "");
+  const reusableApiUrl = getReusableServiceOrigin("api", previousState, {
+    pidRunning: isPidRunning(readPid(paths.apiPidPath))
+  });
+  const reusableWebUrl = getReusableServiceOrigin("web", previousState, {
+    pidRunning: isPidRunning(readPid(paths.webPidPath))
+  });
+  const apiUrl =
+    reusableApiUrl ??
+    withUrlPort(configuredApiUrl, (await resolveAvailableServerConfig(getServerConfigFromUrl(configuredApiUrl))).port);
+  const apiServer = getServerConfigFromUrl(apiUrl);
+  process.env.API_ORIGIN = toOriginString(apiUrl);
   process.env.NEXT_PUBLIC_API_ORIGIN = process.env.API_ORIGIN;
   process.env.NEXT_PUBLIC_WS_ORIGIN = process.env.API_ORIGIN.replace(/^http/u, "ws");
 
-  const webServer = await resolveAvailableServerConfig(getServerConfigFromUrl(configuredWebUrl));
-  const webUrl = withUrlPort(configuredWebUrl, webServer.port);
-  process.env.WEB_ORIGIN = webUrl.toString().replace(/\/$/u, "");
+  const webUrl =
+    reusableWebUrl ??
+    withUrlPort(configuredWebUrl, (await resolveAvailableServerConfig(getServerConfigFromUrl(configuredWebUrl))).port);
+  const webServer = getServerConfigFromUrl(webUrl);
+  process.env.WEB_ORIGIN = toOriginString(webUrl);
 
-  if (apiServer.port !== getServerConfigFromUrl(configuredApiUrl).port) {
+  if (!reusableApiUrl && apiServer.port !== getServerConfigFromUrl(configuredApiUrl).port) {
     console.log(`Preferred API port ${getServerConfigFromUrl(configuredApiUrl).port} is unavailable; using ${apiServer.port} instead.`);
   }
 
-  if (webServer.port !== getServerConfigFromUrl(configuredWebUrl).port) {
+  if (!reusableWebUrl && webServer.port !== getServerConfigFromUrl(configuredWebUrl).port) {
     console.log(`Preferred web port ${getServerConfigFromUrl(configuredWebUrl).port} is unavailable; using ${webServer.port} instead.`);
   }
 
   runtimeUrls = { apiServer, apiUrl, webServer, webUrl };
+  runtimeState = createDevRuntimeState({ apiUrl, webUrl });
   return runtimeUrls;
 }
 
@@ -240,6 +258,29 @@ function clearPidFile(pidPath) {
 
 function writePidFile(pidPath, pid) {
   writeFileSync(pidPath, String(pid), "utf8");
+}
+
+function readRuntimeState() {
+  if (!existsSync(paths.runtimeStatePath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(readFileSync(paths.runtimeStatePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeRuntimeState(state) {
+  ensureRuntimeDir();
+  writeFileSync(paths.runtimeStatePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+}
+
+function clearRuntimeState() {
+  if (existsSync(paths.runtimeStatePath)) {
+    unlinkSync(paths.runtimeStatePath);
+  }
 }
 
 async function startDetachedWindowsNpm(args, logPath, env = process.env) {
@@ -425,14 +466,23 @@ async function downDevInfra() {
 async function startAppService(serviceName) {
   const runtime = getServiceRuntime(serviceName);
   const existingPid = readPid(runtime.pidPath);
+  const expectedState = getServiceStateExpectation(serviceName, runtimeState);
 
   if (existingPid) {
     const pidRunning = isPidRunning(existingPid);
     const action = getExistingServiceAction({ pidRunning });
 
     if (action === "reuse") {
-      console.log(`${serviceName} is already running (pid ${existingPid}).`);
-      return { pid: existingPid, started: false, logPath: runtime.logPath };
+      const stateMatches = doesRuntimeStateMatchExpectation(readRuntimeState(), expectedState);
+
+      if (!stateMatches) {
+        console.log(`${serviceName} runtime config changed; restarting current dev session process (pid ${existingPid}).`);
+        await killProcessTree(existingPid);
+        clearPidFile(runtime.pidPath);
+      } else {
+        console.log(`${serviceName} is already running (pid ${existingPid}).`);
+        return { pid: existingPid, started: false, logPath: runtime.logPath };
+      }
     }
 
     clearPidFile(runtime.pidPath);
@@ -488,6 +538,9 @@ async function startDevApps() {
   }
 
   console.log(`Development app is available at ${runtimeUrls.webUrl.toString()}`);
+  console.log(`API is available at ${runtimeState.apiOrigin}`);
+  console.log(`Web is connected to API at ${runtimeState.nextPublicApiOrigin}`);
+  writeRuntimeState(runtimeState);
 }
 
 async function stopAppService(serviceName) {
@@ -502,18 +555,27 @@ async function stopAppService(serviceName) {
   const pid = readPid(runtime.pidPath);
 
   if (!pid) {
+    if (!readPid(paths.apiPidPath) && !readPid(paths.webPidPath)) {
+      clearRuntimeState();
+    }
     console.log(`${serviceName} is not running.`);
     return;
   }
 
   if (!isPidRunning(pid)) {
     clearPidFile(runtime.pidPath);
+    if (!readPid(paths.apiPidPath) && !readPid(paths.webPidPath)) {
+      clearRuntimeState();
+    }
     console.log(`${serviceName} is not running.`);
     return;
   }
 
   await killProcessTree(pid);
   clearPidFile(runtime.pidPath);
+  if (!readPid(paths.apiPidPath) && !readPid(paths.webPidPath)) {
+    clearRuntimeState();
+  }
   console.log(`Stopped ${serviceName}.`);
 }
 

@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import { buildDatabaseUrl, ensureDatabaseUrl } from "./dev-env.mjs";
 import {
   areRequiredServicesReady,
+  createDevRuntimeState,
+  doesRuntimeStateMatchExpectation,
   getDevCommandPlan,
   getExistingServiceAction,
   getHealthCheckHost,
+  getReusableServiceOrigin,
+  getServiceStateExpectation,
   getServerConfigFromUrl,
   getUrlPort,
   parseComposePsJson,
@@ -64,6 +68,51 @@ describe("dev environment helpers", () => {
     );
 
     expect(server).toEqual({ host: "localhost", port: 3002 });
+  });
+
+  it("keeps web runtime state connected to the resolved API port", () => {
+    const runtimeState = createDevRuntimeState({
+      apiUrl: new URL("http://localhost:4002"),
+      webUrl: new URL("http://localhost:3000")
+    });
+
+    expect(runtimeState).toEqual({
+      apiOrigin: "http://localhost:4002",
+      webOrigin: "http://localhost:3000",
+      nextPublicApiOrigin: "http://localhost:4002",
+      nextPublicWsOrigin: "ws://localhost:4002"
+    });
+    expect(getServiceStateExpectation("web", runtimeState)).toEqual({
+      webOrigin: "http://localhost:3000",
+      nextPublicApiOrigin: "http://localhost:4002",
+      nextPublicWsOrigin: "ws://localhost:4002"
+    });
+  });
+
+  it("detects when a running web process was started with stale API settings", () => {
+    const runtimeState = createDevRuntimeState({
+      apiUrl: new URL("http://localhost:4002"),
+      webUrl: new URL("http://localhost:3000")
+    });
+    const staleState = {
+      webOrigin: "http://localhost:3000",
+      nextPublicApiOrigin: "http://localhost:4000",
+      nextPublicWsOrigin: "ws://localhost:4000"
+    };
+
+    expect(doesRuntimeStateMatchExpectation(staleState, getServiceStateExpectation("web", runtimeState))).toBe(false);
+    expect(doesRuntimeStateMatchExpectation(runtimeState, getServiceStateExpectation("web", runtimeState))).toBe(true);
+  });
+
+  it("reuses current session origins instead of treating their ports as conflicts", () => {
+    const runtimeState = createDevRuntimeState({
+      apiUrl: new URL("http://localhost:4002"),
+      webUrl: new URL("http://localhost:3001")
+    });
+
+    expect(getReusableServiceOrigin("api", runtimeState, { pidRunning: true })?.toString()).toBe("http://localhost:4002/");
+    expect(getReusableServiceOrigin("web", runtimeState, { pidRunning: true })?.toString()).toBe("http://localhost:3001/");
+    expect(getReusableServiceOrigin("api", runtimeState, { pidRunning: false })).toBeNull();
   });
 
   it("builds a local database URL from split postgres settings", () => {

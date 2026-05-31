@@ -21,7 +21,8 @@ export function getDevEnvironmentPaths(rootDir) {
     apiPidPath: path.join(runtimeDir, "api.pid"),
     apiLogPath: path.join(runtimeDir, "api.log"),
     webPidPath: path.join(runtimeDir, "web.pid"),
-    webLogPath: path.join(runtimeDir, "web.log")
+    webLogPath: path.join(runtimeDir, "web.log"),
+    runtimeStatePath: path.join(runtimeDir, "runtime.json")
   };
 }
 
@@ -120,6 +121,54 @@ export function withUrlPort(url, port) {
   const nextUrl = new URL(url.toString());
   nextUrl.port = String(port);
   return nextUrl;
+}
+
+export function toOriginString(url) {
+  return url.toString().replace(/\/$/u, "");
+}
+
+export function createDevRuntimeState({ apiUrl, webUrl }) {
+  const apiOrigin = toOriginString(apiUrl);
+  const webOrigin = toOriginString(webUrl);
+
+  return {
+    apiOrigin,
+    webOrigin,
+    nextPublicApiOrigin: apiOrigin,
+    nextPublicWsOrigin: apiOrigin.replace(/^http/u, "ws")
+  };
+}
+
+export function getServiceStateExpectation(serviceName, runtimeState) {
+  if (serviceName === "api") {
+    return {
+      apiOrigin: runtimeState.apiOrigin
+    };
+  }
+
+  return {
+    webOrigin: runtimeState.webOrigin,
+    nextPublicApiOrigin: runtimeState.nextPublicApiOrigin,
+    nextPublicWsOrigin: runtimeState.nextPublicWsOrigin
+  };
+}
+
+export function doesRuntimeStateMatchExpectation(runtimeState, expectation) {
+  return Object.entries(expectation).every(([key, value]) => runtimeState?.[key] === value);
+}
+
+export function getReusableServiceOrigin(serviceName, runtimeState, { pidRunning }) {
+  if (!pidRunning || !runtimeState) {
+    return null;
+  }
+
+  const origin = serviceName === "api" ? runtimeState.apiOrigin : runtimeState.webOrigin;
+
+  if (!origin) {
+    return null;
+  }
+
+  return new URL(origin);
 }
 
 export function getHealthCheckHost(host) {
