@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPrivateDbEnvText,
+  buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
   escapePostgresIdentifier,
   buildWorktreeDatabaseName,
@@ -43,6 +44,26 @@ describe("worktree helpers", () => {
     expect(buildPrivateDbEnvText("", "inquara_wt_feature_debug_toolbar")).toBe(
       'POSTGRES_DB="inquara_wt_feature_debug_toolbar"\n'
     );
+  });
+
+  it("rebuilds DATABASE_URL when switching a process env to a private database", () => {
+    expect(
+      buildPrivateDatabaseProcessEnv(
+        {
+          POSTGRES_USER: "inquara",
+          POSTGRES_PASSWORD: "inquara",
+          POSTGRES_HOST: "localhost",
+          POSTGRES_PORT: "55432",
+          POSTGRES_DB: "inquara",
+          POSTGRES_SCHEMA: "public",
+          DATABASE_URL: "postgresql://inquara:inquara@localhost:55432/inquara?schema=public"
+        },
+        "inquara_wt_feature_debug_toolbar"
+      )
+    ).toMatchObject({
+      POSTGRES_DB: "inquara_wt_feature_debug_toolbar",
+      DATABASE_URL: "postgresql://inquara:inquara@localhost:55432/inquara_wt_feature_debug_toolbar?schema=public"
+    });
   });
 
   it("updates the private database override without dropping unrelated local env keys", () => {

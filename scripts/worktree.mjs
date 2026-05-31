@@ -6,6 +6,7 @@ import { Client } from "pg";
 import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
 import { getCloneDbPlan, getCreatePlan, getRemovePlan, parseWorktreeCommand } from "./worktree-cli.mjs";
 import {
+  buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
   buildPrivateDbEnvText,
   escapePostgresIdentifier,
@@ -259,10 +260,7 @@ async function cloneDatabaseForCurrentWorktree() {
 
   await runCommand(getNpmCommand(), ["run", "db:migrate:deploy"], {
     cwd: currentDir,
-    env: {
-      ...process.env,
-      POSTGRES_DB: plan.databaseName
-    }
+    env: buildPrivateDatabaseProcessEnv(process.env, plan.databaseName)
   });
 
   console.log(`Cloned "${sourceDatabaseName}" into private database "${plan.databaseName}".`);

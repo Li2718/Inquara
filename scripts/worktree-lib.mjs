@@ -87,6 +87,21 @@ export function buildWorktreeDatabaseAdminUrl(databaseUrl) {
   return url.toString();
 }
 
+export function buildPrivateDatabaseProcessEnv(env, databaseName) {
+  const nextEnv = {
+    ...env,
+    POSTGRES_DB: databaseName
+  };
+
+  if (nextEnv.DATABASE_URL) {
+    const databaseUrl = new URL(nextEnv.DATABASE_URL);
+    databaseUrl.pathname = `/${databaseName}`;
+    nextEnv.DATABASE_URL = databaseUrl.toString();
+  }
+
+  return nextEnv;
+}
+
 export function escapePostgresIdentifier(value) {
   return `"${String(value).replace(/"/gu, '""')}"`;
 }
