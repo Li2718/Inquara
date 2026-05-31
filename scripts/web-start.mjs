@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
-import { pathToFileURL } from "node:url";
 import { hasCompletedSetup } from "@inquara/db";
+import { isMainModule as isMainModuleUrlMatch } from "./main-module.mjs";
 import { startSetupServer } from "./setup-server.mjs";
 
 export function decideWebStartupMode(setupCompleted) {
@@ -53,7 +53,7 @@ export async function startWeb({
 }
 
 export function isMainModule(importMetaUrl, argvPath = process.argv[1]) {
-  return Boolean(argvPath) && importMetaUrl === pathToFileURL(argvPath).href;
+  return isMainModuleUrlMatch(importMetaUrl, argvPath);
 }
 
 if (isMainModule(import.meta.url)) {

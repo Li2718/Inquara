@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
-import { pathToFileURL } from "node:url";
 import { createSetupAccount } from "@inquara/db";
+import { isMainModule as isMainModuleUrlMatch } from "./main-module.mjs";
 
 function escapeHtml(value) {
   return String(value)
@@ -304,7 +304,7 @@ export function startSetupServer({
 }
 
 export function isMainModule(importMetaUrl, argvPath = process.argv[1]) {
-  return Boolean(argvPath) && importMetaUrl === pathToFileURL(argvPath).href;
+  return isMainModuleUrlMatch(importMetaUrl, argvPath);
 }
 
 if (isMainModule(import.meta.url)) {
