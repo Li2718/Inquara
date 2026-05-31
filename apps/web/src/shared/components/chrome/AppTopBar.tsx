@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "../../api";
-import { ConfirmDialog, FloatingCircleButton, PopupMenu, PopupMenuItem } from "../ui";
+import { ConfirmDialog, FloatingCircleButton, InquaraBrandIcon, PopupMenu, PopupMenuItem } from "../ui";
 
 type CurrentUser = {
   email: string;
@@ -97,6 +97,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
         disabled={!isCanvasRoute && isOpeningCanvas}
         onClick={handleBrandClick}
       >
+        <InquaraBrandIcon className="app-top-brand-mark" />
         <span className="app-top-brand-name">
           Inquara
           <span className="app-top-brand-badge">Alpha</span>

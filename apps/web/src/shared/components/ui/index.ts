@@ -5,6 +5,7 @@ export { IconButton } from "./IconButton";
 export { LoadingState, SkeletonBlock } from "./LoadingState";
 export {
   CheckIcon,
+  InquaraBrandIcon,
   MoreVerticalIcon,
   PlusIcon,
   ResetViewIcon,

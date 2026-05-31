@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="178 165 900 900">
   <path
     fill="url(#gradient_bg)"
@@ -18,14 +17,14 @@
   />
   <defs>
     <linearGradient id="gradient_bg" gradientUnits="userSpaceOnUse" x1="250" y1="1040" x2="1010" y2="220">
-      <stop offset="0" stop-color="#32C3C2" />
-      <stop offset="0.58" stop-color="#67D4EA" />
-      <stop offset="1" stop-color="#8FCBFF" />
+      <stop offset="0" stop-color="#138F99" />
+      <stop offset="0.58" stop-color="#4CB8DB" />
+      <stop offset="1" stop-color="#689FE8" />
     </linearGradient>
     <linearGradient id="gradient_symbol" gradientUnits="userSpaceOnUse" x1="470" y1="720" x2="800" y2="430">
-      <stop offset="0" stop-color="#32C3C2" />
-      <stop offset="0.58" stop-color="#67D4EA" />
-      <stop offset="1" stop-color="#8FCBFF" />
+      <stop offset="0" stop-color="#0E818B" />
+      <stop offset="0.58" stop-color="#39A6CF" />
+      <stop offset="1" stop-color="#5A94E0" />
     </linearGradient>
   </defs>
 </svg>

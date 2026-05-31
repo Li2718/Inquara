@@ -915,7 +915,9 @@ h2 {
   top: 16px;
   left: 16px;
   z-index: 29;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 38px;
   padding: 0;
   border: 0;
@@ -945,6 +947,13 @@ h2 {
 .app-top-brand-name {
   position: relative;
   display: inline-block;
+}
+
+.app-top-brand-mark {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 6px 14px rgb(41 128 153 / 0.12));
 }
 
 .app-top-brand-badge {
