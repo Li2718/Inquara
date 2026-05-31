@@ -1,4 +1,0 @@
-services:
-  proxy:
-    ports:
-      - "${WEB_PORT:-3000}:80"

@@ -7,7 +7,7 @@
 
 Inquara's first self-managed production baseline is a single-machine Docker Compose deployment.
 
-The root [docker-compose.yml](../docker-compose.yml) is the production Compose entrypoint for managed reverse-proxy environments such as Dokploy. It starts the full production baseline:
+The root [docker-compose.yml](../docker-compose.yml) is the production Compose entrypoint. It starts the full production baseline:
 
 - `postgres`
 - `migrate`
@@ -27,7 +27,7 @@ Local development uses `docker-compose.dev.yml` and `npm run dev`; it is separat
 | `web` | long-running application | Runs setup mode or normal Next.js web mode on container port `3000`. |
 | `proxy` | long-running edge | Exposes the single public HTTP entrypoint and routes `/api/*` to `api`. |
 
-The long-running application services start only after the database is healthy and migrations have completed. `api`, `web`, and `proxy` are only exposed inside the Compose network in the root Compose file. Public traffic enters through the deployment platform's reverse proxy, such as Dokploy Domains.
+The long-running application services start only after the database is healthy and migrations have completed. `api` and `web` are only exposed inside the Compose network. Public traffic enters through `proxy`.
 
 ## Runtime Model
 
@@ -91,13 +91,18 @@ Start production:
 npm run prod:up
 ```
 
-Equivalent command for standalone local or single-machine use without Dokploy:
+Equivalent command:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.standalone.yml up --build -d
+docker compose up --build -d
 ```
 
-The standalone override publishes the `proxy` service to `${WEB_PORT:-3000}` on the host. Dokploy deployments should use only the root `docker-compose.yml` and configure the public domain in Dokploy instead of publishing host ports from Compose.
+`proxy` publishes container port `80` through `${WEB_PORT}:80`.
+
+- If `WEB_PORT` is set, Docker binds that host port.
+- If `WEB_PORT` is not set, Docker assigns a random available host port.
+
+This keeps a single Compose file usable in both Dokploy and standalone Docker deployments without forcing a fixed host port that may conflict with other services.
 
 View logs:
 
@@ -141,8 +146,7 @@ The web health path exists in both setup mode and normal Next.js mode so Docker 
 
 ## Current Boundaries
 
-- The root Compose file exposes no host ports by default.
-- The optional standalone override publishes one HTTP port through `proxy`.
+- The `proxy` service publishes one HTTP port. Set `WEB_PORT` to choose it, or leave it unset to let Docker assign an available host port.
 - The API remains a separate internal service so WebSocket and AI streaming stay isolated from the Next.js runtime.
 - TLS automation is expected to be provided by the deployment platform, such as Dokploy Domains.
 - Postgres is internal to the Compose network by default and is not published to the host.
@@ -153,6 +157,8 @@ The web health path exists in both setup mode and normal Next.js mode so Docker 
 Use Dokploy's Docker Compose deployment flow against the repository root and the root `docker-compose.yml`.
 
 Configure one domain for the `proxy` service on container port `80`. Dokploy can then terminate TLS and route the public domain to Inquara's single HTTP entrypoint.
+
+Dokploy does not need `WEB_PORT`; it should route to the `proxy` service's container port `80`. Leave `WEB_PORT` unset unless you also want Docker to publish a host port outside Dokploy's domain routing.
 
 Set these environment variables in Dokploy:
 
