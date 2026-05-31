@@ -1,4 +1,4 @@
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://localhost:4000";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || "/api";
 
 const DEFAULT_API_ERROR_MESSAGE = "Something went wrong. Please try again.";
 

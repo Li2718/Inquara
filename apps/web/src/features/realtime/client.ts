@@ -1,6 +1,6 @@
 import { WorkspaceCommandSchema, WorkspaceEventSchema, type WorkspaceCommand, type WorkspaceEvent } from "@inquara/domain";
 
-const WS_ORIGIN = process.env.NEXT_PUBLIC_WS_ORIGIN ?? "ws://localhost:4000";
+const WS_ORIGIN = process.env.NEXT_PUBLIC_WS_ORIGIN || "";
 
 export type RealtimeClient = {
   sendCommand(command: WorkspaceCommand): boolean;
@@ -15,7 +15,7 @@ export type RealtimeClientOptions = {
 };
 
 export function createRealtimeClient(options: RealtimeClientOptions): RealtimeClient {
-  const socket = new WebSocket(`${WS_ORIGIN}/realtime`);
+  const socket = new WebSocket(resolveRealtimeUrl());
   options.onStatusChange?.("connecting");
 
   socket.addEventListener("open", () => {
@@ -51,4 +51,10 @@ export function createRealtimeClient(options: RealtimeClientOptions): RealtimeCl
       socket.close();
     }
   };
+}
+
+function resolveRealtimeUrl(): string {
+  if (WS_ORIGIN) return `${WS_ORIGIN}/realtime`;
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/api/realtime`;
 }
