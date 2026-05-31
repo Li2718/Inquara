@@ -335,8 +335,9 @@ h2 {
 }
 
 .app-shell {
+  --app-shell-padding: clamp(14px, 3vw, 30px);
   min-height: 100svh;
-  padding: clamp(14px, 3vw, 30px);
+  padding: var(--app-shell-padding);
 }
 
 .login-panel,
@@ -349,7 +350,7 @@ h2 {
 }
 
 .login-panel {
-  min-height: calc(100svh - 56px);
+  min-height: calc(100svh - (var(--app-shell-padding) * 2));
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
   align-items: end;
@@ -714,12 +715,12 @@ h2 {
 }
 
 .workspace-panel {
-  min-height: calc(100svh - 56px);
+  min-height: calc(100svh - (var(--app-shell-padding) * 2));
   padding: 24px;
 }
 
 .workspace-loading-panel {
-  min-height: calc(100svh - 60px);
+  min-height: calc(100svh - (var(--app-shell-padding) * 2));
   display: grid;
   place-items: center;
 }
