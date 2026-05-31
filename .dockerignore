@@ -1,0 +1,15 @@
+.cache/
+.git/
+.github/
+.local/
+.playwright-mcp/
+.references/
+.tmp/
+apps/web/.next/
+apps/web/playwright-report/
+apps/web/test-results/
+demo/config.js
+docs/archive/
+log/
+node_modules/
+*.tsbuildinfo

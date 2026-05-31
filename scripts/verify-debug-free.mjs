@@ -7,7 +7,8 @@ const forbiddenMarkers = [
   "INQUARA_DEBUG_PANEL",
   "Canvas session debug",
   "DebugFloatingButton",
-  "/debug/"
+  "debug-floating-button",
+  "INQUARA DEBUG"
 ];
 
 if (!existsSync(nextDir)) {

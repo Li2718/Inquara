@@ -12,7 +12,8 @@ Create a complete Docker-driven production deployment baseline for Inquara. A fr
 ### Included
 
 - Add Docker packaging for the deployable Inquara services.
-- Add a Docker Compose baseline for a single-machine self-managed deployment.
+- Add a root `docker-compose.yml` baseline for a single-machine self-managed deployment.
+- The root `docker-compose.yml` must start the complete production baseline, not only infrastructure.
 - Add a one-shot database migration service that runs before long-lived application services.
 - Use `scripts/web-start.mjs` as the web container entrypoint so setup mode and normal web mode are selected at process startup.
 - Configure restart behavior so the setup app can exit after completion and the web container can restart into normal mode.
@@ -55,31 +56,37 @@ The important deployment idea is that production is started through Docker Compo
 - The API service should start only after the database is healthy and migrations have completed.
 - The web service should start after migrations have completed and should point browser-facing API/WebSocket origins at the deployed API endpoint.
 - Prisma migrations should run through a dedicated one-shot service before normal application services.
-- The root project should expose Docker Compose lifecycle commands, not manual production `next start` or API start commands.
+- The root `docker-compose.yml` is the final production Compose entrypoint and should start all required production services.
+- The root project should expose Docker Compose lifecycle commands that use `docker-compose.yml`, not manual production `next start` or API start commands.
 - Local development remains `npm run dev` and should not be coupled to production Docker startup.
 
 ## Open Questions
 
-- What external ports should be the default for web and API in the Compose baseline?
-- Should the first Compose baseline expose API directly, or should web/API eventually sit behind a reverse proxy?
-- Which environment variables are mandatory for a minimally bootable deployment, and which should remain optional until provider features are used?
-- Whether the deployment package needs separate Dockerfiles for web and API, or one reusable app image with service-specific commands.
+- Whether this initiative should add an end-to-end Docker smoke script, or keep verification as documented manual commands for now.
 
 ## Completed Work
 
 - Created the Production Deployment initiative.
 - Reviewed AITestKit's Docker Compose deployment model, Dockerfiles, setup restart flow, and deployment documentation.
 - Confirmed that Inquara should keep `scripts/web-start.mjs` as an internal container entrypoint rather than exposing a root-level production start command.
+- Audited Inquara's current package scripts, workspace scripts, environment variables, and startup scripts.
+- Chose separate API and Web Dockerfiles because Inquara has separate Fastify and Next.js runtimes.
+- Added root `docker-compose.yml` as the production Compose entrypoint.
+- Added production services for `postgres`, `migrate`, `api`, and `web`.
+- Added Docker restart behavior for long-running services and health checks for API and Web.
+- Added a normal Next.js `/api/health` route so web health checks work after setup exits.
+- Added root production Compose lifecycle scripts.
+- Updated deployment documentation for the implemented Docker Compose baseline.
+- Fixed the debug-free verifier to scan real debug UI markers instead of failing on safe production module paths under `src/debug`.
+- Built the production Docker images successfully.
+- Verified production Compose startup through fresh setup mode.
+- Verified setup completion restarts the web service into normal Next.js mode.
+- Stopped the smoke-test production stack and removed the temporary production database volume.
+- Verified `typecheck`, `lint`, targeted startup/debug tests, and the full test suite.
 
 ## Remaining Work
 
-- Audit current Inquara package scripts, workspace package scripts, environment configuration, and Docker-related files.
-- Design the Inquara Compose service topology.
-- Add Dockerfile(s) for production services.
-- Add a production/staging Compose file with database, migrate, API, and web services.
-- Add root Docker Compose lifecycle scripts.
-- Update `docs/deployment.md` after implementation.
-- Verify Compose configuration and run relevant build/type/lint/test checks.
+- Decide whether to archive this initiative after review.
 
 ## Deferred Work
 
