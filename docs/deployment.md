@@ -27,9 +27,11 @@ Local development uses `.env.dev`, `docker-compose.dev.yml`, and `npm run dev`; 
 | `migrate` | one-shot | Runs Prisma migrations with `npm run db:migrate:deploy`, then exits. |
 | `api` | long-running application | Runs the Fastify HTTP API and assistant streaming routes on container port `4000`. |
 | `web` | long-running application | Runs setup mode or normal Next.js web mode on container port `3000`. |
-| `proxy` | long-running edge | Exposes the single public HTTP entrypoint and routes `/api/*` to `api`. |
+| `proxy` | long-running edge | Builds a small nginx image, exposes the single public HTTP entrypoint, and routes `/api/*` to `api`. |
 
 The long-running application services start only after the database is healthy and migrations have completed. `api` and `web` are only exposed inside the Compose network. Public traffic enters through `proxy`.
+
+The production Compose file is platform-neutral. It describes the application services, their internal network, and their runtime dependencies. Deployment platforms can route to the `proxy` service's container port `80` using platform-side domain configuration.
 
 ## Runtime Model
 
@@ -51,6 +53,8 @@ That script chooses the web startup mode at process startup:
 - if setup is complete, it starts the normal Next.js app
 
 After setup succeeds, the setup app exits. Docker restarts the `web` service because the Compose service uses `restart: unless-stopped`. On the next startup, setup is complete and the normal Next.js app starts.
+
+The proxy container is built from [deploy/proxy/Dockerfile](../deploy/proxy/Dockerfile). That image copies [deploy/nginx.conf](../deploy/nginx.conf) into the container at build time, so the nginx routing configuration is delivered with the proxy image.
 
 ## Environment
 
@@ -164,6 +168,8 @@ docker compose up --build -d
 
 This keeps a single Compose file usable in both Dokploy and standalone Docker deployments without forcing a fixed host port that may conflict with other services.
 
+For standalone Docker Compose usage, set `WEB_PORT=3000` or another available host port in `.env` before starting the stack.
+
 View logs:
 
 ```bash
@@ -207,6 +213,7 @@ The web health path exists in both setup mode and normal Next.js mode so Docker 
 ## Current Boundaries
 
 - The `proxy` service publishes one HTTP port. Set `WEB_PORT` to choose it, or leave it unset to let Docker assign an available host port.
+- The `proxy` service owns its nginx configuration inside its image.
 - The API remains a separate internal service so workspace mutations, lease enforcement, and AI streaming stay isolated from the Next.js runtime.
 - TLS automation is expected to be provided by the deployment platform, such as Dokploy Domains.
 - Postgres is internal to the Compose network by default and is not published to the host.
@@ -218,7 +225,7 @@ Use Dokploy's Docker Compose deployment flow against the repository root and the
 
 Configure one domain for the `proxy` service on container port `80`. Dokploy can then terminate TLS and route the public domain to Inquara's single HTTP entrypoint.
 
-Dokploy does not need `WEB_PORT`; it should route to the `proxy` service's container port `80`. Leave `WEB_PORT` unset unless you also want Docker to publish a host port outside Dokploy's domain routing.
+In Dokploy, route the domain to the `proxy` service's container port `80`. Leave `WEB_PORT` unset unless you also want Docker to publish a host port outside Dokploy's domain routing.
 
 Set these environment variables in Dokploy:
 
