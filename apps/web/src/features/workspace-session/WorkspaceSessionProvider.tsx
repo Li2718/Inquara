@@ -4,6 +4,7 @@ import type { WorkspaceCommand, WorkspaceSnapshot } from "@inquara/domain";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { apiJson, apiRequest } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
+import { useLocale } from "../../shared/locale/LocaleProvider";
 import { createCommands } from "../commands/createCommands";
 import { cancelPendingWorkspaceLeaseRelease, scheduleWorkspaceLeaseRelease } from "./leaseReleaseScheduler";
 import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
@@ -65,6 +66,7 @@ export function WorkspaceSessionProvider({
   children: ReactNode;
 }) {
   const navigation = usePageTransitionNavigation();
+  const { messages } = useLocale();
   const state = useWorkspaceSessionState();
   const sessionIdRef = useRef<string | null>(null);
   const renewTimerRef = useRef<number | null>(null);
@@ -72,7 +74,13 @@ export function WorkspaceSessionProvider({
   const releasedRef = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const commands = useMemo(() => createCommands(workspaceId), [workspaceId]);
+  const commands = useMemo(
+    () =>
+      createCommands(workspaceId, {
+        newChatTitle: messages.canvas.newChat
+      }),
+    [messages.canvas.newChat, workspaceId]
+  );
 
   useEffect(() => {
     cancelPendingWorkspaceLeaseRelease(workspaceId);
@@ -89,7 +97,7 @@ export function WorkspaceSessionProvider({
       expiresAt: null
     });
     workspaceSessionStore.getState().setLeaseState("acquiring");
-    workspaceSessionStore.getState().setErrorMessage(null);
+    workspaceSessionStore.getState().setErrorMessageKey(null);
 
     void acquireAndLoadWorkspace();
 
@@ -132,12 +140,10 @@ export function WorkspaceSessionProvider({
           }
         } catch (error) {
           if (isLeaseStaleError(error)) {
-            await enterBlockedState("This workspace is active in another client.");
+            await enterBlockedState("activeElsewhereMessage");
             return;
           }
-          workspaceSessionStore.getState().setErrorMessage(
-            error instanceof Error ? error.message : "Workspace sync failed."
-          );
+          workspaceSessionStore.getState().setErrorMessageKey("syncFailedMessage");
           workspaceSessionStore.getState().clearPending(command.clientMutationId);
         }
       }
@@ -177,11 +183,9 @@ export function WorkspaceSessionProvider({
       });
       workspaceSessionStore.getState().setLeaseState("blocked-stale");
       startBlockedPollLoop();
-    } catch (error) {
+    } catch {
       workspaceSessionStore.getState().setLeaseState("blocked-stale");
-      workspaceSessionStore.getState().setErrorMessage(
-        error instanceof Error ? error.message : "Failed to acquire the workspace."
-      );
+      workspaceSessionStore.getState().setErrorMessageKey("acquireFailedMessage");
       workspaceSessionStore.getState().setSnapshot(null);
       void navigation.replace("/");
     }
@@ -212,13 +216,13 @@ export function WorkspaceSessionProvider({
     });
 
     if (response.status === 409) {
-      await enterBlockedState("This workspace is active in another client.");
+      await enterBlockedState("activeElsewhereMessage");
       return;
     }
 
     if (!response.ok) {
       workspaceSessionStore.getState().setLeaseState("recovering");
-      workspaceSessionStore.getState().setErrorMessage("Network connection is unstable.");
+      workspaceSessionStore.getState().setErrorMessageKey("unstableNetworkMessage");
       return;
     }
 
@@ -228,13 +232,13 @@ export function WorkspaceSessionProvider({
       expiresAt: renewed.lease.expiresAt
     });
     workspaceSessionStore.getState().setLeaseState("active");
-    workspaceSessionStore.getState().setErrorMessage(null);
+    workspaceSessionStore.getState().setErrorMessageKey(null);
   }
 
-  async function enterBlockedState(message: string): Promise<void> {
+  async function enterBlockedState(messageKey: "activeElsewhereMessage"): Promise<void> {
     clearRenewTimer();
     workspaceSessionStore.getState().setLeaseState("blocked-stale");
-    workspaceSessionStore.getState().setErrorMessage(message);
+    workspaceSessionStore.getState().setErrorMessageKey(messageKey);
     workspaceSessionStore.getState().setLease({
       leaseEpoch: null,
       expiresAt: null
@@ -276,7 +280,7 @@ export function WorkspaceSessionProvider({
           expiresAt: status.lease.expiresAt
         });
         workspaceSessionStore.getState().setLeaseState("active");
-        workspaceSessionStore.getState().setErrorMessage(null);
+        workspaceSessionStore.getState().setErrorMessageKey(null);
         startRenewLoop();
         return;
       }
@@ -292,10 +296,8 @@ export function WorkspaceSessionProvider({
         displacedSeq: status.displacedSeq,
         expiresAt: status.expiresAt
       });
-    } catch (error) {
-      workspaceSessionStore.getState().setErrorMessage(
-        error instanceof Error ? error.message : "Failed to recover the workspace."
-      );
+    } catch {
+      workspaceSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
     }
   }
 
@@ -323,10 +325,11 @@ export function WorkspaceSessionProvider({
     });
 
     if (response.status === 409) {
-      await enterBlockedState("This workspace is active in another client.");
+      await enterBlockedState("activeElsewhereMessage");
       return;
     }
     if (!response.ok || !response.body) {
+      workspaceSessionStore.getState().setErrorMessageKey("streamFailedMessage");
       throw new Error("Failed to stream the assistant reply.");
     }
 
@@ -351,7 +354,7 @@ export function WorkspaceSessionProvider({
           const snapshot = workspaceSessionStore.getState().snapshot;
           if (snapshot) workspaceSnapshotCache.set(workspaceId, snapshot);
         } else if (payload.error.includes("stale")) {
-          await enterBlockedState("This workspace is active in another client.");
+          await enterBlockedState("activeElsewhereMessage");
           return;
         } else {
           throw new Error(payload.error);

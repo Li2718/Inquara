@@ -17,6 +17,8 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
 import { FloatingCircleButton, LoadingState, OrganizeLayoutIcon, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
+import { useLocale } from "../../shared/locale/LocaleProvider";
+import { interpolate } from "../../shared/messages";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
@@ -76,6 +78,8 @@ function CanvasFlow({
   resetViewportRequest: number;
   routeWorkspaceId: string;
 }) {
+  const { messages } = useLocale();
+  const copy = messages.canvas;
   const { state, commands, sendCommand } = useWorkspaceSession();
   const isBlocked = state.leaseState !== "active";
   const { screenToFlowPosition } = useReactFlow();
@@ -329,7 +333,7 @@ function CanvasFlow({
   if (!snapshot) {
     return (
       <div className="canvas-loading">
-        <LoadingState variant="canvas" aria-label="Loading canvas" />
+        <LoadingState variant="canvas" aria-label={copy.loadingCanvas} />
       </div>
     );
   }
@@ -372,7 +376,7 @@ function CanvasFlow({
       </CanvasViewportProvider>
       {!isViewportReady ? (
         <div className="canvas-loading">
-          <LoadingState variant="canvas" aria-label="Preparing canvas view" />
+          <LoadingState variant="canvas" aria-label={copy.preparingCanvas} />
         </div>
       ) : null}
       {isViewportReady ? (
@@ -386,13 +390,13 @@ function CanvasFlow({
       ) : null}
       <PopupMenu
         className="canvas-context-menu"
-        aria-label="Canvas actions"
+        aria-label={copy.actions}
         isOpen={Boolean(contextMenu)}
         onClose={() => setContextMenu(null)}
         style={contextMenu ? { left: contextMenu.screenX, top: contextMenu.screenY } : undefined}
       >
         <PopupMenuItem onClick={createNodeFromContextMenu}>
-          New chat
+          {copy.newChat}
         </PopupMenuItem>
       </PopupMenu>
     </div>
@@ -521,6 +525,8 @@ function CanvasViewportControls({
   onOrganize(): void;
   resetViewportRequest: number;
 }) {
+  const { messages } = useLocale();
+  const copy = messages.canvas;
   const { setViewport } = useReactFlow();
   const { zoom } = useViewport();
   const zoomPercent = Math.round(zoom * 100);
@@ -548,14 +554,14 @@ function CanvasViewportControls({
   }, [resetViewportRequest, resetViewportToRoot]);
 
   return (
-    <div className="canvas-viewport-controls" aria-label="Canvas zoom controls">
-      <span className="canvas-viewport-zoom-label" aria-label={`Current zoom ${zoomPercent}%`}>
+    <div className="canvas-viewport-controls" aria-label={copy.zoomControls}>
+      <span className="canvas-viewport-zoom-label" aria-label={interpolate(copy.currentZoom, { percent: zoomPercent })}>
         {zoomPercent}%
       </span>
       <FloatingCircleButton
         size="sm"
-        aria-label="Organize chats into a compact hierarchy"
-        title="Organize"
+        aria-label={copy.organizeAria}
+        title={copy.organize}
         disabled={isBlocked}
         onClick={onOrganize}
       >
@@ -563,8 +569,8 @@ function CanvasViewportControls({
       </FloatingCircleButton>
       <FloatingCircleButton
         size="sm"
-        aria-label="Reset view to root chat"
-        title="Reset view"
+        aria-label={copy.resetViewAria}
+        title={copy.resetView}
         disabled={!firstRootNode}
         onClick={resetViewportToRoot}
       >

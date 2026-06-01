@@ -1515,9 +1515,16 @@ h2 {
   top: 16px;
   right: 18px;
   z-index: 31;
-  display: grid;
-  justify-items: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+.app-top-language {
+  position: relative;
+  display: inline-grid;
+  justify-items: end;
 }
 
 .canvas-floating-circle-button {
@@ -1556,7 +1563,9 @@ h2 {
 }
 
 .ui-popup-menu {
+  width: max-content;
   min-width: 132px;
+  max-width: calc(100vw - 24px);
   display: grid;
   gap: 4px;
   padding: 6px;
@@ -1614,6 +1623,7 @@ h2 {
   box-shadow: none;
   font-size: 13px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .ui-popup-menu-item:hover {
@@ -1644,8 +1654,24 @@ h2 {
   font-weight: 800;
 }
 
+.app-top-language-button span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 .app-top-account-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
   min-width: 128px;
+}
+
+.app-top-language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 116px;
 }
 
 .canvas-stage {
@@ -3098,6 +3124,26 @@ h2 {
   display: grid;
   margin: 0;
   padding: 9px 10px 10px;
+}
+
+.debug-panel-section {
+  border-top: 1px solid var(--debug-row);
+}
+
+.debug-panel-toggle {
+  width: calc(100% - 20px);
+  margin: 10px;
+  justify-content: center;
+}
+
+.debug-panel-details .debug-panel-list {
+  padding-top: 0;
+}
+
+.debug-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px 10px;
 }
 
 .debug-panel-row {

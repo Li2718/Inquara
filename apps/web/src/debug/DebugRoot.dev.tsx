@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { CanvasDebugPanel } from "./CanvasDebugPanel.dev";
+import { LanguageDebugPanel } from "./LanguageDebugPanel.dev";
 import type { DebugRootProps } from "./debugTypes";
 import { DEBUG_MARKER } from "./debugGuards";
 import {
@@ -158,6 +159,7 @@ export function DebugRootDev(props: DebugRootProps) {
             </button>
           </header>
           {pageSnapshot.page === "canvas" ? <CanvasDebugPanel {...pageSnapshot} /> : <GlobalDebugPanel page={props.page} />}
+          <LanguageDebugPanel />
         </section>
       ) : null}
     </aside>

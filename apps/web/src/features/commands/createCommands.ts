@@ -1,6 +1,6 @@
 import type { WorkspaceCommand } from "@inquara/domain";
 
-export function createCommands(workspaceId: string) {
+export function createCommands(workspaceId: string, defaults: { newChatTitle: string }) {
   return {
     createNodeAtPosition(input: { title?: string; x: number; y: number }): WorkspaceCommand {
       return {
@@ -8,7 +8,7 @@ export function createCommands(workspaceId: string) {
         clientMutationId: crypto.randomUUID(),
         workspaceId,
         nodeId: crypto.randomUUID(),
-        title: input.title ?? "New chat",
+        title: input.title ?? defaults.newChatTitle,
         x: input.x,
         y: input.y
       };

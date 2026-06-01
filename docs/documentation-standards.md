@@ -29,11 +29,14 @@ Current docs explain:
 
 Current docs must not be named with dates, milestone codes, sprint labels, or temporary planning words.
 
+Tool-specific process artifacts, generated plans, scratch specs, and agent workflow records must not create a parallel documentation hierarchy under `docs/`. If their content is still useful, fold it into the relevant `docs/initiatives/<topic>/README.md`, current long-term doc, or archive package; otherwise remove it.
+
 Current docs in this repository:
 
 - `docs/architecture.md`
 - `docs/deployment.md`
 - `docs/documentation-standards.md`
+- `docs/multilingual.md`
 - `docs/testing-standards.md`
 - `docs/ui-system.md`
 

@@ -16,6 +16,9 @@ import {
   SidebarCollapseIcon,
   SidebarPanelIcon
 } from "../../shared/components/ui";
+import { formatDate } from "../../shared/format";
+import { useLocale } from "../../shared/locale/LocaleProvider";
+import { interpolate, type AppMessages } from "../../shared/messages";
 
 type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
@@ -27,6 +30,8 @@ type WorkspaceSidebarProps = {
 let workspaceListCache: Workspace[] | null = null;
 
 export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorkspaceNavigate }: WorkspaceSidebarProps) {
+  const { locale, messages } = useLocale();
+  const copy = messages.workspaceSidebar;
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => workspaceListCache ?? []);
   const [isLoading, setIsLoading] = useState(workspaceListCache === null);
   const [isCreating, setIsCreating] = useState(false);
@@ -49,7 +54,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       workspaceListCache = nextWorkspaces;
       setWorkspaces(nextWorkspaces);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not load workspaces.");
+      setError(caught instanceof Error ? caught.message : copy.couldNotLoad);
     } finally {
       if (showLoading) setIsLoading(false);
     }
@@ -61,7 +66,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
     try {
       const workspace = await apiJson<Workspace>("/workspaces", {
         method: "POST",
-        body: JSON.stringify({ title: "Untitled canvas" })
+        body: JSON.stringify({ title: copy.untitledCanvas })
       });
       setWorkspaces(previous => {
         const nextWorkspaces = [workspace, ...previous.filter(item => item.id !== workspace.id)];
@@ -70,7 +75,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       });
       await onWorkspaceNavigate(workspace.id);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not create canvas.");
+      setError(caught instanceof Error ? caught.message : copy.couldNotCreate);
     } finally {
       setIsCreating(false);
     }
@@ -100,7 +105,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       });
       setRenamingId(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not rename canvas.");
+      setError(caught instanceof Error ? caught.message : copy.couldNotRename);
     }
   }
 
@@ -119,7 +124,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
           nextWorkspaces[0] ??
           (await apiJson<Workspace>("/workspaces", {
             method: "POST",
-            body: JSON.stringify({ title: "Untitled canvas" })
+            body: JSON.stringify({ title: copy.untitledCanvas })
           }));
         if (nextWorkspaces.length === 0) {
           workspaceListCache = [nextWorkspace];
@@ -128,18 +133,18 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
         await onWorkspaceNavigate(nextWorkspace.id, { replace: true });
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not delete canvas.");
+      setError(caught instanceof Error ? caught.message : copy.couldNotDelete);
       setIsDeleting(false);
     }
   }
 
   return (
-    <aside className="workspace-sidebar" data-open={isOpen} aria-label="Workspace navigation">
+    <aside className="workspace-sidebar" data-open={isOpen} aria-label={copy.workspaceNavigation}>
       <button
         type="button"
         className="workspace-sidebar-morph-button"
         onClick={onToggle}
-        aria-label={isOpen ? "Collapse sidebar" : "Open sidebar"}
+        aria-label={isOpen ? copy.collapseSidebar : copy.openSidebar}
         aria-expanded={isOpen}
       >
         <SidebarPanelIcon />
@@ -147,32 +152,32 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
 
       <div className="workspace-sidebar-content" aria-hidden={!isOpen}>
         <header className="workspace-sidebar-header">
-          <button type="button" className="workspace-sidebar-title-button" onClick={onToggle} aria-label="Collapse sidebar">
-            <h2>Canvases</h2>
+          <button type="button" className="workspace-sidebar-title-button" onClick={onToggle} aria-label={copy.collapseSidebar}>
+            <h2>{copy.canvases}</h2>
           </button>
           <button
             type="button"
             className="workspace-sidebar-create-button"
             onClick={createWorkspace}
-            aria-label="New canvas"
+            aria-label={copy.newCanvas}
             disabled={isCreating}
           >
             <PlusIcon />
           </button>
-          <button type="button" className="workspace-sidebar-collapse-button" onClick={onToggle} aria-label="Collapse sidebar">
+          <button type="button" className="workspace-sidebar-collapse-button" onClick={onToggle} aria-label={copy.collapseSidebar}>
             <SidebarCollapseIcon />
           </button>
         </header>
 
-        <div className="workspace-sidebar-list" aria-label="Canvas list">
+        <div className="workspace-sidebar-list" aria-label={copy.canvasList}>
           {isLoading ? (
             <div className="workspace-sidebar-loading">
-              <LoadingState variant="inline" aria-label="Loading canvases" />
+              <LoadingState variant="inline" aria-label={copy.loadingCanvases} />
               <SkeletonBlock variant="list" rows={3} />
             </div>
           ) : null}
           {!isLoading && workspaces.length === 0 ? (
-            <p className="workspace-sidebar-note">No canvases yet.</p>
+            <p className="workspace-sidebar-note">{copy.noCanvases}</p>
           ) : null}
           {workspaces.map(workspace => (
             <WorkspaceSidebarItem
@@ -182,6 +187,8 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
               onMenuToggle={setActiveMenuId}
               onRename={startRenaming}
               onWorkspaceNavigate={onWorkspaceNavigate}
+              locale={locale}
+              messages={messages}
               renamingId={renamingId}
               renameTitle={renameTitle}
               setDeletingWorkspace={setDeletingWorkspace}
@@ -197,9 +204,9 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       </div>
       <ConfirmDialog
         isOpen={Boolean(deletingWorkspace)}
-        title="Delete canvas?"
-        description={deletingWorkspace ? `${deletingWorkspace.title} will be removed from your canvas list. This uses a soft delete.` : undefined}
-        confirmLabel={isDeleting ? "Deleting" : "Delete"}
+        title={copy.deleteCanvas}
+        description={deletingWorkspace ? interpolate(copy.deleteDescription, { title: deletingWorkspace.title }) : undefined}
+        confirmLabel={isDeleting ? messages.common.deleting : messages.common.delete}
         confirmTone="danger"
         isConfirming={isDeleting}
         onCancel={() => setDeletingWorkspace(null)}
@@ -215,6 +222,8 @@ function WorkspaceSidebarItem({
   onMenuToggle,
   onRename,
   onWorkspaceNavigate,
+  locale,
+  messages,
   renamingId,
   renameTitle,
   setDeletingWorkspace,
@@ -228,6 +237,8 @@ function WorkspaceSidebarItem({
   onMenuToggle(activeMenuId: string | null): void;
   onRename(workspace: Workspace): void;
   onWorkspaceNavigate(targetWorkspaceId: string, options?: { replace?: boolean }): Promise<void>;
+  locale: ReturnType<typeof useLocale>["locale"];
+  messages: AppMessages;
   renamingId: string | null;
   renameTitle: string;
   setDeletingWorkspace(workspace: Workspace): void;
@@ -238,6 +249,7 @@ function WorkspaceSidebarItem({
 }) {
   const isMenuOpen = activeMenuId === workspace.id;
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const copy = messages.workspaceSidebar;
 
   return (
     <div className="workspace-sidebar-item-shell">
@@ -253,7 +265,7 @@ function WorkspaceSidebarItem({
             autoFocus
             required
           />
-          <Button type="submit">Save</Button>
+          <Button type="submit">{copy.save}</Button>
         </form>
       ) : (
         <>
@@ -268,27 +280,27 @@ function WorkspaceSidebarItem({
             }}
           >
             <strong>{workspace.title}</strong>
-            <span>{new Date(workspace.updatedAt).toLocaleDateString()}</span>
+            <span>{formatDate(locale, workspace.updatedAt)}</span>
           </PageTransitionLink>
           <button
             ref={menuTriggerRef}
             type="button"
             className="workspace-sidebar-item-menu-trigger"
             onClick={() => onMenuToggle(isMenuOpen ? null : workspace.id)}
-            aria-label={`Canvas actions for ${workspace.title}`}
+            aria-label={interpolate(copy.canvasActions, { title: workspace.title })}
             aria-expanded={isMenuOpen}
           >
             <MoreVerticalIcon />
           </button>
           <PopupMenu
             className="workspace-sidebar-item-menu"
-            aria-label={`Canvas actions for ${workspace.title}`}
+            aria-label={interpolate(copy.canvasActions, { title: workspace.title })}
             ignoreRef={menuTriggerRef}
             isOpen={isMenuOpen}
             onClose={() => onMenuToggle(null)}
           >
             <PopupMenuItem onClick={() => onRename(workspace)}>
-              Rename
+              {copy.rename}
             </PopupMenuItem>
             <PopupMenuItem
               tone="danger"
@@ -297,7 +309,7 @@ function WorkspaceSidebarItem({
                 setDeletingWorkspace(workspace);
               }}
             >
-              Delete
+              {messages.common.delete}
             </PopupMenuItem>
           </PopupMenu>
         </>
