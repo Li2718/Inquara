@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { apiJson } from "../../shared/api";
-import { Button } from "../../shared/components/ui";
+import { Button, Toast } from "../../shared/components/ui";
 
 type LoginPageProps = {
   onLoggedIn(): void;
@@ -54,6 +54,7 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
 
   return (
     <main className="app-shell">
+      <Toast message={error || null} onDismiss={() => setError("")} />
       <section className="login-panel" aria-label="Login">
         <div>
           <p className="eyebrow">Inquara</p>
@@ -126,7 +127,6 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Working..." : mode === "login" ? "Login" : "Create account"}
           </Button>
-          {error ? <p className="error-text">{error}</p> : null}
         </form>
       </section>
     </main>
