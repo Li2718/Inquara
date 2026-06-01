@@ -47,9 +47,10 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
     setIsLoggingOut(true);
     try {
       await apiJson<void>("/auth/logout", { method: "POST" });
+      setIsLogoutDialogOpen(false);
       router.replace("/");
       router.refresh();
-    } finally {
+    } catch {
       setIsLoggingOut(false);
     }
   }

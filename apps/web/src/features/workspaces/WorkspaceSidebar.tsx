@@ -129,7 +129,6 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not delete canvas.");
-    } finally {
       setIsDeleting(false);
     }
   }

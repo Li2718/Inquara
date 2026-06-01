@@ -94,21 +94,23 @@ export function ConfirmDialog({
 
   if (!isPresent || !portalRoot) return null;
 
-  const body = motionState === "closing" ? contentSnapshot.body : children ?? description;
-  const displayedCancelLabel = motionState === "closing" ? contentSnapshot.cancelLabel : cancelLabel;
-  const displayedConfirmLabel = motionState === "closing" ? contentSnapshot.confirmLabel : confirmLabel;
-  const displayedConfirmTone = motionState === "closing" ? contentSnapshot.confirmTone : confirmTone;
-  const displayedIsConfirming = motionState === "closing" ? contentSnapshot.isConfirming : isConfirming;
-  const displayedTitle = motionState === "closing" ? contentSnapshot.title : title;
+  const displayedMotionState = isOpen ? motionState : "closing";
+  const shouldUseSnapshot = displayedMotionState === "closing";
+  const body = shouldUseSnapshot ? contentSnapshot.body : children ?? description;
+  const displayedCancelLabel = shouldUseSnapshot ? contentSnapshot.cancelLabel : cancelLabel;
+  const displayedConfirmLabel = shouldUseSnapshot ? contentSnapshot.confirmLabel : confirmLabel;
+  const displayedConfirmTone = shouldUseSnapshot ? contentSnapshot.confirmTone : confirmTone;
+  const displayedIsConfirming = shouldUseSnapshot ? contentSnapshot.isConfirming : isConfirming;
+  const displayedTitle = shouldUseSnapshot ? contentSnapshot.title : title;
   const confirmVariant = displayedConfirmTone === "danger" ? "danger" : "primary";
 
   return createPortal(
     <div
       className="ui-confirm-dialog-backdrop nodrag nowheel"
-      data-state={motionState}
+      data-state={displayedMotionState}
       role="presentation"
       onPointerDown={event => {
-        if (motionState === "closing") return;
+        if (displayedMotionState === "closing") return;
         if (event.target === event.currentTarget && !isConfirming) onCancel();
       }}
     >

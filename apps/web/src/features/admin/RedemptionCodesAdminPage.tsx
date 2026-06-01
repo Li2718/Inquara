@@ -138,7 +138,6 @@ export function RedemptionCodesAdminPage() {
       setDeletingCode(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Failed to delete code.");
-    } finally {
       setIsDeleting(false);
     }
   }
