@@ -64,6 +64,35 @@ describe("MessageMarkdown", () => {
     expect(html).not.toContain("| --- | --- |");
   });
 
+  it("renders markdown table alignment markers as cell alignment", () => {
+    const html = renderToStaticMarkup(
+      createElement(MessageMarkdown, {
+        content: "| Left | Center | Right |\n| :--- | :---: | ---: |\n| a | b | c |",
+        branches: [],
+        onToggleBranch: vi.fn()
+      })
+    );
+
+    expect(html).toContain("style=\"text-align:left\"");
+    expect(html).toContain("style=\"text-align:center\"");
+    expect(html).toContain("style=\"text-align:right\"");
+    expect(html).not.toContain(":---:");
+  });
+
+  it("keeps escaped pipes inside table cells", () => {
+    const html = renderToStaticMarkup(
+      createElement(MessageMarkdown, {
+        content: "| Pattern | Meaning |\n| --- | --- |\n| a\\|b | literal pipe |",
+        branches: [],
+        onToggleBranch: vi.fn()
+      })
+    );
+
+    expect(html).toContain("a|b");
+    expect(html).toContain("literal pipe");
+    expect(html).not.toContain("a\\|b");
+  });
+
   it("renders task lists with checkbox affordances", () => {
     const html = renderToStaticMarkup(
       createElement(MessageMarkdown, {
@@ -160,5 +189,19 @@ describe("MessageMarkdown", () => {
     expect(html).toContain("E = mc^2");
     expect(html).not.toContain("$E = mc^2$");
     expect(html).toContain("katex");
+  });
+
+  it("renders parenthesized inline math without exposing raw delimiters", () => {
+    const html = renderToStaticMarkup(
+      createElement(MessageMarkdown, {
+        content: "Use \\\\(a_i + b_i\\\\) here.",
+        branches: [],
+        onToggleBranch: vi.fn()
+      })
+    );
+
+    expect(html).toContain("katex");
+    expect(html).not.toContain("\\\\(");
+    expect(html).not.toContain("\\\\)");
   });
 });

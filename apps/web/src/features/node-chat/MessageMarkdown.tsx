@@ -2,7 +2,13 @@
 
 import type { CanvasNode } from "@inquara/domain";
 import React, { Fragment, type ReactNode } from "react";
-import { parseMessageMarkdown, type MarkdownBlock, type MarkdownBranch, type MarkdownToken } from "./messageMarkdownModel";
+import {
+  parseMessageMarkdown,
+  type MarkdownBlock,
+  type MarkdownBranch,
+  type MarkdownTableAlignment,
+  type MarkdownToken
+} from "./messageMarkdownModel";
 import { renderMathToMarkup } from "./mathRender";
 
 type MessageMarkdownProps = {
@@ -57,16 +63,20 @@ function renderBlock(
         <table>
           <thead>
             <tr>
-              {block.header.map(cell => (
-                <th key={`${cell.sourceStart}-${cell.sourceEnd}`}>{renderTokens(cell.tokens, branches, onToggleBranch)}</th>
+              {block.header.map((cell, index) => (
+                <th key={`${cell.sourceStart}-${cell.sourceEnd}`} style={getTableCellStyle(block.alignments[index] ?? null)}>
+                  {renderTokens(cell.tokens, branches, onToggleBranch)}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {block.rows.map(row => (
               <tr key={`${row.sourceStart}-${row.sourceEnd}`}>
-                {row.cells.map(cell => (
-                  <td key={`${cell.sourceStart}-${cell.sourceEnd}`}>{renderTokens(cell.tokens, branches, onToggleBranch)}</td>
+                {row.cells.map((cell, index) => (
+                  <td key={`${cell.sourceStart}-${cell.sourceEnd}`} style={getTableCellStyle(block.alignments[index] ?? null)}>
+                    {renderTokens(cell.tokens, branches, onToggleBranch)}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -122,6 +132,10 @@ function renderBlock(
     default:
       return null;
   }
+}
+
+function getTableCellStyle(alignment: MarkdownTableAlignment) {
+  return alignment ? { textAlign: alignment } : undefined;
 }
 
 function renderTokens(

@@ -39,6 +39,7 @@ export type MarkdownMathToken = {
 };
 
 export type MarkdownToken = MarkdownTextToken | MarkdownInlineToken | MarkdownImageToken | MarkdownMathToken;
+export type MarkdownTableAlignment = "left" | "center" | "right" | null;
 
 export type MarkdownBlock =
   | {
@@ -61,6 +62,7 @@ export type MarkdownBlock =
     }
   | {
       type: "table";
+      alignments: MarkdownTableAlignment[];
       header: {
         tokens: MarkdownToken[];
         sourceStart: number;
@@ -205,6 +207,7 @@ export function parseMessageMarkdown(content: string): MarkdownBlock[] {
     if (isTableHeaderLine(line.text) && index + 1 < lines.length && isTableDividerLine(lines[index + 1]?.text ?? "")) {
       const start = line.start;
       const header = parseTableRow(line.text, line.start);
+      const alignments = parseTableAlignments(lines[index + 1]?.text ?? "");
       let end = lines[index + 1]?.end ?? line.end;
       index += 2;
       const rows: {
@@ -231,6 +234,7 @@ export function parseMessageMarkdown(content: string): MarkdownBlock[] {
 
       blocks.push({
         type: "table",
+        alignments,
         header,
         rows,
         sourceStart: start,
@@ -466,7 +470,7 @@ function isTableDividerLine(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed.includes("|")) return false;
   const cells = splitTableCells(trimmed);
-  return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/u.test(cell.trim()));
+  return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/u.test(cell.value.trim()));
 }
 
 function isTableRowLine(text: string): boolean {
@@ -492,28 +496,65 @@ function parseTableRow(
 
   let searchOffset = 0;
   for (const rawCell of cells) {
-    const tokenStart = text.indexOf(rawCell, searchOffset);
+    const tokenStart = text.indexOf(rawCell.raw, searchOffset);
     const sourceStart = rowSourceStart + Math.max(0, tokenStart);
-    const sourceEnd = sourceStart + rawCell.length;
-    const cellText = rawCell.trim();
-    const leadingWhitespace = rawCell.length - rawCell.trimStart().length;
+    const sourceEnd = sourceStart + rawCell.raw.length;
+    const cellText = rawCell.value.trim();
+    const leadingWhitespace = rawCell.value.length - rawCell.value.trimStart().length;
     result.push({
       tokens: parseInlineTokens(cellText, sourceStart + leadingWhitespace),
       sourceStart,
       sourceEnd
     });
-    searchOffset = Math.max(searchOffset, tokenStart + rawCell.length + 1);
+    searchOffset = Math.max(searchOffset, tokenStart + rawCell.raw.length + 1);
   }
 
   return result;
 }
 
-function splitTableCells(text: string): string[] {
-  return text
+function parseTableAlignments(text: string): MarkdownTableAlignment[] {
+  return splitTableCells(text).map(cell => {
+    const trimmed = cell.value.trim();
+    const startsWithColon = trimmed.startsWith(":");
+    const endsWithColon = trimmed.endsWith(":");
+    if (startsWithColon && endsWithColon) return "center";
+    if (startsWithColon) return "left";
+    if (endsWithColon) return "right";
+    return null;
+  });
+}
+
+function splitTableCells(text: string): { raw: string; value: string }[] {
+  const innerText = text
     .trim()
     .replace(/^\|/u, "")
-    .replace(/\|$/u, "")
-    .split("|");
+    .replace(/\|$/u, "");
+  const cells: { raw: string; value: string }[] = [];
+  let raw = "";
+  let value = "";
+
+  for (let index = 0; index < innerText.length; index += 1) {
+    const char = innerText[index] ?? "";
+    if (char === "\\" && innerText[index + 1] === "|") {
+      raw += "\\|";
+      value += "|";
+      index += 1;
+      continue;
+    }
+
+    if (char === "|") {
+      cells.push({ raw, value });
+      raw = "";
+      value = "";
+      continue;
+    }
+
+    raw += char;
+    value += char;
+  }
+
+  cells.push({ raw, value });
+  return cells;
 }
 
 function parseInlineTokens(text: string, sourceOffset: number): MarkdownToken[] {
@@ -556,6 +597,29 @@ function parseInlineTokens(text: string, sourceOffset: number): MarkdownToken[] 
             contentEnd: sourceOffset + closing - trailingWhitespace
           });
           cursor = closing + 1;
+          continue;
+        }
+      }
+    }
+
+    if (text.startsWith("\\(", cursor)) {
+      const closing = text.indexOf("\\)", cursor + 2);
+      if (closing > cursor + 2) {
+        const rawFormula = text.slice(cursor + 2, closing);
+        const formula = rawFormula.trim();
+        if (formula.length > 0) {
+          const leadingWhitespace = rawFormula.length - rawFormula.trimStart().length;
+          const trailingWhitespace = rawFormula.length - rawFormula.trimEnd().length;
+          tokens.push({
+            type: "math",
+            displayMode: false,
+            formula,
+            sourceStart: sourceOffset + cursor,
+            sourceEnd: sourceOffset + closing + 2,
+            contentStart: sourceOffset + cursor + 2 + leadingWhitespace,
+            contentEnd: sourceOffset + closing - trailingWhitespace
+          });
+          cursor = closing + 2;
           continue;
         }
       }
@@ -648,6 +712,7 @@ function parseInlineTokens(text: string, sourceOffset: number): MarkdownToken[] 
       const nextTwo = text.slice(next, next + 2);
       if (
         nextTwo === "![" ||
+        nextTwo === "\\(" ||
         nextTwo === "~~" ||
         nextTwo === "**" ||
         nextChar === "$" ||
