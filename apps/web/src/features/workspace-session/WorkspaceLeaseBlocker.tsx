@@ -3,16 +3,17 @@
 import React from "react";
 import { Button } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
+import type { WorkspaceSessionMessageKey } from "./store";
 
 export function WorkspaceLeaseBlocker({
   isVisible,
   isRecovering,
-  message,
+  messageKey,
   onRetry
 }: {
   isVisible: boolean;
   isRecovering: boolean;
-  message: string | null;
+  messageKey: WorkspaceSessionMessageKey | null;
   onRetry(): void;
 }) {
   const { messages } = useLocale();
@@ -24,10 +25,7 @@ export function WorkspaceLeaseBlocker({
       <div className="workspace-lease-blocker-card">
         <p className="workspace-lease-blocker-eyebrow">{isRecovering ? copy.recoveringEyebrow : copy.blockedEyebrow}</p>
         <h2>{isRecovering ? copy.recoveringTitle : copy.blockedTitle}</h2>
-        <p>
-          {message ??
-            copy.defaultMessage}
-        </p>
+        <p>{messageKey ? copy[messageKey] : copy.defaultMessage}</p>
         <div className="workspace-lease-blocker-actions">
           <Button type="button" onClick={onRetry}>
             {copy.takeOver}

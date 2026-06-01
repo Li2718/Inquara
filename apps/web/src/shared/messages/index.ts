@@ -104,14 +104,21 @@ export const messages = {
     },
     chat: {
       askPlaceholder: "Ask in this node",
+      thinking: "Thinking...",
       send: "Send"
     },
     lease: {
+      activeElsewhereMessage: "This workspace is active in another client.",
+      acquireFailedMessage: "Failed to acquire the workspace.",
       blockedEyebrow: "Workspace blocked",
       blockedTitle: "This workspace is active in another client",
       defaultMessage: "The content shown here may be out of date. Editing stays disabled until this client reconnects and becomes active again.",
+      recoverFailedMessage: "Failed to recover the workspace.",
       recoveringEyebrow: "Recovering workspace",
       recoveringTitle: "Waiting to restore editing",
+      syncFailedMessage: "Workspace sync failed.",
+      streamFailedMessage: "Failed to stream the assistant reply.",
+      unstableNetworkMessage: "Network connection is unstable.",
       takeOver: "Take over here"
     },
     error: {
@@ -287,14 +294,21 @@ export const messages = {
     },
     chat: {
       askPlaceholder: "在此节点提问",
+      thinking: "正在思考...",
       send: "发送"
     },
     lease: {
+      activeElsewhereMessage: "此工作区正在另一个客户端中使用。",
+      acquireFailedMessage: "无法获取工作区编辑权。",
       blockedEyebrow: "工作区已阻止",
       blockedTitle: "此工作区正在另一个客户端中使用",
       defaultMessage: "这里显示的内容可能已过期。在此客户端重新连接并重新变为活动状态前，编辑会保持禁用。",
+      recoverFailedMessage: "无法恢复工作区。",
       recoveringEyebrow: "正在恢复工作区",
       recoveringTitle: "等待恢复编辑",
+      syncFailedMessage: "工作区同步失败。",
+      streamFailedMessage: "助手回复流式传输失败。",
+      unstableNetworkMessage: "网络连接不稳定。",
       takeOver: "在此接管"
     },
     error: {

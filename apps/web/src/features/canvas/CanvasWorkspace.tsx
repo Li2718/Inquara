@@ -124,7 +124,7 @@ function CanvasWorkspaceContent({
         <WorkspaceLeaseBlocker
           isVisible={state.leaseState === "blocked-stale" || state.leaseState === "recovering"}
           isRecovering={state.leaseState === "recovering"}
-          message={state.errorMessage}
+          messageKey={state.errorMessageKey}
           onRetry={() => window.location.reload()}
         />
       </section>

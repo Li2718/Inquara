@@ -2,6 +2,7 @@
 
 import type { CanvasNode, NodeMessage } from "@inquara/domain";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useLocale } from "../../shared/locale/LocaleProvider";
 import { useCanvasPlacementViewportGetter } from "../canvas/CanvasViewportContext";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
@@ -21,6 +22,7 @@ type SelectionState = {
 };
 
 export function MessageList({ node }: { node: CanvasNode }) {
+  const { messages: appMessages } = useLocale();
   const { state, commands, sendCommand } = useWorkspaceSession();
   const { getPlacementViewport } = useCanvasPlacementViewportGetter();
   const isBlocked = state.leaseState !== "active";
@@ -218,6 +220,7 @@ export function MessageList({ node }: { node: CanvasNode }) {
             message={message}
             branchNodes={(state.snapshot?.nodes ?? []).filter(node => node.sourceMessageId === message.id && !node.deletedAt)}
             onToggleBranch={toggleBranch}
+            streamingLabel={appMessages.chat.thinking}
           />
           {message.status !== "complete" ? <small>{message.status}</small> : null}
         </article>
@@ -240,12 +243,14 @@ function normalizeSelectionText(value: string): string {
 function MessageContent({
   message,
   branchNodes,
-  onToggleBranch
+  onToggleBranch,
+  streamingLabel
 }: {
   message: NodeMessage;
   branchNodes: CanvasNode[];
   onToggleBranch(node: CanvasNode): void;
+  streamingLabel: string;
 }) {
-  const content = message.content || (message.status === "streaming" ? "Thinking..." : "");
+  const content = message.content || (message.status === "streaming" ? streamingLabel : "");
   return <MessageMarkdown content={content} branches={branchNodes} onToggleBranch={onToggleBranch} />;
 }

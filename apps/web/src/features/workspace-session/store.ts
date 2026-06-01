@@ -19,16 +19,24 @@ export type WorkspaceLeaseMeta = {
   expiresAt: string | null;
 };
 
+export type WorkspaceSessionMessageKey =
+  | "activeElsewhereMessage"
+  | "acquireFailedMessage"
+  | "recoverFailedMessage"
+  | "streamFailedMessage"
+  | "syncFailedMessage"
+  | "unstableNetworkMessage";
+
 export type WorkspaceSessionState = {
   snapshot: WorkspaceSnapshot | null;
   leaseState: WorkspaceLeaseState;
   lease: WorkspaceLeaseMeta;
   pendingClientMutationIds: string[];
-  errorMessage: string | null;
+  errorMessageKey: WorkspaceSessionMessageKey | null;
   setSnapshot(snapshot: WorkspaceSnapshot | null): void;
   setLeaseState(state: WorkspaceLeaseState): void;
   setLease(meta: Partial<WorkspaceLeaseMeta>): void;
-  setErrorMessage(message: string | null): void;
+  setErrorMessageKey(messageKey: WorkspaceSessionMessageKey | null): void;
   markPending(clientMutationId: string): void;
   clearPending(clientMutationId: string): void;
   applyEvent(event: WorkspaceEvent): void;
@@ -49,7 +57,7 @@ export function createWorkspaceSessionStore() {
     leaseState: "idle",
     lease: emptyLease,
     pendingClientMutationIds: [],
-    errorMessage: null,
+    errorMessageKey: null,
     setSnapshot(snapshot) {
       set({ snapshot });
     },
@@ -64,8 +72,8 @@ export function createWorkspaceSessionStore() {
         }
       }));
     },
-    setErrorMessage(errorMessage) {
-      set({ errorMessage });
+    setErrorMessageKey(errorMessageKey) {
+      set({ errorMessageKey });
     },
     markPending(clientMutationId) {
       set(state => ({
@@ -106,7 +114,7 @@ export function createWorkspaceSessionStore() {
         leaseState: "idle",
         lease: emptyLease,
         pendingClientMutationIds: [],
-        errorMessage: null
+        errorMessageKey: null
       });
     }
   }));

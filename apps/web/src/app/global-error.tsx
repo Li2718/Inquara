@@ -5,11 +5,9 @@ import "./../shared/styles.css";
 import { ErrorScreen } from "../shared/components/product";
 import { LocaleProvider } from "../shared/locale/LocaleProvider";
 import { DEFAULT_LOCALE } from "../shared/locale";
-import { getMessages } from "../shared/messages";
+import { useLocale } from "../shared/locale/LocaleProvider";
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  const messages = getMessages(DEFAULT_LOCALE);
-
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -18,13 +16,21 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="en">
       <body>
         <LocaleProvider initialLocale={DEFAULT_LOCALE}>
-          <ErrorScreen
-            heading={messages.error.globalHeading}
-            message={messages.error.globalMessage}
-            onRetry={reset}
-          />
+          <GlobalErrorContent onRetry={reset} />
         </LocaleProvider>
       </body>
     </html>
+  );
+}
+
+function GlobalErrorContent({ onRetry }: { onRetry: () => void }) {
+  const { messages } = useLocale();
+
+  return (
+    <ErrorScreen
+      heading={messages.error.globalHeading}
+      message={messages.error.globalMessage}
+      onRetry={onRetry}
+    />
   );
 }
