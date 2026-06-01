@@ -27,7 +27,7 @@ export function WorkspaceLeaseBlocker({
         </p>
         <div className="workspace-lease-blocker-actions">
           <Button type="button" onClick={onRetry}>
-            Try reconnecting
+            Take over here
           </Button>
         </div>
       </div>

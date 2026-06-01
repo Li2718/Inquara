@@ -12,7 +12,7 @@ vi.mock("../../shared/components/ui", () => ({
 }));
 
 describe("WorkspaceLeaseBlocker", () => {
-  it("uses reconnect language for the recovery action", () => {
+  it("uses takeover language for the blocked workspace action", () => {
     const markup = renderToStaticMarkup(
       React.createElement(WorkspaceLeaseBlocker, {
         isVisible: true,
@@ -22,7 +22,7 @@ describe("WorkspaceLeaseBlocker", () => {
       })
     );
 
-    expect(markup).toContain("Try reconnecting");
-    expect(markup).not.toContain("Check again");
+    expect(markup).toContain("Take over here");
+    expect(markup).not.toContain("Try reconnecting");
   });
 });
