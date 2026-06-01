@@ -1,9 +1,9 @@
 "use client";
 
 import type { WorkspaceCommand, WorkspaceSnapshot } from "@inquara/domain";
-import { useRouter } from "next/navigation";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { apiJson } from "../../shared/api";
+import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { createCommands } from "../commands/createCommands";
 import { createRealtimeClient, type RealtimeClient } from "../realtime/client";
 import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
@@ -26,7 +26,7 @@ export function WorkspaceSessionProvider({
   children: ReactNode;
 }) {
   const realtimeRef = useRef<RealtimeClient | null>(null);
-  const router = useRouter();
+  const navigation = usePageTransitionNavigation();
   const state = useWorkspaceSessionState();
   const commands = useMemo(() => createCommands(workspaceId), [workspaceId]);
 
@@ -59,7 +59,7 @@ export function WorkspaceSessionProvider({
       if (cancelled) return;
       workspaceSessionStore.getState().setConnectionStatus("disconnected");
       workspaceSessionStore.getState().setSnapshot(null);
-      router.replace("/");
+      void navigation.replace("/");
     });
 
     return () => {
@@ -67,7 +67,7 @@ export function WorkspaceSessionProvider({
       realtimeRef.current?.close();
       realtimeRef.current = null;
     };
-  }, [router, workspaceId]);
+  }, [navigation, workspaceId]);
 
   const value = useMemo<WorkspaceSessionContextValue>(
     () => ({

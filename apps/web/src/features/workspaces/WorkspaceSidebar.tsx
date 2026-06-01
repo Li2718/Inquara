@@ -1,9 +1,9 @@
 "use client";
 
 import type { Workspace } from "@inquara/domain";
-import Link from "next/link";
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from "react";
 import { apiJson } from "../../shared/api";
+import { PageTransitionLink } from "../../shared/components/chrome";
 import {
   Button,
   ConfirmDialog,
@@ -257,7 +257,7 @@ function WorkspaceSidebarItem({
         </form>
       ) : (
         <>
-          <Link
+          <PageTransitionLink
             className="workspace-sidebar-item"
             data-active={workspace.id === currentWorkspaceId}
             href={`/workspaces/${workspace.id}`}
@@ -269,7 +269,7 @@ function WorkspaceSidebarItem({
           >
             <strong>{workspace.title}</strong>
             <span>{new Date(workspace.updatedAt).toLocaleDateString()}</span>
-          </Link>
+          </PageTransitionLink>
           <button
             ref={menuTriggerRef}
             type="button"

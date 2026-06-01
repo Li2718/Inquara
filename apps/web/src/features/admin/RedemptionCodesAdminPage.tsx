@@ -1,9 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { apiJson } from "../../shared/api";
-import { AppTopBar } from "../../shared/components/chrome";
+import { AppTopBar, PageTransitionLink } from "../../shared/components/chrome";
 import { Button, CheckIcon, ChevronDownIcon, ConfirmDialog, CopyIcon, EditIcon, IconButton, InlineIconButton, LoadingState, SkeletonBlock, Toast, TrashIcon } from "../../shared/components/ui";
 
 type RedemptionCode = {
@@ -423,9 +422,9 @@ function AdminShell({ children }: { children: ReactNode }) {
         <aside className="admin-sidebar" aria-label="Admin settings">
           <p className="admin-sidebar-title">Settings</p>
           <nav className="admin-nav">
-            <Link className="admin-nav-link" href="/admin/codes" aria-current="page">
+            <PageTransitionLink className="admin-nav-link" href="/admin/codes" aria-current="page">
               邀请码
-            </Link>
+            </PageTransitionLink>
           </nav>
         </aside>
         <div className="admin-content">{children}</div>

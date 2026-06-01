@@ -1,14 +1,14 @@
 "use client";
 
 import type { Workspace } from "@inquara/domain";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LoginPage } from "../auth/LoginPage";
 import { apiJson } from "../../shared/api";
+import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { LoadingState } from "../../shared/components/ui";
 
 export function WorkspaceListPage() {
-  const router = useRouter();
+  const navigation = usePageTransitionNavigation();
   const [isLoading, setIsLoading] = useState(true);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +29,7 @@ export function WorkspaceListPage() {
           body: JSON.stringify({ title: "Research canvas" })
         }));
       setNeedsLogin(false);
-      router.replace(`/workspaces/${workspace.id}`);
+      await navigation.replace(`/workspaces/${workspace.id}`);
     } catch {
       setNeedsLogin(true);
     } finally {

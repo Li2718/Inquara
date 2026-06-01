@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { DebugRoot } from "../debug/DebugRoot";
+import { PageTransitionRoot } from "../shared/components/chrome";
 import { getClientFatalErrorFallbackScript } from "../shared/components/product/clientFatalErrorFallback";
 import "../shared/styles.css";
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: getClientFatalErrorFallbackScript() }}
         />
+        <PageTransitionRoot />
         {children}
         <DebugRoot page="global" />
       </body>
