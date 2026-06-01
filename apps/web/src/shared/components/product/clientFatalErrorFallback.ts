@@ -63,12 +63,13 @@ export function getClientFatalErrorFallbackScript() {
       if (manualLocale) return manualLocale;
     } catch {}
 
-    var languages = Array.isArray(window.navigator.languages) ? window.navigator.languages : [];
+    var navigatorValue = window.navigator || {};
+    var languages = Array.isArray(navigatorValue.languages) ? navigatorValue.languages : [];
     for (var index = 0; index < languages.length; index += 1) {
       var matched = matchLocale(languages[index]);
       if (matched) return matched;
     }
-    return matchLocale(window.navigator.language) || "en";
+    return matchLocale(navigatorValue.language) || "en";
   }
 
   function renderFallback() {

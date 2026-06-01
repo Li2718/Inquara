@@ -72,6 +72,14 @@ describe("client fatal error fallback", () => {
     expect(harness.reloadListeners).toHaveLength(1);
   });
 
+  it("falls back to English when navigator is unavailable", () => {
+    const harness = createScriptHarness();
+
+    harness.listeners.get("error")?.[0]?.();
+
+    expect(harness.body.innerHTML).toContain("The workspace hit a snag.");
+  });
+
   it("handles unhandled promise rejections without rewriting an existing fallback", () => {
     const harness = createScriptHarness();
 
