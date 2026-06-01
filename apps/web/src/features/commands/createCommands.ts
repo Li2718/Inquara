@@ -7,6 +7,7 @@ export function createCommands(workspaceId: string) {
         type: "node.createAtPosition",
         clientMutationId: crypto.randomUUID(),
         workspaceId,
+        nodeId: crypto.randomUUID(),
         title: input.title ?? "New chat",
         x: input.x,
         y: input.y
@@ -25,6 +26,8 @@ export function createCommands(workspaceId: string) {
         type: "node.createFromSelection",
         clientMutationId: crypto.randomUUID(),
         workspaceId,
+        nodeId: crypto.randomUUID(),
+        edgeId: crypto.randomUUID(),
         ...input
       };
     },
@@ -106,6 +109,8 @@ export function createCommands(workspaceId: string) {
         clientMutationId: crypto.randomUUID(),
         workspaceId,
         nodeId,
+        userMessageId: crypto.randomUUID(),
+        assistantMessageId: crypto.randomUUID(),
         content
       };
     }

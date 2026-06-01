@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
+  REDIS_URL: z.string().min(1),
   SESSION_SECRET: z.string().min(32),
   WEB_ORIGIN: z.string().url().default("http://localhost:3000"),
   AI_PROVIDER: z.enum(["fake", "openai-compatible"]).default("fake"),

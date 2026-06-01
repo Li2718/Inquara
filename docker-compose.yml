@@ -3,6 +3,7 @@ name: inquara-prod
 x-app-env: &app-env
   NODE_ENV: production
   DATABASE_URL: postgresql://inquara:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a strong database password}@postgres:5432/inquara?schema=public
+  REDIS_URL: redis://redis:6379
   SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET to at least 32 random characters}
   WEB_ORIGIN: ${WEB_ORIGIN:?Set WEB_ORIGIN to the public web origin, such as https://inquara.example.com}
   AI_PROVIDER: ${AI_PROVIDER:-fake}
@@ -29,6 +30,19 @@ services:
       retries: 20
       start_period: 5s
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
   migrate:
     build:
       context: .
@@ -36,6 +50,8 @@ services:
     environment: *app-env
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: ["npm", "run", "db:migrate:deploy"]
     restart: "no"
@@ -50,6 +66,8 @@ services:
       PORT: 4000
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
@@ -78,6 +96,8 @@ services:
       HOSTNAME: 0.0.0.0
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully

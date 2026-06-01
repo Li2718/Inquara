@@ -2,21 +2,60 @@
 
 import type { WorkspaceCommand, WorkspaceSnapshot } from "@inquara/domain";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
-import { apiJson } from "../../shared/api";
+import { apiJson, apiRequest } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { createCommands } from "../commands/createCommands";
-import { createRealtimeClient, type RealtimeClient } from "../realtime/client";
+import { cancelPendingWorkspaceLeaseRelease, scheduleWorkspaceLeaseRelease } from "./leaseReleaseScheduler";
 import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
 
 type WorkspaceSessionContextValue = {
   state: WorkspaceSessionState;
   commands: ReturnType<typeof createCommands>;
-  sendCommand(command: WorkspaceCommand): void;
+  sendCommand(command: WorkspaceCommand): Promise<void>;
 };
 
-const WorkspaceSessionContext = createContext<WorkspaceSessionContextValue | null>(null);
+type LeaseAcquireResponse =
+  | {
+      status: "active";
+      lease: {
+        leaseEpoch: number;
+        expiresAt: string;
+      };
+    }
+  | {
+      status: "blocked";
+      currentHolderSessionId: string | null;
+      displacedSeq: number | null;
+      expiresAt: string | null;
+    };
 
+type LeaseStatusResponse =
+  | {
+      status: "active";
+      lease: {
+        leaseEpoch: number;
+        expiresAt: string;
+      };
+    }
+  | {
+      status: "available";
+      displacedSeq: number | null;
+      expiresAt: null;
+    }
+  | {
+      status: "blocked";
+      currentHolderSessionId: string | null;
+      displacedSeq: number | null;
+      expiresAt: string | null;
+    };
+
+const WorkspaceSessionContext = createContext<WorkspaceSessionContextValue | null>(null);
 const workspaceSnapshotCache = new Map<string, WorkspaceSnapshot>();
+const renewIntervalMs = 5_000;
+const stalePollMinMs = 8_000;
+const stalePollJitterMs = 2_000;
+const leaseReleaseDelayMs = 250;
+const sessionStorageKeyPrefix = "inquara.workspace-session";
 
 export function WorkspaceSessionProvider({
   workspaceId,
@@ -25,47 +64,42 @@ export function WorkspaceSessionProvider({
   workspaceId: string;
   children: ReactNode;
 }) {
-  const realtimeRef = useRef<RealtimeClient | null>(null);
   const navigation = usePageTransitionNavigation();
   const state = useWorkspaceSessionState();
+  const sessionIdRef = useRef<string | null>(null);
+  const renewTimerRef = useRef<number | null>(null);
+  const blockedPollTimerRef = useRef<number | null>(null);
+  const releasedRef = useRef(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const commands = useMemo(() => createCommands(workspaceId), [workspaceId]);
 
   useEffect(() => {
-    let cancelled = false;
+    cancelPendingWorkspaceLeaseRelease(workspaceId);
+    sessionIdRef.current = getOrCreateSessionId(workspaceId);
+    releasedRef.current = false;
     const cachedSnapshot = workspaceSnapshotCache.get(workspaceId);
     if (cachedSnapshot) {
       workspaceSessionStore.getState().setSnapshot(cachedSnapshot);
     }
-    workspaceSessionStore.getState().setConnectionStatus("connecting");
-
-    async function start() {
-      const snapshot = await apiJson<WorkspaceSnapshot>(`/workspaces/${workspaceId}/snapshot`);
-      if (cancelled) return;
-      workspaceSnapshotCache.set(workspaceId, snapshot);
-      workspaceSessionStore.getState().setSnapshot(snapshot);
-      realtimeRef.current = createRealtimeClient({
-        workspaceId,
-        onEvent: event => {
-          workspaceSessionStore.getState().applyEvent(event);
-          const nextSnapshot = workspaceSessionStore.getState().snapshot;
-          if (nextSnapshot) workspaceSnapshotCache.set(workspaceId, nextSnapshot);
-        },
-        onStatusChange: status => workspaceSessionStore.getState().setConnectionStatus(status),
-        onError: () => workspaceSessionStore.getState().setConnectionStatus("disconnected")
-      });
-    }
-
-    void start().catch(() => {
-      if (cancelled) return;
-      workspaceSessionStore.getState().setConnectionStatus("disconnected");
-      workspaceSessionStore.getState().setSnapshot(null);
-      void navigation.replace("/");
+    workspaceSessionStore.getState().setLease({
+      sessionId: sessionIdRef.current,
+      leaseEpoch: null,
+      displacedSeq: null,
+      expiresAt: null
     });
+    workspaceSessionStore.getState().setLeaseState("acquiring");
+    workspaceSessionStore.getState().setErrorMessage(null);
+
+    void acquireAndLoadWorkspace();
 
     return () => {
-      cancelled = true;
-      realtimeRef.current?.close();
-      realtimeRef.current = null;
+      clearRenewTimer();
+      clearBlockedPollTimer();
+      if (!releasedRef.current) {
+        releasedRef.current = true;
+        scheduleWorkspaceLeaseRelease(workspaceId, releaseLease, leaseReleaseDelayMs);
+      }
     };
   }, [navigation, workspaceId]);
 
@@ -73,15 +107,260 @@ export function WorkspaceSessionProvider({
     () => ({
       state,
       commands,
-      sendCommand(command) {
-        const sent = realtimeRef.current?.sendCommand(command) ?? false;
-        if (sent) workspaceSessionStore.getState().markPending(command.clientMutationId);
+      async sendCommand(command) {
+        if (stateRef.current.leaseState !== "active") return;
+        workspaceSessionStore.getState().applyOptimisticCommand(command);
+        try {
+          if (command.type === "message.sendUserMessage") {
+            await streamMessageCommand(command);
+          } else {
+            const response = await apiJson<{ events: unknown[] }>(`/workspaces/${workspaceId}/commands`, {
+              method: "POST",
+              body: JSON.stringify({
+                sessionId: sessionIdRef.current,
+                leaseEpoch: stateRef.current.lease.leaseEpoch,
+                command
+              })
+            });
+            const snapshot = workspaceSessionStore.getState().snapshot;
+            if (snapshot) {
+              workspaceSnapshotCache.set(workspaceId, snapshot);
+            }
+            if (!response.events.length) {
+              workspaceSessionStore.getState().clearPending(command.clientMutationId);
+            }
+          }
+        } catch (error) {
+          if (isLeaseStaleError(error)) {
+            await enterBlockedState("This workspace is active in another client.");
+            return;
+          }
+          workspaceSessionStore.getState().setErrorMessage(
+            error instanceof Error ? error.message : "Workspace sync failed."
+          );
+          workspaceSessionStore.getState().clearPending(command.clientMutationId);
+        }
       }
     }),
-    [commands, state]
+    [commands, state, workspaceId]
   );
 
   return <WorkspaceSessionContext.Provider value={value}>{children}</WorkspaceSessionContext.Provider>;
+
+  async function acquireAndLoadWorkspace(): Promise<void> {
+    try {
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) throw new Error("Workspace session is unavailable.");
+
+      const acquire = await apiJson<LeaseAcquireResponse>(`/workspaces/${workspaceId}/lease/acquire`, {
+        method: "POST",
+        body: JSON.stringify({ sessionId })
+      });
+
+      if (acquire.status === "active") {
+        workspaceSessionStore.getState().setLease({
+          leaseEpoch: acquire.lease.leaseEpoch,
+          displacedSeq: null,
+          expiresAt: acquire.lease.expiresAt
+        });
+        const snapshot = await apiJson<WorkspaceSnapshot>(`/workspaces/${workspaceId}/snapshot`);
+        workspaceSnapshotCache.set(workspaceId, snapshot);
+        workspaceSessionStore.getState().setSnapshot(snapshot);
+        workspaceSessionStore.getState().setLeaseState("active");
+        startRenewLoop();
+        return;
+      }
+
+      workspaceSessionStore.getState().setLease({
+        displacedSeq: acquire.displacedSeq,
+        expiresAt: acquire.expiresAt
+      });
+      workspaceSessionStore.getState().setLeaseState("blocked-stale");
+      startBlockedPollLoop();
+    } catch (error) {
+      workspaceSessionStore.getState().setLeaseState("blocked-stale");
+      workspaceSessionStore.getState().setErrorMessage(
+        error instanceof Error ? error.message : "Failed to acquire the workspace."
+      );
+      workspaceSessionStore.getState().setSnapshot(null);
+      void navigation.replace("/");
+    }
+  }
+
+  function startRenewLoop(): void {
+    clearRenewTimer();
+    renewTimerRef.current = window.setInterval(() => {
+      void renewLease();
+    }, renewIntervalMs);
+  }
+
+  function clearRenewTimer(): void {
+    if (renewTimerRef.current !== null) {
+      window.clearInterval(renewTimerRef.current);
+      renewTimerRef.current = null;
+    }
+  }
+
+  async function renewLease(): Promise<void> {
+    const sessionId = sessionIdRef.current;
+    const leaseEpoch = stateRef.current.lease.leaseEpoch;
+    if (!sessionId || !leaseEpoch) return;
+
+    const response = await apiRequest(`/workspaces/${workspaceId}/lease/renew`, {
+      method: "POST",
+      body: JSON.stringify({ sessionId, leaseEpoch })
+    });
+
+    if (response.status === 409) {
+      await enterBlockedState("This workspace is active in another client.");
+      return;
+    }
+
+    if (!response.ok) {
+      workspaceSessionStore.getState().setLeaseState("recovering");
+      workspaceSessionStore.getState().setErrorMessage("Network connection is unstable.");
+      return;
+    }
+
+    const renewed = (await response.json()) as { status: "active"; lease: { leaseEpoch: number; expiresAt: string } };
+    workspaceSessionStore.getState().setLease({
+      leaseEpoch: renewed.lease.leaseEpoch,
+      expiresAt: renewed.lease.expiresAt
+    });
+    workspaceSessionStore.getState().setLeaseState("active");
+    workspaceSessionStore.getState().setErrorMessage(null);
+  }
+
+  async function enterBlockedState(message: string): Promise<void> {
+    clearRenewTimer();
+    workspaceSessionStore.getState().setLeaseState("blocked-stale");
+    workspaceSessionStore.getState().setErrorMessage(message);
+    workspaceSessionStore.getState().setLease({
+      leaseEpoch: null,
+      expiresAt: null
+    });
+    startBlockedPollLoop();
+  }
+
+  function startBlockedPollLoop(): void {
+    clearBlockedPollTimer();
+    const run = async () => {
+      await pollLeaseAvailability();
+      if (stateRef.current.leaseState === "blocked-stale" || stateRef.current.leaseState === "recovering") {
+        blockedPollTimerRef.current = window.setTimeout(run, nextBlockedPollDelay());
+      }
+    };
+    blockedPollTimerRef.current = window.setTimeout(run, nextBlockedPollDelay());
+  }
+
+  function clearBlockedPollTimer(): void {
+    if (blockedPollTimerRef.current !== null) {
+      window.clearTimeout(blockedPollTimerRef.current);
+      blockedPollTimerRef.current = null;
+    }
+  }
+
+  async function pollLeaseAvailability(): Promise<void> {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+
+    try {
+      const status = await apiJson<LeaseStatusResponse>(
+        `/workspaces/${workspaceId}/lease/status?sessionId=${encodeURIComponent(sessionId)}`
+      );
+
+      if (status.status === "active") {
+        workspaceSessionStore.getState().setLease({
+          leaseEpoch: status.lease.leaseEpoch,
+          displacedSeq: null,
+          expiresAt: status.lease.expiresAt
+        });
+        workspaceSessionStore.getState().setLeaseState("active");
+        workspaceSessionStore.getState().setErrorMessage(null);
+        startRenewLoop();
+        return;
+      }
+
+      if (status.status === "available") {
+        workspaceSessionStore.getState().setLeaseState("recovering");
+        clearBlockedPollTimer();
+        await acquireAndLoadWorkspace();
+        return;
+      }
+
+      workspaceSessionStore.getState().setLease({
+        displacedSeq: status.displacedSeq,
+        expiresAt: status.expiresAt
+      });
+    } catch (error) {
+      workspaceSessionStore.getState().setErrorMessage(
+        error instanceof Error ? error.message : "Failed to recover the workspace."
+      );
+    }
+  }
+
+  async function releaseLease(): Promise<void> {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+    try {
+      await apiRequest(`/workspaces/${workspaceId}/lease/release`, {
+        method: "POST",
+        body: JSON.stringify({ sessionId })
+      });
+    } catch {
+      // Best-effort release only.
+    }
+  }
+
+  async function streamMessageCommand(command: Extract<WorkspaceCommand, { type: "message.sendUserMessage" }>): Promise<void> {
+    const response = await apiRequest(`/workspaces/${workspaceId}/messages/stream`, {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: sessionIdRef.current,
+        leaseEpoch: stateRef.current.lease.leaseEpoch,
+        command
+      })
+    });
+
+    if (response.status === 409) {
+      await enterBlockedState("This workspace is active in another client.");
+      return;
+    }
+    if (!response.ok || !response.body) {
+      throw new Error("Failed to stream the assistant reply.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const payload = JSON.parse(trimmed) as
+          | { type: "event"; event: Parameters<WorkspaceSessionState["applyEvent"]>[0] }
+          | { type: "error"; error: string };
+        if (payload.type === "event") {
+          workspaceSessionStore.getState().applyEvent(payload.event);
+          const snapshot = workspaceSessionStore.getState().snapshot;
+          if (snapshot) workspaceSnapshotCache.set(workspaceId, snapshot);
+        } else if (payload.error.includes("stale")) {
+          await enterBlockedState("This workspace is active in another client.");
+          return;
+        } else {
+          throw new Error(payload.error);
+        }
+      }
+
+      if (done) break;
+    }
+  }
 }
 
 export function useWorkspaceSession() {
@@ -98,4 +377,21 @@ function useWorkspaceSessionState() {
     workspaceSessionStore.getState,
     workspaceSessionStore.getState
   );
+}
+
+function getOrCreateSessionId(workspaceId: string): string {
+  const storageKey = `${sessionStorageKeyPrefix}:${workspaceId}`;
+  const existing = window.sessionStorage.getItem(storageKey);
+  if (existing) return existing;
+  const created = crypto.randomUUID();
+  window.sessionStorage.setItem(storageKey, created);
+  return created;
+}
+
+function nextBlockedPollDelay(): number {
+  return stalePollMinMs + Math.floor(Math.random() * stalePollJitterMs);
+}
+
+function isLeaseStaleError(error: unknown): boolean {
+  return error instanceof Error && error.message.toLowerCase().includes("stale");
 }

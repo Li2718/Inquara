@@ -8,6 +8,7 @@ import {
   createDevRuntimeState,
   doesRuntimeStateMatchExpectation,
   ensureDevComposeExists,
+  getDevComposeProjectName,
   getDevCommandPlan,
   getDevEnvironmentPaths,
   getExistingServiceAction,
@@ -137,7 +138,7 @@ async function captureCommand(commandName, args, options = {}) {
 
 function getComposeArgs() {
   ensureDevComposeExists(rootDir);
-  return ["compose", "-f", paths.devComposePath];
+  return ["compose", "-p", getDevComposeProjectName(rootDir), "-f", paths.devComposePath];
 }
 
 async function readComposeServices() {
@@ -197,7 +198,6 @@ async function resolveRuntimeUrls() {
   const apiServer = getServerConfigFromUrl(apiUrl);
   process.env.API_ORIGIN = toOriginString(apiUrl);
   process.env.NEXT_PUBLIC_API_ORIGIN = process.env.API_ORIGIN;
-  process.env.NEXT_PUBLIC_WS_ORIGIN = process.env.API_ORIGIN.replace(/^http/u, "ws");
 
   const webUrl =
     reusableWebUrl ??

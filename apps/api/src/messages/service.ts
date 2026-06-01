@@ -16,6 +16,8 @@ export type SendUserMessageCommand = {
   clientMutationId: string;
   workspaceId: string;
   nodeId: string;
+  userMessageId: string;
+  assistantMessageId: string;
   content: string;
 };
 
@@ -24,7 +26,8 @@ export async function sendUserMessage(
   command: SendUserMessageCommand,
   provider: AIProvider,
   broadcast: (event: WorkspaceEvent) => void,
-  client: PrismaClient = prisma
+  client: PrismaClient = prisma,
+  assertCanContinue?: () => Promise<void>
 ): Promise<void> {
   const created = await client.$transaction(async tx => {
     await requireOwnedNode(tx, userId, command.workspaceId, command.nodeId);
@@ -32,6 +35,7 @@ export async function sendUserMessage(
     const userVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
     const userMessage = await tx.nodeMessage.create({
       data: {
+        id: command.userMessageId,
         workspaceId: command.workspaceId,
         nodeId: command.nodeId,
         role: "user",
@@ -43,6 +47,7 @@ export async function sendUserMessage(
     const assistantVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
     const assistantMessage = await tx.nodeMessage.create({
       data: {
+        id: command.assistantMessageId,
         workspaceId: command.workspaceId,
         nodeId: command.nodeId,
         role: "assistant",
@@ -80,6 +85,7 @@ export async function sendUserMessage(
     const context = await loadContext(command.workspaceId, command.nodeId, client);
     const result = await provider.streamReply(context, {
       onDelta: async delta => {
+        await assertCanContinue?.();
         const version = await client.$transaction(async tx => {
           const nextVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
           const currentMessage = await tx.nodeMessage.findUnique({
@@ -106,6 +112,7 @@ export async function sendUserMessage(
       }
     });
 
+    await assertCanContinue?.();
     const finalMessage = await client.$transaction(async tx => {
       const version = await incrementWorkspaceVersion(tx, command.workspaceId);
       const message = await tx.nodeMessage.update({
@@ -295,5 +302,12 @@ export class MessageCommandError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "MessageCommandError";
+  }
+}
+
+export class MessageStreamingInterruptedError extends Error {
+  constructor(message = "Workspace lease is stale.") {
+    super(message);
+    this.name = "MessageStreamingInterruptedError";
   }
 }

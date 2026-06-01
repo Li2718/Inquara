@@ -13,6 +13,7 @@ export function createApiTestEnv(overrides: Partial<AppConfig> & Record<string, 
 
   return {
     DATABASE_URL: databaseUrl,
+    REDIS_URL: "redis://test.local:6379",
     SESSION_SECRET: "test-session-secret-with-at-least-32-chars",
     WEB_ORIGIN: "http://localhost:3000",
     API_ORIGIN: "http://localhost:4000",

@@ -4,6 +4,7 @@ import {
   areRequiredServicesReady,
   createDevRuntimeState,
   doesRuntimeStateMatchExpectation,
+  getDevComposeProjectName,
   getDevCommandPlan,
   getExistingServiceAction,
   getHealthCheckHost,
@@ -38,6 +39,11 @@ describe("dev environment helpers", () => {
   it("plans to bootstrap infrastructure before starting apps when infra is not ready", () => {
     expect(getDevCommandPlan({ hasDevComposeFile: true, infraReady: false })).toEqual(["bootstrap", "start"]);
     expect(getDevCommandPlan({ hasDevComposeFile: true, infraReady: true })).toEqual(["start"]);
+  });
+
+  it("uses the managed repo root to share the dev compose project across worktrees", () => {
+    expect(getDevComposeProjectName("/workspace/inquara")).toBe("inquara");
+    expect(getDevComposeProjectName("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe("inquara");
   });
 
   it("reuses running app service pids", () => {

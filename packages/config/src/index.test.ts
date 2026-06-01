@@ -3,7 +3,8 @@ import { loadConfig } from "./index";
 
 const validEnv = {
   DATABASE_URL: "postgresql://inquara:inquara@localhost:5432/inquara?schema=public",
-  SESSION_SECRET: "replace-with-at-least-32-random-characters"
+  SESSION_SECRET: "replace-with-at-least-32-random-characters",
+  REDIS_URL: "redis://localhost:6379"
 };
 
 describe("loadConfig", () => {
@@ -14,6 +15,7 @@ describe("loadConfig", () => {
     expect(config.SESSION_SECRET).toBe(validEnv.SESSION_SECRET);
     expect(config.WEB_ORIGIN).toBe("http://localhost:3000");
     expect(config.AI_PROVIDER).toBe("fake");
+    expect(config.REDIS_URL).toBe("redis://localhost:6379");
     expect(config).not.toHaveProperty("ADMIN_EMAIL");
     expect(config).not.toHaveProperty("ADMIN_PASSWORD");
   });

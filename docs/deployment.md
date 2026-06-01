@@ -10,6 +10,7 @@ Inquara's first self-managed production baseline is a single-machine Docker Comp
 The root [docker-compose.yml](../docker-compose.yml) is the production Compose entrypoint. It starts the full production baseline:
 
 - `postgres`
+- `redis`
 - `migrate`
 - `api`
 - `web`
@@ -22,8 +23,9 @@ Local development uses `.env.dev`, `docker-compose.dev.yml`, and `npm run dev`; 
 | Service | Type | Responsibility |
 | --- | --- | --- |
 | `postgres` | long-running infrastructure | Stores all application state. |
+| `redis` | long-running infrastructure | Stores active workspace lease state and waiter priority for takeover recovery. |
 | `migrate` | one-shot | Runs Prisma migrations with `npm run db:migrate:deploy`, then exits. |
-| `api` | long-running application | Runs the Fastify HTTP/WebSocket API on container port `4000`. |
+| `api` | long-running application | Runs the Fastify HTTP API and assistant streaming routes on container port `4000`. |
 | `web` | long-running application | Runs setup mode or normal Next.js web mode on container port `3000`. |
 | `proxy` | long-running edge | Exposes the single public HTTP entrypoint and routes `/api/*` to `api`. |
 
@@ -65,13 +67,9 @@ POSTGRES_PASSWORD=replace-with-a-strong-password
 WEB_ORIGIN=https://your-inquara-domain.example
 ```
 
-Browser API calls use same-origin `/api/*` by default. The production proxy strips the `/api` prefix and forwards those requests to the internal API service. Browser WebSocket traffic uses the same origin as well:
+Browser API calls use same-origin `/api/*` by default. The production proxy strips the `/api` prefix and forwards those requests to the internal API service.
 
-```text
-/api/realtime -> api:4000/realtime
-```
-
-`API_ORIGIN`, `NEXT_PUBLIC_API_ORIGIN`, and `NEXT_PUBLIC_WS_ORIGIN` are not part of the default Docker Compose and Dokploy deployment path. Split-origin deployments should use a separate Compose override instead of adding those values to the default production environment.
+`API_ORIGIN` and `NEXT_PUBLIC_API_ORIGIN` are not part of the default Docker Compose and Dokploy deployment path. Split-origin deployments should use a separate Compose override instead of adding those values to the default production environment.
 
 Optional deployment environment values:
 
@@ -93,6 +91,7 @@ The Compose file owns internal wiring values:
 | --- | --- |
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | `postgresql://inquara:<POSTGRES_PASSWORD>@postgres:5432/inquara?schema=public` |
+| `REDIS_URL` | `redis://redis:6379` |
 | `POSTGRES_DB` | `inquara` |
 | `POSTGRES_USER` | `inquara` |
 | API container port | `4000` |
@@ -120,6 +119,7 @@ POSTGRES_DB=inquara
 POSTGRES_HOST=localhost
 POSTGRES_PORT=55432
 POSTGRES_SCHEMA=public
+REDIS_URL=redis://localhost:56379
 SESSION_SECRET=replace-with-at-least-32-random-characters
 WEB_ORIGIN=http://localhost:3000
 API_ORIGIN=http://localhost:4000
@@ -207,7 +207,7 @@ The web health path exists in both setup mode and normal Next.js mode so Docker 
 ## Current Boundaries
 
 - The `proxy` service publishes one HTTP port. Set `WEB_PORT` to choose it, or leave it unset to let Docker assign an available host port.
-- The API remains a separate internal service so WebSocket and AI streaming stay isolated from the Next.js runtime.
+- The API remains a separate internal service so workspace mutations, lease enforcement, and AI streaming stay isolated from the Next.js runtime.
 - TLS automation is expected to be provided by the deployment platform, such as Dokploy Domains.
 - Postgres is internal to the Compose network by default and is not published to the host.
 - Backup, restore, external secret manager, observability, and multi-host deployment are not included yet.

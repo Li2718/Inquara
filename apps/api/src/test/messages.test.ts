@@ -102,6 +102,8 @@ describe("message command services", () => {
         clientMutationId: "mutation-partial-stream",
         workspaceId,
         nodeId: childNodeId,
+        userMessageId: "message-user-partial-1",
+        assistantMessageId: "message-assistant-partial-1",
         content: "Start answering, then fail."
       },
       failingProvider,
@@ -130,6 +132,8 @@ describe("message command services", () => {
         clientMutationId: "mutation-follow-up-message",
         workspaceId,
         nodeId: childNodeId,
+        userMessageId: "message-user-followup-1",
+        assistantMessageId: "message-assistant-followup-1",
         content: "What does this phrase mean?"
       },
       capturingProvider,
@@ -194,6 +198,8 @@ describe("message command services", () => {
         clientMutationId: "mutation-nested-follow-up-message",
         workspaceId,
         nodeId: nestedNode.id,
+        userMessageId: "message-user-nested-1",
+        assistantMessageId: "message-assistant-nested-1",
         content: "How far back can it look?"
       },
       capturingProvider,

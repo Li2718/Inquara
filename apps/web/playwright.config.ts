@@ -30,6 +30,7 @@ export default defineConfig({
       timeout: 30_000,
       env: {
         DATABASE_URL: process.env.DATABASE_URL ?? "",
+        REDIS_URL: process.env.REDIS_URL ?? "redis://127.0.0.1:56379",
         INQUARA_USE_EXISTING_TEST_DB: "1",
         SESSION_SECRET: "e2e-session-secret-with-at-least-32-chars",
         WEB_ORIGIN: `http://127.0.0.1:${webPort}`,
@@ -45,8 +46,7 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
-        NEXT_PUBLIC_API_ORIGIN: `http://127.0.0.1:${apiPort}`,
-        NEXT_PUBLIC_WS_ORIGIN: `ws://127.0.0.1:${apiPort}`
+        NEXT_PUBLIC_API_ORIGIN: `http://127.0.0.1:${apiPort}`
       }
     }
   ]
