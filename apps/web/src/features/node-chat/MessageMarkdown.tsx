@@ -3,6 +3,7 @@
 import type { CanvasNode } from "@inquara/domain";
 import React, { Fragment, type ReactNode } from "react";
 import { parseMessageMarkdown, type MarkdownBlock, type MarkdownBranch, type MarkdownToken } from "./messageMarkdownModel";
+import { renderMathToMarkup } from "./mathRender";
 
 type MessageMarkdownProps = {
   content: string;
@@ -37,6 +38,18 @@ function renderBlock(
     }
     case "paragraph":
       return <p>{renderTokens(block.tokens, branches, onToggleBranch)}</p>;
+    case "math":
+      return (
+        <div className="message-math message-math-block">
+          <span
+            data-source-start={block.contentStart}
+            data-source-end={block.contentEnd}
+            dangerouslySetInnerHTML={{ __html: renderMathToMarkup(block.formula, { displayMode: true }) }}
+          />
+        </div>
+      );
+    case "thematicBreak":
+      return <hr />;
     case "blockquote":
       return <blockquote>{renderTokens(block.tokens, branches, onToggleBranch)}</blockquote>;
     case "table":
@@ -64,13 +77,37 @@ function renderBlock(
       return block.ordered ? (
         <ol>
           {block.items.map(item => (
-            <li key={`${item.sourceStart}-${item.sourceEnd}`}>{renderTokens(item.tokens, branches, onToggleBranch)}</li>
+            <li
+              key={`${item.sourceStart}-${item.sourceEnd}`}
+              className={item.checked === null ? undefined : "task-list-item"}
+            >
+              {item.checked === null ? null : (
+                <span
+                  className="task-checkbox"
+                  role="checkbox"
+                  aria-checked={item.checked}
+                />
+              )}
+              {renderTokens(item.tokens, branches, onToggleBranch)}
+            </li>
           ))}
         </ol>
       ) : (
-        <ul>
+        <ul className={block.items.some(item => item.checked !== null) ? "task-list" : undefined}>
           {block.items.map(item => (
-            <li key={`${item.sourceStart}-${item.sourceEnd}`}>{renderTokens(item.tokens, branches, onToggleBranch)}</li>
+            <li
+              key={`${item.sourceStart}-${item.sourceEnd}`}
+              className={item.checked === null ? undefined : "task-list-item"}
+            >
+              {item.checked === null ? null : (
+                <span
+                  className="task-checkbox"
+                  role="checkbox"
+                  aria-checked={item.checked}
+                />
+              )}
+              {renderTokens(item.tokens, branches, onToggleBranch)}
+            </li>
           ))}
         </ul>
       );
@@ -106,6 +143,30 @@ function renderTokens(
       continue;
     }
 
+    if (token.type === "image") {
+      rendered.push(
+        <img
+          key={`image-${token.sourceStart}-${token.sourceEnd}`}
+          src={token.src}
+          alt={token.alt}
+        />
+      );
+      continue;
+    }
+
+    if (token.type === "math") {
+      rendered.push(
+        <span
+          key={`math-${token.sourceStart}-${token.sourceEnd}`}
+          className={token.displayMode ? "message-math message-math-inline message-math-display" : "message-math message-math-inline"}
+          data-source-start={token.contentStart}
+          data-source-end={token.contentEnd}
+          dangerouslySetInnerHTML={{ __html: renderMathToMarkup(token.formula, { displayMode: token.displayMode }) }}
+        />
+      );
+      continue;
+    }
+
     const children = renderTokens(token.children, branches, onToggleBranch);
     const key = `${token.type}-${token.sourceStart}-${token.sourceEnd}`;
     switch (token.type) {
@@ -114,6 +175,9 @@ function renderTokens(
         break;
       case "emphasis":
         rendered.push(<em key={key}>{children}</em>);
+        break;
+      case "strikethrough":
+        rendered.push(<del key={key}>{children}</del>);
         break;
       case "inlineCode":
         rendered.push(

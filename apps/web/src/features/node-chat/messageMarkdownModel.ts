@@ -13,14 +13,32 @@ export type MarkdownTextToken = {
 };
 
 export type MarkdownInlineToken = {
-  type: "strong" | "emphasis" | "inlineCode" | "link";
+  type: "strong" | "emphasis" | "strikethrough" | "inlineCode" | "link";
   children: MarkdownToken[];
   sourceStart: number;
   sourceEnd: number;
   href?: string;
 };
 
-export type MarkdownToken = MarkdownTextToken | MarkdownInlineToken;
+export type MarkdownImageToken = {
+  type: "image";
+  alt: string;
+  src: string;
+  sourceStart: number;
+  sourceEnd: number;
+};
+
+export type MarkdownMathToken = {
+  type: "math";
+  displayMode: boolean;
+  formula: string;
+  sourceStart: number;
+  sourceEnd: number;
+  contentStart: number;
+  contentEnd: number;
+};
+
+export type MarkdownToken = MarkdownTextToken | MarkdownInlineToken | MarkdownImageToken | MarkdownMathToken;
 
 export type MarkdownBlock =
   | {
@@ -33,6 +51,11 @@ export type MarkdownBlock =
   | {
       type: "paragraph";
       tokens: MarkdownToken[];
+      sourceStart: number;
+      sourceEnd: number;
+    }
+  | {
+      type: "thematicBreak";
       sourceStart: number;
       sourceEnd: number;
     }
@@ -59,6 +82,7 @@ export type MarkdownBlock =
       type: "list";
       ordered: boolean;
       items: {
+        checked: boolean | null;
         tokens: MarkdownToken[];
         sourceStart: number;
         sourceEnd: number;
@@ -78,6 +102,15 @@ export type MarkdownBlock =
   | {
       type: "blockquote";
       tokens: MarkdownToken[];
+      sourceStart: number;
+      sourceEnd: number;
+    }
+  | {
+      type: "math";
+      displayMode: true;
+      formula: string;
+      contentStart: number;
+      contentEnd: number;
       sourceStart: number;
       sourceEnd: number;
     };
@@ -137,6 +170,13 @@ export function parseMessageMarkdown(content: string): MarkdownBlock[] {
       continue;
     }
 
+    const mathBlock = parseMathBlock(lines, index);
+    if (mathBlock) {
+      blocks.push(mathBlock.block);
+      index = mathBlock.nextIndex;
+      continue;
+    }
+
     const headingMatch = line.text.match(/^(#{1,6})\s+(.*)$/u);
     if (headingMatch) {
       const hashes = headingMatch[1] ?? "#";
@@ -145,6 +185,16 @@ export function parseMessageMarkdown(content: string): MarkdownBlock[] {
         type: "heading",
         level: hashes.length as 1 | 2 | 3 | 4 | 5 | 6,
         tokens: parseInlineTokens(headingMatch[2] ?? "", bodyStart),
+        sourceStart: line.start,
+        sourceEnd: line.end
+      });
+      index += 1;
+      continue;
+    }
+
+    if (/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/u.test(line.text)) {
+      blocks.push({
+        type: "thematicBreak",
         sourceStart: line.start,
         sourceEnd: line.end
       });
@@ -191,7 +241,7 @@ export function parseMessageMarkdown(content: string): MarkdownBlock[] {
 
     if (/^\s*[-*]\s+/u.test(line.text) || /^\s*\d+\.\s+/u.test(line.text)) {
       const ordered = /^\s*\d+\.\s+/u.test(line.text);
-      const items: { tokens: MarkdownToken[]; sourceStart: number; sourceEnd: number }[] = [];
+      const items: { checked: boolean | null; tokens: MarkdownToken[]; sourceStart: number; sourceEnd: number }[] = [];
       const start = line.start;
       let end = line.end;
 
@@ -202,8 +252,11 @@ export function parseMessageMarkdown(content: string): MarkdownBlock[] {
         if (!markerMatch) break;
         const prefix = markerMatch[1] ?? "";
         const body = markerMatch[2] ?? "";
+        const taskMatch = body.match(/^\[( |x|X)\]\s+(.*)$/u);
+        const contentStart = itemLine.start + prefix.length + (taskMatch ? taskMatch[0].indexOf(taskMatch[2] ?? "") : 0);
         items.push({
-          tokens: parseInlineTokens(body, itemLine.start + prefix.length),
+          checked: taskMatch ? (taskMatch[1] ?? "").toLowerCase() === "x" : null,
+          tokens: parseInlineTokens(taskMatch?.[2] ?? body, contentStart),
           sourceStart: itemLine.start,
           sourceEnd: itemLine.end
         });
@@ -304,6 +357,107 @@ function splitLines(content: string): LineInfo[] {
   return lines;
 }
 
+type ParsedMathBlock = {
+  block: Extract<MarkdownBlock, { type: "math" }>;
+  nextIndex: number;
+};
+
+function parseMathBlock(lines: LineInfo[], startIndex: number): ParsedMathBlock | null {
+  const startLine = lines[startIndex];
+  if (!startLine) return null;
+  const trimmed = startLine.text.trim();
+
+  if (trimmed.startsWith("\\[")) {
+    const sameLine = parseSameLineMathBlock(startLine, "\\[", "\\]");
+    if (sameLine) {
+      return {
+        block: sameLine,
+        nextIndex: startIndex + 1
+      };
+    }
+    if (trimmed !== "\\[") return null;
+    return parseMultilineMathBlock(lines, startIndex, "\\]");
+  }
+
+  if (trimmed.startsWith("$$")) {
+    const sameLine = parseSameLineMathBlock(startLine, "$$", "$$");
+    if (sameLine) {
+      return {
+        block: sameLine,
+        nextIndex: startIndex + 1
+      };
+    }
+    if (trimmed !== "$$") return null;
+    return parseMultilineMathBlock(lines, startIndex, "$$");
+  }
+
+  return null;
+}
+
+function parseSameLineMathBlock(
+  line: LineInfo,
+  openingDelimiter: "\\[" | "$$",
+  closingDelimiter: "\\]" | "$$"
+): Extract<MarkdownBlock, { type: "math" }> | null {
+  const openIndex = line.text.indexOf(openingDelimiter);
+  const closeIndex = line.text.lastIndexOf(closingDelimiter);
+  if (openIndex < 0 || closeIndex <= openIndex + openingDelimiter.length) return null;
+  if (openingDelimiter === "$$" && openIndex === closeIndex) return null;
+
+  const rawFormula = line.text.slice(openIndex + openingDelimiter.length, closeIndex);
+  const formula = rawFormula.trim();
+  if (formula.length === 0) return null;
+
+  const leadingWhitespace = rawFormula.length - rawFormula.trimStart().length;
+  const trailingWhitespace = rawFormula.length - rawFormula.trimEnd().length;
+
+  return {
+    type: "math",
+    displayMode: true,
+    formula,
+    contentStart: line.start + openIndex + openingDelimiter.length + leadingWhitespace,
+    contentEnd: line.start + closeIndex - trailingWhitespace,
+    sourceStart: line.start + openIndex,
+    sourceEnd: line.start + closeIndex + closingDelimiter.length
+  };
+}
+
+function parseMultilineMathBlock(
+  lines: LineInfo[],
+  startIndex: number,
+  closingDelimiter: "\\]" | "$$"
+): ParsedMathBlock | null {
+  const startLine = lines[startIndex];
+  if (!startLine) return null;
+
+  const formulaLines: string[] = [];
+  const contentStart = startLine.end + (startLine.hasTrailingNewline ? 1 : 0);
+  let contentEnd = contentStart;
+
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line) break;
+    if (line.text.trim() === closingDelimiter) {
+      return {
+        block: {
+          type: "math",
+          displayMode: true,
+          formula: formulaLines.join("\n").trim(),
+          contentStart,
+          contentEnd,
+          sourceStart: startLine.start,
+          sourceEnd: line.end
+        },
+        nextIndex: index + 1
+      };
+    }
+    formulaLines.push(line.text);
+    contentEnd = line.end;
+  }
+
+  return null;
+}
+
 function isTableHeaderLine(text: string): boolean {
   return isTableRowLine(text);
 }
@@ -367,6 +521,60 @@ function parseInlineTokens(text: string, sourceOffset: number): MarkdownToken[] 
   let cursor = 0;
 
   while (cursor < text.length) {
+    if (text.startsWith("![", cursor)) {
+      const altEnd = text.indexOf("]", cursor + 2);
+      const openParen = altEnd >= 0 ? text.indexOf("(", altEnd) : -1;
+      const closeParen = openParen >= 0 ? text.indexOf(")", openParen) : -1;
+      if (altEnd > cursor + 2 && openParen === altEnd + 1 && closeParen > openParen + 1) {
+        tokens.push({
+          type: "image",
+          alt: text.slice(cursor + 2, altEnd),
+          src: text.slice(openParen + 1, closeParen),
+          sourceStart: sourceOffset + cursor,
+          sourceEnd: sourceOffset + closeParen + 1
+        });
+        cursor = closeParen + 1;
+        continue;
+      }
+    }
+
+    if (text[cursor] === "$" && text[cursor + 1] !== "$") {
+      const closing = findInlineMathClosing(text, cursor + 1);
+      if (closing > cursor + 1) {
+        const rawFormula = text.slice(cursor + 1, closing);
+        const formula = rawFormula.trim();
+        if (formula.length > 0) {
+          const leadingWhitespace = rawFormula.length - rawFormula.trimStart().length;
+          const trailingWhitespace = rawFormula.length - rawFormula.trimEnd().length;
+          tokens.push({
+            type: "math",
+            displayMode: false,
+            formula,
+            sourceStart: sourceOffset + cursor,
+            sourceEnd: sourceOffset + closing + 1,
+            contentStart: sourceOffset + cursor + 1 + leadingWhitespace,
+            contentEnd: sourceOffset + closing - trailingWhitespace
+          });
+          cursor = closing + 1;
+          continue;
+        }
+      }
+    }
+
+    if (text.startsWith("~~", cursor)) {
+      const closing = text.indexOf("~~", cursor + 2);
+      if (closing > cursor + 2) {
+        tokens.push({
+          type: "strikethrough",
+          children: parseInlineTokens(text.slice(cursor + 2, closing), sourceOffset + cursor + 2),
+          sourceStart: sourceOffset + cursor,
+          sourceEnd: sourceOffset + closing + 2
+        });
+        cursor = closing + 2;
+        continue;
+      }
+    }
+
     if (text.startsWith("**", cursor)) {
       const closing = text.indexOf("**", cursor + 2);
       if (closing > cursor + 2) {
@@ -438,7 +646,16 @@ function parseInlineTokens(text: string, sourceOffset: number): MarkdownToken[] 
     while (next < text.length) {
       const nextChar = text[next] ?? "";
       const nextTwo = text.slice(next, next + 2);
-      if (nextTwo === "**" || nextChar === "*" || nextChar === "_" || nextChar === "`" || nextChar === "[") break;
+      if (
+        nextTwo === "![" ||
+        nextTwo === "~~" ||
+        nextTwo === "**" ||
+        nextChar === "$" ||
+        nextChar === "*" ||
+        nextChar === "_" ||
+        nextChar === "`" ||
+        nextChar === "["
+      ) break;
       next += 1;
     }
     tokens.push({
@@ -451,6 +668,16 @@ function parseInlineTokens(text: string, sourceOffset: number): MarkdownToken[] 
   }
 
   return mergeAdjacentTextTokens(tokens);
+}
+
+function findInlineMathClosing(text: string, startIndex: number): number {
+  for (let index = startIndex; index < text.length; index += 1) {
+    if (text[index] !== "$") continue;
+    if (text[index - 1] === "\\") continue;
+    return index;
+  }
+
+  return -1;
 }
 
 function mergeAdjacentTextTokens(tokens: MarkdownToken[]): MarkdownToken[] {

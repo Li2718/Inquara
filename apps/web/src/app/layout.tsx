@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import "katex/dist/katex.min.css";
 import { DebugRoot } from "../debug/DebugRoot";
 import { PageTransitionRoot } from "../shared/components/chrome";
 import { getClientFatalErrorFallbackScript } from "../shared/components/product/clientFatalErrorFallback";
