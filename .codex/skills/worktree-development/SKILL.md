@@ -81,7 +81,15 @@ Remove managed worktrees with:
 npm run worktree:remove <branch-name-or-path>
 ```
 
-Removal is strict: the target worktree must be clean, the current worktree cannot remove itself, tracked private databases are dropped, and the target branch is deleted.
+Before removing a worktree, stop any development services launched from that worktree. Use the target worktree's own runtime state:
+
+```bash
+npm run dev:stop
+```
+
+`npm run worktree:remove` also attempts this automatically when the target worktree has `.local/dev/*.pid` files. If removal fails because files are locked or ports remain open, stop the remaining process that was launched from the target worktree and retry removal; do not manually delete around a running worktree service.
+
+Removal is strict: the target worktree's development services must be stopped, the target worktree must be clean, the current worktree cannot remove itself, tracked private databases are dropped, and the target branch is deleted.
 
 ## Merge And Cleanup Gate
 
@@ -104,6 +112,7 @@ Do not treat an active initiative as done merely because implementation tests pa
 Before creating, cloning, or removing a worktree:
 
 - Work only in the intended worktree path.
+- Stop development services launched from the target worktree before removing it.
 - Do not edit the main workspace unless explicitly requested.
 - Use `worktree:cloneinfra` before modifying worktree infrastructure, changing schema, or doing destructive database work.
 - Check related initiative archive readiness before merging and cleaning up a worktree.

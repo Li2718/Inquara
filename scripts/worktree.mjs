@@ -21,7 +21,8 @@ import {
   parseWorktreeListPorcelain,
   readPrivateDatabaseName,
   selectAvailablePort,
-  selectWorktreeEntry
+  selectWorktreeEntry,
+  shouldStopWorktreeDevServicesBeforeRemoval
 } from "./worktree-lib.mjs";
 
 const rootDir = getManagedWorktreeRootDir(process.cwd());
@@ -306,6 +307,14 @@ async function removeWorktree(target) {
     targetEntry: selectedEntry,
     trackedDatabaseName: readPrivateDatabaseName(selectedEntry.path)
   });
+
+  if (shouldStopWorktreeDevServicesBeforeRemoval(plan.targetPath)) {
+    console.log(`Stopping dev services for worktree "${plan.branchName}" before removal.`);
+    await runCommand("npm", ["run", "dev:stop"], {
+      cwd: plan.targetPath
+    });
+  }
+
   const { stdout } = await captureCommand("git", ["status", "--porcelain"], {
     cwd: plan.targetPath
   });

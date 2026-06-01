@@ -9,7 +9,8 @@ import {
   getWorktreeParentDirName,
   parseWorktreeListPorcelain,
   selectAvailablePort,
-  selectWorktreeEntry
+  selectWorktreeEntry,
+  shouldStopWorktreeDevServicesBeforeRemoval
 } from "./worktree-lib.mjs";
 
 const fixtureMainRoot = path.join("fixtures", "inquara");
@@ -128,5 +129,20 @@ describe("worktree helpers", () => {
   it("detects the main repo root when run inside a managed worktree", () => {
     expect(getManagedWorktreeRootDir(fixtureHyphenatedWorktreeRoot)).toBe(fixtureMainRoot);
     expect(getManagedWorktreeRootDir(fixtureMainRoot)).toBe(fixtureMainRoot);
+  });
+
+  it("requires stopping worktree dev services before removal when runtime pid files exist", () => {
+    const existingPaths = new Set([path.join(fixtureWorktreeRoot, ".local", "dev", "web.pid")]);
+
+    expect(
+      shouldStopWorktreeDevServicesBeforeRemoval(fixtureWorktreeRoot, {
+        pathExists: candidatePath => existingPaths.has(candidatePath)
+      })
+    ).toBe(true);
+    expect(
+      shouldStopWorktreeDevServicesBeforeRemoval(fixtureWorktreeRoot, {
+        pathExists: () => false
+      })
+    ).toBe(false);
   });
 });

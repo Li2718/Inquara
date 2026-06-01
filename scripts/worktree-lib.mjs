@@ -191,6 +191,11 @@ export function getRuntimePidPaths(rootDir) {
   };
 }
 
+export function shouldStopWorktreeDevServicesBeforeRemoval(worktreePath, { pathExists = existsSync } = {}) {
+  const { apiPidPath, webPidPath } = getRuntimePidPaths(worktreePath);
+  return pathExists(apiPidPath) || pathExists(webPidPath);
+}
+
 export function readPid(pidPath) {
   if (!existsSync(pidPath)) {
     return null;
