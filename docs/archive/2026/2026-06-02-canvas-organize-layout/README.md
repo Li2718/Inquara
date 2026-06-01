@@ -1,18 +1,15 @@
 # Canvas Organize Layout
 
-> status: active
+> status: archived
 > owner: web
-> updated: 2026-06-01
+> updated: 2026-06-02
 > related_docs:
 > - `docs/ui-system.md`
 > - `docs/architecture.md`
 > - `docs/documentation-standards.md`
 > - `apps/web/src/shared/components/README.md`
-> archive_when:
-> - the canvas organize control is implemented and verified in the browser
-> - hidden-branch restore behavior no longer depends on stale absolute coordinates
-> - the initiative README remaining-work list is empty or intentionally deferred
-> - durable rules worth keeping are reflected back into current long-term docs
+> archived_from: `docs/initiatives/canvas-organize-layout/`
+> archived_reason: implementation completed and committed
 
 ## Goal
 
@@ -48,14 +45,14 @@ Explicitly out of scope for this slice:
 4. Relative-position restore applies to the whole hidden subtree, not only the branch root the user clicks to restore.
 5. Organize must not change dialog width, dialog height, or hidden and visible state.
 
-## Current Behavior Summary
+## Original Behavior Summary
 
-Current canvas behavior uses absolute `x` and `y` coordinates for every node.
+Before this initiative, canvas behavior used absolute `x` and `y` coordinates for every node.
 
-- Visible-node organize behavior does not exist yet.
-- Hidden branch restore currently computes a collision-aware restore position only for the branch root and still uses the node's saved absolute coordinates as the restore ideal.
-- Deeper hidden descendants keep their stored absolute coordinates when a subtree is restored.
-- Hidden-state snapshots currently store `hiddenAt` and `scrollTop`, but not relative layout information.
+- Visible-node organize behavior did not exist.
+- Hidden branch restore computed a collision-aware restore position only for the branch root and still used the node's saved absolute coordinates as the restore ideal.
+- Deeper hidden descendants kept their stored absolute coordinates when a subtree was restored.
+- Hidden-state snapshots stored `hiddenAt` and `scrollTop`, but not relative layout information.
 
 This means a later organize action can move visible parents while hidden descendants still restore around stale absolute positions.
 
@@ -86,15 +83,25 @@ The organize action will not inspect hidden nodes and will not leave placeholder
 - Confirmed hidden-branch restore should follow parent-relative layout for the whole hidden subtree.
 - Added a bottom-right canvas organize control in the existing floating controls area.
 - Added one shared visible-node hierarchy layout helper in `@inquara/domain`.
-- Added one batch `node.organize` command path through domain, realtime, API, and web command creators.
+- Added one batch `node.organize` command path through domain, the HTTP workspace command route, API services, and web command creators.
 - Updated hidden subtree snapshots to store parent-relative offsets plus scroll state.
 - Updated hidden branch restore to rebuild the whole subtree from the current visible parent position.
 - Added focused tests for visible-node organize layout, hidden subtree relative offsets, and canvas service behavior.
 - Verified focused typecheck and focused canvas tests pass in the worktree.
+- Synced the branch with main after WebSocket sync was removed, keeping the organize command on the HTTP lease command flow.
+- Replaced the initial organize button icon with a lighter shared outline icon.
+- Verified `typecheck`, `lint`, `verify:debug-free`, and focused regression tests.
 
 ## Remaining Work
 
-- Verify the behavior in the browser.
+- None.
+
+## Verification
+
+- `npm run typecheck`
+- `npm run lint`
+- `npm run verify:debug-free`
+- `npm exec vitest run apps/web/src/features/canvas/organizeLayout.test.ts apps/api/src/test/hiddenLayout.test.ts apps/api/src/test/canvas.test.ts apps/api/src/test/workspace-http.test.ts apps/web/src/features/workspace-session/store.test.ts apps/web/src/features/node-chat/branchPlacement.test.ts apps/web/src/features/canvas/rootNodeFocus.test.ts apps/web/src/debug/debugPageStore.test.ts`
 
 ## Deferred Or Out Of Scope
 

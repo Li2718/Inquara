@@ -1,13 +1,14 @@
 # Canvas Organize Layout Implementation Plan
 
-> status: active
+> status: archived
 > owner: web
-> updated: 2026-06-01
+> updated: 2026-06-02
 > related_docs:
-> - `docs/initiatives/canvas-organize-layout/README.md`
+> - `docs/archive/2026/2026-06-02-canvas-organize-layout/README.md`
 > - `docs/ui-system.md`
 > - `docs/architecture.md`
 > - `apps/web/src/shared/components/README.md`
+> archived_reason: implementation completed; retained as historical plan
 
 ## Goal
 
@@ -22,7 +23,7 @@ The work splits into two cooperating parts:
 
 ## File Map
 
-Expected primary code touch points:
+Original expected primary code touch points:
 
 - `apps/web/src/features/canvas/CanvasView.tsx`
   - add the organize control wiring and invoke the new layout helper
@@ -40,8 +41,8 @@ Expected primary code touch points:
   - extend hidden snapshot schema for parent-relative offsets
 - `apps/api/src/canvas/service.ts`
   - persist parent-relative hidden snapshot data and restore subtree coordinates recursively
-- `apps/api/src/realtime/ws.ts`
-  - route any new organize command
+- `apps/api/src/workspace-commands/service.ts`
+  - route the new organize command through the HTTP lease command flow used by main
 - `apps/api/src/test/canvas.test.ts`
   - add API coverage for organize persistence and recursive restore behavior
 - `apps/web/src/shared/components/ui/icons.tsx`
@@ -65,11 +66,8 @@ Expected primary code touch points:
 4. Relative positioning applies recursively to the whole hidden subtree.
 5. Dialog size and hidden/visible state must remain unchanged.
 
-## Open Implementation Choice
+## Resolved Implementation Choice
 
-Choose one of these during implementation after reading the current realtime and reducer flow:
+Implementation used one new batch command for organize persistence so all position updates share one mutation.
 
-- Preferred: one new batch command for organize persistence so all position updates share one mutation and no intermediate layout flicker leaks through the realtime stream.
-- Acceptable fallback: send existing `node.updatePosition` commands in a deterministic sequence only if the batch command turns out unnecessary.
-
-The first option is preferred because it fits the "organize all visible nodes at once" interaction better.
+After main removed WebSocket sync, the command was routed through `apps/api/src/workspace-commands/service.ts` and the web workspace session HTTP command sender instead of any realtime WebSocket route.
