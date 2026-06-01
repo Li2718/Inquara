@@ -1,0 +1,105 @@
+import { describe, expect, it, vi } from "vitest";
+import { getClientFatalErrorFallbackScript } from "./clientFatalErrorFallback";
+
+type Listener = () => void;
+
+function createScriptHarness() {
+  const listeners = new Map<string, Listener[]>();
+  const timeouts: Listener[] = [];
+  const reload = vi.fn();
+  const reloadListeners: Listener[] = [];
+  const documentElement = {
+    attributes: new Map<string, string>(),
+    setAttribute(name: string, value: string) {
+      this.attributes.set(name, value);
+    }
+  };
+  const body = {
+    innerHTML: ""
+  };
+  const fakeWindow = {
+    location: { reload },
+    addEventListener(type: string, listener: Listener) {
+      listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+    },
+    setTimeout(listener: Listener) {
+      timeouts.push(listener);
+    }
+  };
+  const fakeDocument = {
+    body,
+    documentElement,
+    querySelector(selector: string) {
+      if (selector === "[data-client-fatal-error-page]") {
+        return body.innerHTML.includes("data-client-fatal-error-page") ? {} : null;
+      }
+
+      if (selector !== "[data-client-fatal-reload]" || !body.innerHTML.includes("data-client-fatal-reload")) {
+        return null;
+      }
+
+      return {
+        addEventListener(type: string, listener: Listener) {
+          if (type === "click") {
+            reloadListeners.push(listener);
+          }
+        }
+      };
+    }
+  };
+
+  const run = new Function("window", "document", getClientFatalErrorFallbackScript());
+  run(fakeWindow, fakeDocument);
+
+  return {
+    body,
+    documentElement,
+    listeners,
+    reload,
+    reloadListeners,
+    timeouts
+  };
+}
+
+describe("client fatal error fallback", () => {
+  it("replaces the document with the Inquara error screen for uncaught client errors", () => {
+    const harness = createScriptHarness();
+
+    harness.listeners.get("error")?.[0]?.();
+
+    expect(harness.documentElement.attributes.get("data-client-fatal-error")).toBe("true");
+    expect(harness.body.innerHTML).toContain('class="error-page"');
+    expect(harness.body.innerHTML).toContain("The workspace hit a snag.");
+    expect(harness.body.innerHTML).toContain("Back to canvas");
+  });
+
+  it("handles unhandled promise rejections without rewriting an existing fallback", () => {
+    const harness = createScriptHarness();
+
+    harness.listeners.get("unhandledrejection")?.[0]?.();
+    const firstHtml = harness.body.innerHTML;
+    harness.listeners.get("error")?.[0]?.();
+
+    expect(firstHtml).toContain("data-client-fatal-error-page");
+    expect(harness.body.innerHTML).toBe(firstHtml);
+  });
+
+  it("restores the fallback if a framework fatal handler overwrites the page afterward", () => {
+    const harness = createScriptHarness();
+
+    harness.listeners.get("error")?.[0]?.();
+    harness.body.innerHTML = "framework fallback";
+    harness.timeouts.at(-1)?.();
+
+    expect(harness.body.innerHTML).toContain("data-client-fatal-error-page");
+  });
+
+  it("wires the reload action without depending on React", () => {
+    const harness = createScriptHarness();
+
+    harness.listeners.get("error")?.[0]?.();
+    harness.reloadListeners[0]?.();
+
+    expect(harness.reload).toHaveBeenCalledOnce();
+  });
+});
