@@ -7,6 +7,9 @@ import {
   parseWorktreeCommand
 } from "./worktree-cli.mjs";
 
+const fixtureMainRoot = "/workspace/inquara";
+const fixtureWorktreeRoot = path.join(fixtureMainRoot, ".worktrees", "feature-debug-toolbar");
+
 describe("worktree command parsing", () => {
   it("parses create, cloneinfra, and remove commands", () => {
     expect(parseWorktreeCommand(["create", "feature/debug-toolbar"])).toEqual({
@@ -37,51 +40,45 @@ describe("worktree plans", () => {
     expect(
       getCreatePlan({
         branchName: "feature/debug-toolbar",
-        rootDir: "/workspace/inquara",
+        rootDir: fixtureMainRoot,
         worktreeParentDirName: ".worktrees"
       })
     ).toEqual({
       branchName: "feature/debug-toolbar",
       copyEnvDev: true,
       mode: "shared",
-      targetPath: path.join("/workspace/inquara", ".worktrees", "feature-debug-toolbar")
+      targetPath: fixtureWorktreeRoot
     });
   });
 
   it("creates a private infrastructure plan for the current worktree", () => {
     expect(
       getCloneInfraPlan({
-        currentPath: "/workspace/inquara/.worktrees/feature-debug-toolbar"
+        currentPath: fixtureWorktreeRoot
       })
     ).toEqual({
-      composePath: path.join(
-        "/workspace/inquara/.worktrees/feature-debug-toolbar",
-        "docker-compose.dev.yml"
-      ),
-      currentPath: "/workspace/inquara/.worktrees/feature-debug-toolbar",
-      envLocalPath: path.join("/workspace/inquara/.worktrees/feature-debug-toolbar", ".env.dev.local"),
-      sourceComposePath: path.join(
-        "/workspace/inquara/.worktrees/feature-debug-toolbar",
-        "docker-compose.dev.example.yml"
-      )
+      composePath: path.join(fixtureWorktreeRoot, "docker-compose.dev.yml"),
+      currentPath: fixtureWorktreeRoot,
+      envLocalPath: path.join(fixtureWorktreeRoot, ".env.dev.local"),
+      sourceComposePath: path.join(fixtureWorktreeRoot, "docker-compose.dev.example.yml")
     });
   });
 
   it("removes the target worktree and its tracked private database", () => {
     expect(
       getRemovePlan({
-        currentPath: "/workspace/inquara",
+        currentPath: fixtureMainRoot,
         targetEntry: {
           branchName: "feature/debug-toolbar",
-          path: "/workspace/inquara/.worktrees/feature-debug-toolbar"
+          path: fixtureWorktreeRoot
         },
         trackedDatabaseName: "inquara_wt_feature_debug_toolbar"
       })
     ).toEqual({
       branchName: "feature/debug-toolbar",
-      currentPath: "/workspace/inquara",
+      currentPath: fixtureMainRoot,
       databaseName: "inquara_wt_feature_debug_toolbar",
-      targetPath: "/workspace/inquara/.worktrees/feature-debug-toolbar"
+      targetPath: fixtureWorktreeRoot
     });
   });
 });

@@ -4,6 +4,7 @@ import { buildApp } from "../app";
 
 const baseEnv = {
   DATABASE_URL: "postgresql://debug:debug@localhost:1/inquara_debug_test?schema=public",
+  REDIS_URL: "redis://test.local:6379",
   SESSION_SECRET: "test-session-secret-with-at-least-32-chars",
   WEB_ORIGIN: "http://localhost:3000",
   API_ORIGIN: "http://localhost:4000",

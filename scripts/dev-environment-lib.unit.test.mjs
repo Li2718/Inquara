@@ -19,6 +19,15 @@ import {
   withUrlPort
 } from "./dev-environment-lib.mjs";
 
+function hasNormalizedSuffix(filePath, suffix) {
+  return path.normalize(filePath).endsWith(path.normalize(suffix));
+}
+
+const fixtureMainRoot = path.join("fixtures", "Inquara");
+const fixtureWorktreeRoot = path.join(fixtureMainRoot, ".worktrees", "feature-debug-toolbar");
+const fixtureMainComposePath = path.join(fixtureMainRoot, "docker-compose.dev.yml");
+const fixtureWorktreeComposePath = path.join(fixtureWorktreeRoot, "docker-compose.dev.yml");
+
 describe("dev environment helpers", () => {
   it("parses docker compose ps output as JSON lines", () => {
     const rows = parseComposePsJson(
@@ -59,18 +68,16 @@ describe("dev environment helpers", () => {
   });
 
   it("uses the managed repo root to share the dev compose project across worktrees", () => {
-    expect(getDevComposeProjectName("/workspace/inquara")).toBe("inquara");
-    expect(getDevComposeProjectName("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe(
-      "feature-debug-toolbar"
-    );
+    expect(getDevComposeProjectName(fixtureMainRoot)).toBe("inquara");
+    expect(getDevComposeProjectName(fixtureWorktreeRoot)).toBe("feature-debug-toolbar");
   });
 
   it("uses the main workspace compose file for a managed worktree without local infra", () => {
-    const infrastructure = resolveDevInfrastructure("/workspace/inquara/.worktrees/feature-debug-toolbar", {
-        exists: filePath => filePath.endsWith("D:\\codes\\li2718\\Inquara\\docker-compose.dev.yml")
+    const infrastructure = resolveDevInfrastructure(fixtureWorktreeRoot, {
+      exists: filePath => hasNormalizedSuffix(filePath, fixtureMainComposePath)
     });
 
-    expect(path.normalize(infrastructure.composeRootDir)).toBe(path.normalize("/workspace/inquara"));
+    expect(path.normalize(infrastructure.composeRootDir)).toBe(path.normalize(fixtureMainRoot));
     expect(infrastructure).toMatchObject({
       mode: "shared",
       projectName: "inquara"
@@ -79,21 +86,19 @@ describe("dev environment helpers", () => {
 
   it("uses the current worktree compose file when a worktree has private infra", () => {
     expect(
-      resolveDevInfrastructure("/workspace/inquara/.worktrees/feature-debug-toolbar", {
-        exists: filePath => filePath.endsWith("feature-debug-toolbar\\docker-compose.dev.yml")
+      resolveDevInfrastructure(fixtureWorktreeRoot, {
+        exists: filePath => hasNormalizedSuffix(filePath, fixtureWorktreeComposePath)
       })
     ).toMatchObject({
-      composeRootDir: "/workspace/inquara/.worktrees/feature-debug-toolbar",
+      composeRootDir: fixtureWorktreeRoot,
       mode: "private",
       projectName: "feature-debug-toolbar"
     });
   });
 
   it("derives compose project names from the selected infrastructure root", () => {
-    expect(getDevComposeProjectName("/workspace/inquara")).toBe("inquara");
-    expect(getDevComposeProjectName("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe(
-      "feature-debug-toolbar"
-    );
+    expect(getDevComposeProjectName(fixtureMainRoot)).toBe("inquara");
+    expect(getDevComposeProjectName(fixtureWorktreeRoot)).toBe("feature-debug-toolbar");
   });
 
   it("reuses running app service pids", () => {
@@ -150,7 +155,7 @@ describe("dev environment helpers", () => {
       apiUrl: new URL("http://localhost:4000"),
       databaseUrl: "postgresql://inquara:inquara@localhost:55433/inquara?schema=public",
       infrastructure: {
-        composePath: "/workspace/inquara/.worktrees/feature-debug-toolbar/docker-compose.dev.yml",
+        composePath: fixtureWorktreeComposePath,
         mode: "private",
         projectName: "feature-debug-toolbar"
       },
@@ -161,7 +166,7 @@ describe("dev environment helpers", () => {
     expect(getServiceStateExpectation("api", runtimeState)).toEqual({
       apiOrigin: "http://localhost:4000",
       databaseUrl: "postgresql://inquara:inquara@localhost:55433/inquara?schema=public",
-      infrastructureComposePath: "/workspace/inquara/.worktrees/feature-debug-toolbar/docker-compose.dev.yml",
+      infrastructureComposePath: fixtureWorktreeComposePath,
       infrastructureMode: "private",
       infrastructureProjectName: "feature-debug-toolbar",
       redisUrl: "redis://localhost:56381"

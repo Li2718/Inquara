@@ -295,17 +295,6 @@ async function cloneInfrastructureForCurrentWorktree() {
   console.log(`Current worktree now uses ${plan.envLocalPath}.`);
 }
 
-function getNpmCommand() {
-  const npmBinaryName = process.platform === "win32" ? "npm.cmd" : "npm";
-  const siblingNpm = path.join(path.dirname(process.execPath), npmBinaryName);
-
-  if (existsSync(siblingNpm)) {
-    return siblingNpm;
-  }
-
-  return npmBinaryName;
-}
-
 async function removeWorktree(target) {
   const entries = await listWorktrees();
   const selectedEntry = selectWorktreeEntry(entries, {

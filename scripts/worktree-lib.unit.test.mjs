@@ -11,6 +11,10 @@ import {
   selectWorktreeEntry
 } from "./worktree-lib.mjs";
 
+const fixtureMainRoot = "/workspace/inquara";
+const fixtureWorktreeRoot = `${fixtureMainRoot}/.worktrees/feature/debug-toolbar`;
+const fixtureHyphenatedWorktreeRoot = `${fixtureMainRoot}/.worktrees/feature-debug-toolbar`;
+
 describe("worktree helpers", () => {
   it("copies only environment defaults for a shared-infra worktree", () => {
     expect(
@@ -63,11 +67,11 @@ describe("worktree helpers", () => {
   it("parses git worktree porcelain output", () => {
     const entries = parseWorktreeListPorcelain(
       [
-        "worktree /workspace/inquara",
+        `worktree ${fixtureMainRoot}`,
         "HEAD abc123",
         "branch refs/heads/main",
         "",
-        "worktree /workspace/inquara/.worktrees/feature/debug-toolbar",
+        `worktree ${fixtureWorktreeRoot}`,
         "HEAD def456",
         "branch refs/heads/feature/debug-toolbar",
         ""
@@ -78,12 +82,12 @@ describe("worktree helpers", () => {
       {
         branchName: "main",
         head: "abc123",
-        path: "/workspace/inquara"
+        path: fixtureMainRoot
       },
       {
         branchName: "feature/debug-toolbar",
         head: "def456",
-        path: "/workspace/inquara/.worktrees/feature/debug-toolbar"
+        path: fixtureWorktreeRoot
       }
     ]);
   });
@@ -92,38 +96,36 @@ describe("worktree helpers", () => {
     const entries = [
       {
         branchName: "main",
-        path: "/workspace/inquara"
+        path: fixtureMainRoot
       },
       {
         branchName: "feature/debug-toolbar",
-        path: "/workspace/inquara/.worktrees/feature/debug-toolbar"
+        path: fixtureWorktreeRoot
       }
     ];
 
     expect(
       selectWorktreeEntry(entries, {
-        currentPath: "/workspace/inquara",
+        currentPath: fixtureMainRoot,
         target: "feature/debug-toolbar"
       })
     ).toEqual(entries[1]);
     expect(
       selectWorktreeEntry(entries, {
-        currentPath: "/workspace/inquara",
-        target: "/workspace/inquara/.worktrees/feature/debug-toolbar"
+        currentPath: fixtureMainRoot,
+        target: fixtureWorktreeRoot
       })
     ).toEqual(entries[1]);
     expect(() =>
       selectWorktreeEntry(entries, {
-        currentPath: "/workspace/inquara",
+        currentPath: fixtureMainRoot,
         target: "main"
       })
     ).toThrow("Refusing to remove the current worktree");
   });
 
   it("detects the main repo root when run inside a managed worktree", () => {
-    expect(getManagedWorktreeRootDir("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe(
-      "/workspace/inquara"
-    );
-    expect(getManagedWorktreeRootDir("/workspace/inquara")).toBe("/workspace/inquara");
+    expect(getManagedWorktreeRootDir(fixtureHyphenatedWorktreeRoot)).toBe(fixtureMainRoot);
+    expect(getManagedWorktreeRootDir(fixtureMainRoot)).toBe(fixtureMainRoot);
   });
 });
