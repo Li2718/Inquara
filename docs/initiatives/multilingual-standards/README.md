@@ -47,6 +47,7 @@ An isolated managed worktree and branch exist for this topic: `multilingual-stan
 - Drafted Inquara-specific multilingual standards using repository-relative paths and current shared component layers.
 - Connected the new long-term standard from repository documentation standards and AGENTS hard-rule entrypoints.
 - Ran focused documentation verification for local absolute paths, unresolved drafting markers, and changed-file status.
+- Removed tool-specific process artifacts from the project documentation hierarchy and recorded that rule in `docs/documentation-standards.md`.
 - Updated the standard so `en` is the default locale and English source copy drives translations.
 - Expanded the durable rules for translation quality, Chinese localization, untranslated terms, interpolation tokens, errors, and empty states.
 - Added shared locale parsing and persistence constants under `apps/web/src/shared/locale/`.
