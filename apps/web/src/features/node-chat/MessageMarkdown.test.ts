@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { MessageMarkdown } from "./MessageMarkdown";
 
@@ -203,5 +204,13 @@ describe("MessageMarkdown", () => {
     expect(html).toContain("katex");
     expect(html).not.toContain("\\\\(");
     expect(html).not.toContain("\\\\)");
+  });
+
+  it("keeps KaTeX radical decoration layers from intercepting text selection starts", () => {
+    const styles = readFileSync("apps/web/src/shared/styles.css", "utf8");
+
+    expect(styles).toContain(".message-bubble .message-math .hide-tail");
+    expect(styles).toContain(".message-bubble .message-math svg");
+    expect(styles).toContain("pointer-events: none");
   });
 });

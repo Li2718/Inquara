@@ -2753,6 +2753,11 @@ h2 {
   margin: 0;
 }
 
+.message-bubble .message-math .hide-tail,
+.message-bubble .message-math svg {
+  pointer-events: none;
+}
+
 .message-bubble hr {
   border: 0;
   border-top: 1px solid rgb(57 183 165 / 18%);

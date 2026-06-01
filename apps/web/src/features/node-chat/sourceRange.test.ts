@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findSourceRange, getSourceRangeFromTextNodes, getTextRangeFromTextNodes } from "./sourceRange";
+import { findSourceRange, getRangeContainerElement, getSourceRangeFromTextNodes, getTextRangeFromTextNodes } from "./sourceRange";
 
 describe("findSourceRange", () => {
   it("maps normalized selected text back to the original message offsets", () => {
@@ -84,5 +84,77 @@ describe("findSourceRange", () => {
         }
       )
     ).toEqual({ start: 3, end: 12 });
+  });
+
+  it("maps nested rendered math text back to the whole formula source range", () => {
+    const mathText = Symbol("katex text");
+
+    expect(
+      getSourceRangeFromTextNodes(
+        [
+          {
+            id: mathText,
+            length: 3,
+            sourceStart: 5,
+            sourceEnd: 14,
+            offsetMode: "container"
+          }
+        ],
+        {
+          startNode: mathText,
+          startOffset: 1,
+          endNode: mathText,
+          endOffset: 2
+        }
+      )
+    ).toEqual({ start: 5, end: 14 });
+  });
+
+  it("maps selections whose boundary containers are formula wrapper elements", () => {
+    const formulaElement = Symbol("formula element");
+    const firstFormulaText = Symbol("first formula text");
+    const secondFormulaText = Symbol("second formula text");
+
+    expect(
+      getSourceRangeFromTextNodes(
+        [
+          {
+            id: firstFormulaText,
+            owner: formulaElement,
+            length: 2,
+            sourceStart: 5,
+            sourceEnd: 14,
+            offsetMode: "container"
+          },
+          {
+            id: secondFormulaText,
+            owner: formulaElement,
+            length: 2,
+            sourceStart: 5,
+            sourceEnd: 14,
+            offsetMode: "container"
+          }
+        ],
+        {
+          startNode: formulaElement,
+          startOffset: 0,
+          endNode: formulaElement,
+          endOffset: 2
+        }
+      )
+    ).toEqual({ start: 5, end: 14 });
+  });
+
+  it("returns the container itself when a range common ancestor is already an element", () => {
+    const messageElement = { nodeType: 1 } as Element & { nodeType: number };
+
+    expect(getRangeContainerElement(messageElement)).toBe(messageElement);
+  });
+
+  it("returns the parent element when a range starts or ends inside a text node", () => {
+    const parentElement = { nodeType: 1 } as Element & { nodeType: number };
+    const textNode = { nodeType: 3, parentElement };
+
+    expect(getRangeContainerElement(textNode)).toBe(parentElement);
   });
 });

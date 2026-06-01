@@ -54,17 +54,19 @@ export function getSourceRangeInElement(root: HTMLElement, range: Range): { star
 
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    const parent = node.parentElement;
-    const sourceStartValue = parent?.getAttribute("data-source-start");
-    const sourceEndValue = parent?.getAttribute("data-source-end");
+    const sourceElement = node.parentElement?.closest<HTMLElement>("[data-source-start][data-source-end]");
+    const sourceStartValue = sourceElement?.getAttribute("data-source-start");
+    const sourceEndValue = sourceElement?.getAttribute("data-source-end");
     const sourceStart = sourceStartValue === null || sourceStartValue === undefined ? Number.NaN : Number(sourceStartValue);
     const sourceEnd = sourceEndValue === null || sourceEndValue === undefined ? Number.NaN : Number(sourceEndValue);
     if (!Number.isFinite(sourceStart) || !Number.isFinite(sourceEnd)) continue;
     textNodes.push({
       id: node,
+      owner: sourceElement,
       length: node.textContent?.length ?? 0,
       sourceStart,
-      sourceEnd
+      sourceEnd,
+      offsetMode: sourceElement?.getAttribute("data-source-offset-mode") === "container" ? "container" : "text"
     });
   }
 
@@ -76,14 +78,24 @@ export function getSourceRangeInElement(root: HTMLElement, range: Range): { star
   });
 }
 
+export function getRangeContainerElement(container: {
+  nodeType: number;
+  parentElement?: Element | null;
+} | null): Element | null {
+  if (!container) return null;
+  return container.nodeType === 1 ? (container as Element) : (container.parentElement ?? null);
+}
+
 type TextRangeNode = {
   id: unknown;
+  owner?: unknown;
   length: number;
 };
 
 type SourceTextRangeNode = TextRangeNode & {
   sourceStart: number;
   sourceEnd: number;
+  offsetMode?: "text" | "container";
 };
 
 export function getTextRangeFromTextNodes(
@@ -125,11 +137,11 @@ export function getSourceRangeFromTextNodes(
   let end: number | null = null;
 
   for (const node of textNodes) {
-    if (node.id === selection.startNode) {
-      start = Math.min(node.sourceEnd, node.sourceStart + selection.startOffset);
+    if (node.id === selection.startNode || node.owner === selection.startNode) {
+      start = node.offsetMode === "container" ? node.sourceStart : Math.min(node.sourceEnd, node.sourceStart + selection.startOffset);
     }
-    if (node.id === selection.endNode) {
-      end = Math.min(node.sourceEnd, node.sourceStart + selection.endOffset);
+    if (node.id === selection.endNode || node.owner === selection.endNode) {
+      end = node.offsetMode === "container" ? node.sourceEnd : Math.min(node.sourceEnd, node.sourceStart + selection.endOffset);
       break;
     }
   }

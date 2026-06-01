@@ -20,6 +20,7 @@
 - [x] Add a regression test that proves branch highlights can target visible text inside markdown formatting syntax.
 - [x] Add a source-range regression test that maps rendered text-node offsets back to raw markdown offsets.
 - [x] Add regression coverage for tables, task lists, strikethrough, images, thematic breaks, table alignment, escaped table pipes, and math delimiters.
+- [x] Add regression coverage for selections inside nested KaTeX-rendered formula DOM.
 
 ### Task 2: Implement Feature-Owned Markdown Rendering
 
@@ -40,6 +41,7 @@
 
 - [x] Replace the plain paragraph wrapper with the markdown renderer.
 - [x] Recover selected source ranges from rendered markdown text fragments before falling back to string search.
+- [x] Recover selections inside KaTeX-rendered formula DOM to the whole formula source range.
 - [x] Keep the existing follow-up and branch-toggle behavior unchanged from the caller's perspective.
 
 ### Task 4: Update Product Message Styling And Verify
@@ -49,9 +51,9 @@
 
 - [x] Remove assistant bubble styling while preserving readable product message layout.
 - [x] Style markdown blocks, inline code, code fences, lists, blockquotes, links, tables, images, task lists, and math for both assistant and user messages.
+- [x] Keep KaTeX radical decoration layers from intercepting text selection starts.
 - [ ] Run final focused Vitest coverage, web typecheck, lint, and required closeout verification after authenticated visual acceptance.
 
 ### Remaining Acceptance Work
 
 - [ ] Verify representative authenticated workspace messages in the in-app browser.
-- [ ] Decide whether KaTeX-rendered formulas need fine-grained branch highlight mapping in this initiative.

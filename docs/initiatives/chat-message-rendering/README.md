@@ -62,6 +62,8 @@ Visual changes will:
 - Added feature-owned markdown parsing and rendering for headings, paragraphs, lists, blockquotes, fenced code, inline formatting, links, images, thematic breaks, task lists, tables, table alignment, and escaped table pipes.
 - Added KaTeX rendering for `$...$`, `\(...\)`, `\[...\]`, and `$$...$$` math content.
 - Preserved source offset metadata for rendered text fragments so selection follow-ups and branch highlights still map back to raw message content.
+- Mapped selections inside KaTeX-rendered formula DOM back to the whole formula source range so formula follow-ups remain usable.
+- Disabled pointer hit-testing on KaTeX formula decoration layers so radical SVGs do not block starting text selections inside square-root content.
 - Added focused Vitest coverage for markdown rendering and source range mapping.
 - Committed implementation checkpoints:
   - `df8ebff feat: render node chat markdown messages`
@@ -71,7 +73,6 @@ Visual changes will:
 ## Remaining Work
 
 - Run authenticated product-page visual acceptance against representative real messages in the in-app browser.
-- Decide whether formula branch highlights need fine-grained mapping inside KaTeX-rendered content, or whether block-level formula source ranges are sufficient for this initiative.
 - Run final verification before integration, including focused Vitest coverage, web typecheck, lint, and the required debug-free production check if a production build is part of the closeout.
 
 ## Deferred Or Out Of Scope
@@ -79,3 +80,4 @@ Visual changes will:
 - Full CommonMark compliance beyond the formats that current node chat content needs most often.
 - Promoting the renderer into a shared UI layer before a second real use site exists.
 - Full nested markdown support such as multi-paragraph list items, deeply nested lists, and complex nested blockquotes.
+- Fine-grained character-level source mapping inside KaTeX-rendered formula internals.

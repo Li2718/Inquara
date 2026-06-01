@@ -9,7 +9,7 @@ import { findFollowupNodePosition, findRestoredNodePosition } from "./branchPlac
 import { MessageMarkdown } from "./MessageMarkdown";
 import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 import { getLastVisibleSelectionRect, toViewportToolbarPoint } from "./selectionToolbarPosition";
-import { findSourceRange, getSourceRangeInElement, getTextRangeInElement } from "./sourceRange";
+import { findSourceRange, getRangeContainerElement, getSourceRangeInElement, getTextRangeInElement } from "./sourceRange";
 
 type SelectionState = {
   message: NodeMessage;
@@ -143,7 +143,8 @@ export function MessageList({ node }: { node: CanvasNode }) {
       setSelection(null);
       return;
     }
-    const messageElement = range?.commonAncestorContainer.parentElement?.closest<HTMLElement>("[data-message-content]");
+    const rangeElement = getRangeContainerElement(range?.commonAncestorContainer ?? null);
+    const messageElement = rangeElement?.closest<HTMLElement>("[data-message-content]");
     const sourceRange =
       range && messageElement && element.contains(messageElement)
         ? getSourceRangeInElement(messageElement, range) ??

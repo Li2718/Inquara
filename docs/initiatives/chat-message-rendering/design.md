@@ -32,3 +32,7 @@ The message renderer must keep source ranges aligned to the raw markdown string,
 This slice uses a small feature-owned parser for practical markdown coverage instead of adopting a full CommonMark pipeline. That keeps source-offset behavior explicit and local to node chat, at the cost of supporting a practical subset rather than full CommonMark.
 
 Math rendering is the exception: formulas use KaTeX instead of hand-rendered text because the product needs real mathematical layout, not styled LaTeX source. The parser still owns delimiter detection and source offsets; KaTeX owns the formula DOM.
+
+Selections inside KaTeX-rendered DOM map back to the whole formula source range. This keeps follow-up creation and branch visibility usable for formulas without depending on KaTeX's internal markup shape.
+
+KaTeX radical notation uses SVG decoration layers for the square-root mark. Those decoration layers should not receive pointer events inside message math, otherwise the browser can fail to start a text selection from inside the radicand.

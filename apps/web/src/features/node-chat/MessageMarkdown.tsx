@@ -50,6 +50,7 @@ function renderBlock(
           <span
             data-source-start={block.contentStart}
             data-source-end={block.contentEnd}
+            data-source-offset-mode="container"
             dangerouslySetInnerHTML={{ __html: renderMathToMarkup(block.formula, { displayMode: true }) }}
           />
         </div>
@@ -175,6 +176,7 @@ function renderTokens(
           className={token.displayMode ? "message-math message-math-inline message-math-display" : "message-math message-math-inline"}
           data-source-start={token.contentStart}
           data-source-end={token.contentEnd}
+          data-source-offset-mode="container"
           dangerouslySetInnerHTML={{ __html: renderMathToMarkup(token.formula, { displayMode: token.displayMode }) }}
         />
       );
@@ -281,7 +283,11 @@ function renderTextWithHighlights(
 function createSourceSpan(key: string, text: string, start: number, end: number) {
   if (text.length === 0) return null;
   return (
-    <span key={key} data-source-start={start} data-source-end={end}>
+    <span
+      key={key}
+      data-source-start={start}
+      data-source-end={end}
+    >
       {text}
     </span>
   );
