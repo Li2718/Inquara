@@ -226,16 +226,6 @@ Development database changes must follow the hard rules in [docs/architecture.md
 3. Do not leave the running development server connected to an unmigrated development database.
 4. If migration cannot be applied, stop and report the blocker instead of letting the user debug stale database-shape errors in the browser.
 
-## Development Server Build Rules
-
-Development server and build verification work must follow the hard rules in [docs/architecture.md](docs/architecture.md).
-
-1. Before running a production web build such as `npm --workspace @inquara/web run build`, check whether a local Next development server is running for this repository.
-2. Do not run a production Next build against `apps/web/.next` while `next dev` is serving the browser, because the build can rewrite `.next` and break the active dev server with missing chunk errors.
-3. If a production web build is required while the user is using the local app, stop the development server first, or use an explicitly isolated build/output environment.
-4. After any production build that may have touched `apps/web/.next`, restart `npm run dev` before asking the user to continue using `localhost:3000`.
-5. If this rule is violated and the browser shows missing Next chunk/module errors, restart the development server immediately and verify the affected route in the browser.
-
 ## Worktree Rules
 
 Managed git worktree work must follow the repo-local skill at [.codex/skills/worktree-development/SKILL.md](.codex/skills/worktree-development/SKILL.md).

@@ -947,16 +947,6 @@ When implementation work modifies the Prisma schema or adds/changes a database m
 - Do not leave a running development server connected to a database that lacks the new schema shape.
 - If the migration cannot be applied, report the blocker clearly instead of letting stale database errors surface through the product UI.
 
-## Development Server Build Rule
-
-The local Next development server and production web build both use `apps/web/.next` by default. Running a production build while `next dev` is serving the browser can rewrite that directory underneath the active dev process, causing missing chunk or module errors such as `Cannot find module './901.js'`.
-
-- Before running a production web build such as `npm --workspace @inquara/web run build`, check whether a local Next development server for this repository is running.
-- Do not run a production Next build against `apps/web/.next` while `next dev` is serving the browser.
-- If the build is required while the user is actively using the local app, first stop the development server, or use an explicitly isolated output/build environment.
-- After a production build touches `apps/web/.next`, restart `npm run dev` before handing the browser app back to the user.
-- If the browser shows missing Next chunk/module errors after build verification, treat it as a corrupted/stale dev build artifact, restart the development server, and verify the affected route in the browser.
-
 ## Migration From The Demo
 
 The demo should be treated as interaction reference material, not production foundation.
