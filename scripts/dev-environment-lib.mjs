@@ -26,16 +26,69 @@ export function getDevEnvironmentPaths(rootDir) {
   };
 }
 
-export function ensureDevComposeExists(rootDir) {
-  const paths = getDevEnvironmentPaths(rootDir);
+export function getDevComposeProjectName(rootDir) {
+  const normalizedRootDir = rootDir.endsWith(path.sep) ? rootDir.slice(0, -1) : rootDir;
 
-  if (!existsSync(paths.devComposePath)) {
+  return path.basename(normalizedRootDir)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+}
+
+export function getManagedRepoRootDir(rootDir) {
+  const normalizedRootDir = rootDir.endsWith(path.sep) ? rootDir.slice(0, -1) : rootDir;
+  const parentDirName = path.basename(path.dirname(normalizedRootDir));
+
+  if (parentDirName === ".worktrees" || parentDirName === "worktrees") {
+    return path.dirname(path.dirname(normalizedRootDir));
+  }
+
+  return rootDir;
+}
+
+export function resolveDevInfrastructure(rootDir, { exists = existsSync } = {}) {
+  const localPaths = getDevEnvironmentPaths(rootDir);
+  const mainRootDir = getManagedRepoRootDir(rootDir);
+  const mainPaths = getDevEnvironmentPaths(mainRootDir);
+  const isManagedWorktree = path.normalize(mainRootDir) !== path.normalize(rootDir);
+
+  if (exists(localPaths.devComposePath)) {
+    return {
+      composePath: localPaths.devComposePath,
+      composeRootDir: rootDir,
+      mode: isManagedWorktree ? "private" : "main",
+      projectName: getDevComposeProjectName(rootDir)
+    };
+  }
+
+  if (isManagedWorktree && exists(mainPaths.devComposePath)) {
+    return {
+      composePath: mainPaths.devComposePath,
+      composeRootDir: mainRootDir,
+      mode: "shared",
+      projectName: getDevComposeProjectName(mainRootDir)
+    };
+  }
+
+  return {
+    composePath: localPaths.devComposePath,
+    composeRootDir: rootDir,
+    mode: "missing",
+    projectName: getDevComposeProjectName(rootDir)
+  };
+}
+
+export function ensureDevComposeExists(rootDir) {
+  const infrastructure = resolveDevInfrastructure(rootDir);
+
+  if (infrastructure.mode === "missing") {
     throw new Error(
       "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml, then copy .env.dev.example to .env.dev and adjust them for your machine first."
     );
   }
 
-  return paths;
+  return infrastructure;
 }
 
 export function parseComposePsJson(rawOutput) {
@@ -72,7 +125,7 @@ function isReadyState(row) {
 }
 
 export function areRequiredServicesReady(rows) {
-  const requiredServices = ["postgres"];
+  const requiredServices = ["postgres", "redis"];
 
   return requiredServices.every(serviceName => {
     const row = rows.find(entry => entry.Service === serviceName);
@@ -80,8 +133,8 @@ export function areRequiredServicesReady(rows) {
   });
 }
 
-export function getDevCommandPlan({ hasDevComposeFile, infraReady }) {
-  if (!hasDevComposeFile) {
+export function getDevCommandPlan({ hasDevInfrastructure, infraReady }) {
+  if (!hasDevInfrastructure) {
     throw new Error(
       "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml, then copy .env.dev.example to .env.dev and adjust them for your machine first."
     );

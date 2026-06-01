@@ -46,7 +46,17 @@ What this does:
 - creates a new branch for that worktree
 - copies the main workspace `.env.dev` into the new worktree
 
-Initial worktree database mode is shared. A newly created worktree starts by using the same development database settings as the main workspace until you explicitly switch it to a private cloned database.
+Initial worktree infrastructure mode is shared. A newly created worktree does not get its own `docker-compose.dev.yml`; `npm run dev` uses the main workspace development infrastructure by default.
+
+Initial worktree database mode is also shared. A newly created worktree starts by using the same development database settings as the main workspace until you explicitly switch it to a private cloned database.
+
+## Private Infrastructure Workflow
+
+Most worktrees should reuse the main workspace infrastructure. If a worktree needs to change development infrastructure itself, such as changing `docker-compose.dev.yml`, adding infrastructure services, or changing service ports, give that worktree an explicit private infrastructure copy first.
+
+A managed worktree is considered private-infrastructure mode when it has its own `docker-compose.dev.yml`. In that mode, `npm run dev` uses the current worktree's compose file and compose project instead of the main workspace infrastructure.
+
+Keep worktree-local infrastructure overrides in `.env.dev.local` when possible. Do not use private infrastructure merely to isolate application data; use the private database workflow for that.
 
 ## Private Database Workflow
 

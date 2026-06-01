@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getSharedDevelopmentFileNames,
   buildPrivateDbEnvText,
   buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
@@ -12,6 +13,14 @@ import {
 } from "./worktree-lib.mjs";
 
 describe("worktree helpers", () => {
+  it("copies only environment defaults for a shared-infra worktree", () => {
+    expect(
+      getSharedDevelopmentFileNames({
+        envDevExists: true
+      })
+    ).toEqual([".env.dev"]);
+  });
+
   it("prefers .worktrees when picking the managed worktree directory", () => {
     expect(getWorktreeParentDirName({ dotWorktreesExists: true, worktreesExists: true })).toBe(".worktrees");
     expect(getWorktreeParentDirName({ dotWorktreesExists: false, worktreesExists: true })).toBe("worktrees");

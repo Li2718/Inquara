@@ -6,6 +6,16 @@ import process from "node:process";
 const WORKTREE_DATABASE_PREFIX = "inquara_wt_";
 const MAX_POSTGRES_IDENTIFIER_LENGTH = 63;
 
+export function getSharedDevelopmentFileNames({ envDevExists }) {
+  const sharedFiles = [];
+
+  if (envDevExists) {
+    sharedFiles.push(".env.dev");
+  }
+
+  return sharedFiles;
+}
+
 export function getWorktreeParentDirName({ dotWorktreesExists, worktreesExists }) {
   if (dotWorktreesExists) {
     return ".worktrees";

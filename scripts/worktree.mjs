@@ -10,6 +10,7 @@ import {
   buildWorktreeDatabaseAdminUrl,
   buildPrivateDbEnvText,
   escapePostgresIdentifier,
+  getSharedDevelopmentFileNames,
   getManagedWorktreeRootDir,
   getWorktreeParentDirName,
   parseWorktreeListPorcelain,
@@ -121,14 +122,18 @@ function ensureManagedWorktreeDirectory(rootPath) {
   };
 }
 
-function copyEnvDevIntoWorktree(rootPath, targetPath) {
+function copySharedDevelopmentFilesIntoWorktree(rootPath, targetPath) {
   const envDevPath = path.join(rootPath, ".env.dev");
 
   if (!existsSync(envDevPath)) {
     throw new Error("Missing .env.dev in the main worktree. Create it before creating managed worktrees.");
   }
 
-  copyFileSync(envDevPath, path.join(targetPath, ".env.dev"));
+  for (const fileName of getSharedDevelopmentFileNames({
+    envDevExists: true
+  })) {
+    copyFileSync(path.join(rootPath, fileName), path.join(targetPath, fileName));
+  }
 }
 
 function parseDatabaseUrl(databaseUrl) {
@@ -230,10 +235,10 @@ async function createWorktree(branchName) {
   await runCommand("git", ["worktree", "add", plan.targetPath, "-b", branchName], {
     cwd: rootDir
   });
-  copyEnvDevIntoWorktree(rootDir, plan.targetPath);
+  copySharedDevelopmentFilesIntoWorktree(rootDir, plan.targetPath);
 
   console.log(`Created worktree at ${plan.targetPath}`);
-  console.log("Database mode: shared (.env.dev copied from the main worktree)");
+  console.log("Database mode: shared (copied shared development files from the main worktree)");
 }
 
 async function cloneDatabaseForCurrentWorktree() {
