@@ -210,3 +210,13 @@ Development server and build verification work must follow the hard rules in [do
 3. If a production web build is required while the user is using the local app, stop the development server first, or use an explicitly isolated build/output environment.
 4. After any production build that may have touched `apps/web/.next`, restart `npm run dev` before asking the user to continue using `localhost:3000`.
 5. If this rule is violated and the browser shows missing Next chunk/module errors, restart the development server immediately and verify the affected route in the browser.
+
+## Worktree Rules
+
+Managed git worktree work must follow [docs/worktree-development.md](docs/worktree-development.md).
+
+Use these rules as hard constraints, not optional style guidance.
+
+1. Before creating, cloning, or removing a repository worktree, read `docs/worktree-development.md`.
+2. Do not create ad hoc worktrees when the managed repository worktree workflow applies.
+3. If a worktree will do schema-changing or destructive database work, run `npm run worktree:clonedb` in that worktree before continuing.

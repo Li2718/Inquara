@@ -36,6 +36,7 @@ Current docs in this repository:
 - `docs/documentation-standards.md`
 - `docs/testing-standards.md`
 - `docs/ui-system.md`
+- `docs/worktree-development.md`
 
 Debug implementation rules are current long-term architecture rules and live in `docs/architecture.md`. Initiative docs may plan changes to the debug system, but durable constraints must be reflected back into the architecture document.
 
