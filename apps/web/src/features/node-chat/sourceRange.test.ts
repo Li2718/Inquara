@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findSourceRange, getTextRangeFromTextNodes } from "./sourceRange";
+import { findSourceRange, getSourceRangeFromTextNodes, getTextRangeFromTextNodes } from "./sourceRange";
 
 describe("findSourceRange", () => {
   it("maps normalized selected text back to the original message offsets", () => {
@@ -54,5 +54,35 @@ describe("findSourceRange", () => {
         }
       )
     ).toEqual({ start: 10, end: 13 });
+  });
+
+  it("maps rendered markdown text nodes back to raw markdown source offsets", () => {
+    const boldText = Symbol("bold text");
+    const tailText = Symbol("tail text");
+
+    expect(
+      getSourceRangeFromTextNodes(
+        [
+          {
+            id: boldText,
+            length: 5,
+            sourceStart: 2,
+            sourceEnd: 7
+          },
+          {
+            id: tailText,
+            length: 5,
+            sourceStart: 10,
+            sourceEnd: 15
+          }
+        ],
+        {
+          startNode: boldText,
+          startOffset: 1,
+          endNode: tailText,
+          endOffset: 2
+        }
+      )
+    ).toEqual({ start: 3, end: 12 });
   });
 });

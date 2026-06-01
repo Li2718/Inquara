@@ -46,9 +46,44 @@ export function getTextRangeInElement(root: HTMLElement, range: Range): { start:
   });
 }
 
+export function getSourceRangeInElement(root: HTMLElement, range: Range): { start: number; end: number } | null {
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes: SourceTextRangeNode[] = [];
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const parent = node.parentElement;
+    const sourceStartValue = parent?.getAttribute("data-source-start");
+    const sourceEndValue = parent?.getAttribute("data-source-end");
+    const sourceStart = sourceStartValue === null || sourceStartValue === undefined ? Number.NaN : Number(sourceStartValue);
+    const sourceEnd = sourceEndValue === null || sourceEndValue === undefined ? Number.NaN : Number(sourceEndValue);
+    if (!Number.isFinite(sourceStart) || !Number.isFinite(sourceEnd)) continue;
+    textNodes.push({
+      id: node,
+      length: node.textContent?.length ?? 0,
+      sourceStart,
+      sourceEnd
+    });
+  }
+
+  return getSourceRangeFromTextNodes(textNodes, {
+    startNode: range.startContainer,
+    startOffset: range.startOffset,
+    endNode: range.endContainer,
+    endOffset: range.endOffset
+  });
+}
+
 type TextRangeNode = {
   id: unknown;
   length: number;
+};
+
+type SourceTextRangeNode = TextRangeNode & {
+  sourceStart: number;
+  sourceEnd: number;
 };
 
 export function getTextRangeFromTextNodes(
@@ -71,6 +106,32 @@ export function getTextRangeFromTextNodes(
       break;
     }
     offset += node.length;
+  }
+
+  if (start === null || end === null || end < start) return null;
+  return { start, end };
+}
+
+export function getSourceRangeFromTextNodes(
+  textNodes: SourceTextRangeNode[],
+  selection: {
+    startNode: unknown;
+    startOffset: number;
+    endNode: unknown;
+    endOffset: number;
+  }
+): { start: number; end: number } | null {
+  let start: number | null = null;
+  let end: number | null = null;
+
+  for (const node of textNodes) {
+    if (node.id === selection.startNode) {
+      start = Math.min(node.sourceEnd, node.sourceStart + selection.startOffset);
+    }
+    if (node.id === selection.endNode) {
+      end = Math.min(node.sourceEnd, node.sourceStart + selection.endOffset);
+      break;
+    }
   }
 
   if (start === null || end === null || end < start) return null;
