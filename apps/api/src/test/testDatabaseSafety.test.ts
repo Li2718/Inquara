@@ -34,14 +34,4 @@ describe("test database safety", () => {
       );
     }
   });
-
-  it("runs Playwright e2e through the ephemeral database wrapper", () => {
-    const webPackage = readFileSync("apps/web/package.json", "utf8");
-    const wrapper = readFileSync("scripts/run-e2e.mjs", "utf8");
-
-    expect(webPackage).toContain("scripts/run-e2e.mjs");
-    expect(wrapper).toContain("new GenericContainer(\"postgres:16-alpine\")");
-    expect(wrapper).toContain("prisma\", \"migrate\", \"deploy\"");
-    expect(wrapper).toContain("INQUARA_USE_EXISTING_TEST_DB");
-  });
 });

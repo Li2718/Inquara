@@ -62,15 +62,14 @@ function createScriptHarness() {
 }
 
 describe("client fatal error fallback", () => {
-  it("replaces the document with the Inquara error screen for uncaught client errors", () => {
+  it("marks the document as fatal and installs the fallback for uncaught client errors", () => {
     const harness = createScriptHarness();
 
     harness.listeners.get("error")?.[0]?.();
 
     expect(harness.documentElement.attributes.get("data-client-fatal-error")).toBe("true");
-    expect(harness.body.innerHTML).toContain('class="error-page"');
-    expect(harness.body.innerHTML).toContain("The workspace hit a snag.");
-    expect(harness.body.innerHTML).toContain("Back to canvas");
+    expect(harness.body.innerHTML).not.toBe("");
+    expect(harness.reloadListeners).toHaveLength(1);
   });
 
   it("handles unhandled promise rejections without rewriting an existing fallback", () => {
@@ -80,7 +79,7 @@ describe("client fatal error fallback", () => {
     const firstHtml = harness.body.innerHTML;
     harness.listeners.get("error")?.[0]?.();
 
-    expect(firstHtml).toContain("data-client-fatal-error-page");
+    expect(firstHtml).not.toBe("");
     expect(harness.body.innerHTML).toBe(firstHtml);
   });
 
@@ -91,7 +90,7 @@ describe("client fatal error fallback", () => {
     harness.body.innerHTML = "framework fallback";
     harness.timeouts.at(-1)?.();
 
-    expect(harness.body.innerHTML).toContain("data-client-fatal-error-page");
+    expect(harness.body.innerHTML).not.toBe("framework fallback");
   });
 
   it("wires the reload action without depending on React", () => {

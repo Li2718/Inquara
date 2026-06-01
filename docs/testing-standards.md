@@ -11,6 +11,8 @@ A useful test has an independent reason to exist. It states a behavior, invarian
 
 A low-value test mostly describes how the current code happens to be written. It fails on harmless rewrites but does not reliably catch user-visible regressions, data loss, security problems, integration breaks, or deployment risks.
 
+Another way to say this: a valuable test provides new information. If a reader can already tell from the production code that the asserted value must be true, and the test adds no meaningful protection against a real regression, the test is probably not worth keeping.
+
 ## Value Test
 
 Before adding or keeping a test, answer these questions:
@@ -20,6 +22,7 @@ Before adding or keeping a test, answer these questions:
 3. Would the test still be meaningful after a reasonable implementation refactor?
 4. Is this the cheapest layer that can catch the failure without coupling to incidental details?
 5. Does another higher-value test already cover the same risk?
+6. Does this test add information beyond simply restating what the code literally says today?
 
 If the answers are unclear, do not add the test yet. Clarify the risk first.
 
@@ -183,17 +186,19 @@ A test is suspect when its main value comes from one of these patterns:
 
 - It tests language, framework, runtime, or test-library basics.
 - It asserts names, strings, selectors, styling details, file structure, or import shape rather than behavior.
+- It asserts a literal value that is already written directly in the production code, such as a hard-coded return value, label, or message, without proving a broader contract.
 - It proves that a wrapper, factory, adapter, or passthrough copied arguments into a similarly shaped object.
 - It repeats the implementation algorithm inside the expected value.
 - It mocks away the only meaningful dependency and then mainly verifies the mock interaction.
 - It checks constants, defaults, generated boilerplate, or old code absence without a meaningful ongoing failure mode.
+- It would almost always be updated in the same edit as the production code because both sides are expressing the same literal choice rather than an independent contract.
 - It covers only the happy path while the real risk is rejection, ordering, persistence, stale state, deduplication, or recovery.
 - It duplicates a stronger test at an API, domain, integration, or e2e boundary.
 - It makes a harmless refactor expensive while providing little confidence about product behavior.
 
 These are signals, not a complete list. New low-value patterns should be judged by the value test above, not by whether they appear in this list.
 
-Exceptions require an explicit contract. For example, a file path, export, class name, or passthrough shape can be tested only when it is a public API, build contract, architecture boundary, or security boundary.
+Exceptions require an explicit contract. For example, a file path, export, class name, passthrough shape, or specific string can be tested only when it is a public API, build contract, architecture boundary, security boundary, or another durable external contract. Ordinary UI copy, internal constant values, and source literals are not special just because they appear in a rendered tree.
 
 ## Source-Level Guardrail Tests
 
@@ -224,6 +229,8 @@ Do not write tests that assert documentation wording. Documentation governance s
 
 If a documentation rule needs automation, prefer a small script or checklist that validates a concrete repository invariant, such as broken links or missing required files. Avoid tests that force exact prose.
 
+The same principle applies to most product copy. Do not add a test merely to assert that a component renders a specific sentence, button label, or heading when that wording is just the current implementation choice. Copy is worth testing only when the exact wording is itself part of a durable contract, such as a protocol string, API payload, audit marker, or another boundary where changing the text would break real integration or safety expectations.
+
 ## Existing Test Audit
 
 When reviewing an existing test, classify it into exactly one outcome:
@@ -233,6 +240,8 @@ When reviewing an existing test, classify it into exactly one outcome:
 - `Merge`: the risk is real, but another test covers the same contract at a better layer.
 - `Move`: the test is at the wrong layer, such as a unit test trying to prove a database or browser contract.
 - `Delete`: the test has no durable contract, is too low-risk, duplicates stronger coverage, or only served as a one-time migration check.
+
+A test should also be deleted when it only mirrors the implementation and no longer adds independent information. If changing the production code would naturally require changing the test in the same obvious way every time, that is usually a sign that the test is guarding the spelling of the implementation rather than the behavior of the system.
 
 Do not keep a test merely because it already exists. Do not delete a test merely because it is small. The deciding factor is whether it protects a meaningful contract at an appropriate cost.
 
@@ -247,6 +256,8 @@ Before adding a test, state:
 - Why this is the right test layer.
 - Whether it duplicates existing coverage.
 - For database-backed tests, how it uses the disposable test database flow.
+
+If the motivation is mainly "so nobody casually changes this," stop and ask whether the test is protecting a real behavior boundary or just freezing today's wording or structure. Review and ownership should handle ordinary product copy and implementation trivia; tests should handle real contracts.
 
 Test names should describe behavior or risk, not implementation steps.
 
@@ -272,3 +283,4 @@ Before keeping or adding a test, ask:
 - Is it testing behavior, data safety, or a production boundary?
 - Is there a cheaper pure function or integration boundary where this can be tested?
 - If it reads source text, is that because the risk is genuinely architectural or production-related?
+- Does this test protect something that could fail independently of a developer intentionally changing the same literal in both the code and the test?

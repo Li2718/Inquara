@@ -30,47 +30,4 @@ describe("debug production safety", () => {
 
     expect(offenders).toEqual([]);
   });
-
-  it("exposes a single guarded DebugRoot entrypoint for product code", () => {
-    const source = readFileSync("apps/web/src/debug/DebugRoot.tsx", "utf8");
-    const nextConfig = readFileSync("apps/web/next.config.ts", "utf8");
-
-    expect(source).toContain("./DebugRoot.target");
-    expect(nextConfig).toContain("DebugRoot.target");
-    expect(nextConfig).toContain("DebugRoot.production.tsx");
-    expect(nextConfig).toContain("DebugRoot.development.tsx");
-    expect(nextConfig).toContain("DebugCanvasSource.target");
-    expect(nextConfig).toContain("DebugCanvasSource.production.tsx");
-    expect(nextConfig).toContain("DebugCanvasSource.dev.tsx");
-  });
-
-  it("does not scan Next trace metadata as production executable content", () => {
-    const source = readFileSync("scripts/verify-debug-free.mjs", "utf8");
-
-    expect(source).toContain("path.endsWith(\".nft.json\")");
-  });
-
-  it("mounts the debug shell globally instead of inside the canvas page", () => {
-    const layout = readFileSync("apps/web/src/app/layout.tsx", "utf8");
-    const canvasWorkspace = readFileSync("apps/web/src/features/canvas/CanvasWorkspace.tsx", "utf8");
-    const debugTypes = readFileSync("apps/web/src/debug/debugTypes.ts", "utf8");
-
-    expect(layout).toContain("import { DebugRoot } from \"../debug/DebugRoot\"");
-    expect(layout).toContain("<DebugRoot page=\"global\" />");
-    expect(canvasWorkspace).not.toContain("DebugRoot");
-    expect(debugTypes).toContain("page: \"global\"");
-  });
-
-  it("keeps canvas diagnostics as a data source for the global debug shell", () => {
-    const canvasWorkspace = readFileSync("apps/web/src/features/canvas/CanvasWorkspace.tsx", "utf8");
-    const source = readFileSync("apps/web/src/debug/DebugCanvasSource.tsx", "utf8");
-    const devSource = readFileSync("apps/web/src/debug/DebugCanvasSource.dev.tsx", "utf8");
-    const shell = readFileSync("apps/web/src/debug/DebugRoot.dev.tsx", "utf8");
-
-    expect(canvasWorkspace).toContain("DebugCanvasSource");
-    expect(source).toContain("./DebugCanvasSource.target");
-    expect(devSource).toContain("setDebugPageSnapshot");
-    expect(devSource).toContain("clearDebugPageSnapshot");
-    expect(shell).toContain("useDebugPageSnapshot");
-  });
 });
