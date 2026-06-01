@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import path from "node:path";
 import { buildDatabaseUrl, ensureDatabaseUrl } from "./dev-env.mjs";
 import {
   areRequiredServicesReady,
@@ -9,6 +10,7 @@ import {
   getExistingServiceAction,
   getHealthCheckHost,
   getReusableServiceOrigin,
+  resolveDevInfrastructure,
   getServiceStateExpectation,
   getServerConfigFromUrl,
   getUrlPort,
@@ -31,19 +33,67 @@ describe("dev environment helpers", () => {
   });
 
   it("requires postgres to be running and healthy", () => {
-    expect(areRequiredServicesReady([{ Service: "postgres", State: "running", Health: "healthy" }])).toBe(true);
-    expect(areRequiredServicesReady([{ Service: "postgres", State: "running", Health: "unhealthy" }])).toBe(false);
+    expect(
+      areRequiredServicesReady([
+        { Service: "postgres", State: "running", Health: "healthy" },
+        { Service: "redis", State: "running" }
+      ])
+    ).toBe(true);
+    expect(
+      areRequiredServicesReady([
+        { Service: "postgres", State: "running", Health: "healthy" }
+      ])
+    ).toBe(false);
+    expect(
+      areRequiredServicesReady([
+        { Service: "postgres", State: "running", Health: "unhealthy" },
+        { Service: "redis", State: "running" }
+      ])
+    ).toBe(false);
     expect(areRequiredServicesReady([])).toBe(false);
   });
 
   it("plans to bootstrap infrastructure before starting apps when infra is not ready", () => {
-    expect(getDevCommandPlan({ hasDevComposeFile: true, infraReady: false })).toEqual(["bootstrap", "start"]);
-    expect(getDevCommandPlan({ hasDevComposeFile: true, infraReady: true })).toEqual(["start"]);
+    expect(getDevCommandPlan({ hasDevInfrastructure: true, infraReady: false })).toEqual(["bootstrap", "start"]);
+    expect(getDevCommandPlan({ hasDevInfrastructure: true, infraReady: true })).toEqual(["start"]);
   });
 
   it("uses the managed repo root to share the dev compose project across worktrees", () => {
     expect(getDevComposeProjectName("/workspace/inquara")).toBe("inquara");
-    expect(getDevComposeProjectName("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe("inquara");
+    expect(getDevComposeProjectName("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe(
+      "feature-debug-toolbar"
+    );
+  });
+
+  it("uses the main workspace compose file for a managed worktree without local infra", () => {
+    const infrastructure = resolveDevInfrastructure("/workspace/inquara/.worktrees/feature-debug-toolbar", {
+        exists: filePath => filePath.endsWith("D:\\codes\\li2718\\Inquara\\docker-compose.dev.yml")
+    });
+
+    expect(path.normalize(infrastructure.composeRootDir)).toBe(path.normalize("/workspace/inquara"));
+    expect(infrastructure).toMatchObject({
+      mode: "shared",
+      projectName: "inquara"
+    });
+  });
+
+  it("uses the current worktree compose file when a worktree has private infra", () => {
+    expect(
+      resolveDevInfrastructure("/workspace/inquara/.worktrees/feature-debug-toolbar", {
+        exists: filePath => filePath.endsWith("feature-debug-toolbar\\docker-compose.dev.yml")
+      })
+    ).toMatchObject({
+      composeRootDir: "/workspace/inquara/.worktrees/feature-debug-toolbar",
+      mode: "private",
+      projectName: "feature-debug-toolbar"
+    });
+  });
+
+  it("derives compose project names from the selected infrastructure root", () => {
+    expect(getDevComposeProjectName("/workspace/inquara")).toBe("inquara");
+    expect(getDevComposeProjectName("/workspace/inquara/.worktrees/feature-debug-toolbar")).toBe(
+      "feature-debug-toolbar"
+    );
   });
 
   it("reuses running app service pids", () => {
@@ -93,6 +143,38 @@ describe("dev environment helpers", () => {
       nextPublicApiOrigin: "http://localhost:4002",
       nextPublicWsOrigin: "ws://localhost:4002"
     });
+  });
+
+  it("tracks infrastructure-sensitive API runtime settings", () => {
+    const runtimeState = createDevRuntimeState({
+      apiUrl: new URL("http://localhost:4000"),
+      databaseUrl: "postgresql://inquara:inquara@localhost:55433/inquara?schema=public",
+      infrastructure: {
+        composePath: "/workspace/inquara/.worktrees/feature-debug-toolbar/docker-compose.dev.yml",
+        mode: "private",
+        projectName: "feature-debug-toolbar"
+      },
+      redisUrl: "redis://localhost:56381",
+      webUrl: new URL("http://localhost:3001")
+    });
+
+    expect(getServiceStateExpectation("api", runtimeState)).toEqual({
+      apiOrigin: "http://localhost:4000",
+      databaseUrl: "postgresql://inquara:inquara@localhost:55433/inquara?schema=public",
+      infrastructureComposePath: "/workspace/inquara/.worktrees/feature-debug-toolbar/docker-compose.dev.yml",
+      infrastructureMode: "private",
+      infrastructureProjectName: "feature-debug-toolbar",
+      redisUrl: "redis://localhost:56381"
+    });
+    expect(
+      doesRuntimeStateMatchExpectation(
+        {
+          ...runtimeState,
+          databaseUrl: "postgresql://inquara:inquara@localhost:55432/inquara?schema=public"
+        },
+        getServiceStateExpectation("api", runtimeState)
+      )
+    ).toBe(false);
   });
 
   it("detects when a running web process was started with stale API settings", () => {

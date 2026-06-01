@@ -2,18 +2,25 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFil
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
+import net from "node:net";
 import { Client } from "pg";
 import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
-import { getCloneDbPlan, getCreatePlan, getRemovePlan, parseWorktreeCommand } from "./worktree-cli.mjs";
 import {
-  buildPrivateDatabaseProcessEnv,
+  getCloneInfraPlan,
+  getCreatePlan,
+  getRemovePlan,
+  parseWorktreeCommand
+} from "./worktree-cli.mjs";
+import {
   buildWorktreeDatabaseAdminUrl,
-  buildPrivateDbEnvText,
+  buildPrivateInfraEnvText,
   escapePostgresIdentifier,
+  getSharedDevelopmentFileNames,
   getManagedWorktreeRootDir,
   getWorktreeParentDirName,
   parseWorktreeListPorcelain,
   readPrivateDatabaseName,
+  selectAvailablePort,
   selectWorktreeEntry
 } from "./worktree-lib.mjs";
 
@@ -22,6 +29,22 @@ const currentDir = process.cwd();
 
 loadDevelopmentEnv(rootDir);
 ensureDatabaseUrl(process.env);
+
+async function isPortAvailable(port, host = "127.0.0.1") {
+  return new Promise(resolve => {
+    const server = net.createServer();
+
+    server.once("error", () => {
+      resolve(false);
+    });
+    server.once("listening", () => {
+      server.close(() => {
+        resolve(true);
+      });
+    });
+    server.listen(port, host);
+  });
+}
 
 function quoteWindowsArg(value) {
   if (value.length === 0) {
@@ -121,14 +144,18 @@ function ensureManagedWorktreeDirectory(rootPath) {
   };
 }
 
-function copyEnvDevIntoWorktree(rootPath, targetPath) {
+function copySharedDevelopmentFilesIntoWorktree(rootPath, targetPath) {
   const envDevPath = path.join(rootPath, ".env.dev");
 
   if (!existsSync(envDevPath)) {
     throw new Error("Missing .env.dev in the main worktree. Create it before creating managed worktrees.");
   }
 
-  copyFileSync(envDevPath, path.join(targetPath, ".env.dev"));
+  for (const fileName of getSharedDevelopmentFileNames({
+    envDevExists: true
+  })) {
+    copyFileSync(path.join(rootPath, fileName), path.join(targetPath, fileName));
+  }
 }
 
 function parseDatabaseUrl(databaseUrl) {
@@ -150,23 +177,6 @@ function getPsqlEnv() {
   return parseDatabaseUrl(databaseUrl);
 }
 
-async function createPrivateDatabase({ sourceDatabaseName, databaseName }) {
-  const { adminDatabaseUrl } = getPsqlEnv();
-  const client = new Client({
-    connectionString: adminDatabaseUrl
-  });
-
-  await client.connect();
-
-  try {
-    await client.query(
-      `CREATE DATABASE ${escapePostgresIdentifier(databaseName)} WITH TEMPLATE ${escapePostgresIdentifier(sourceDatabaseName)}`
-    );
-  } finally {
-    await client.end();
-  }
-}
-
 async function dropDatabase(databaseName) {
   const { adminDatabaseUrl } = getPsqlEnv();
   const client = new Client({
@@ -186,26 +196,30 @@ async function dropDatabase(databaseName) {
   }
 }
 
-async function getCurrentBranchName() {
-  const { stdout } = await captureCommand("git", ["branch", "--show-current"], {
-    cwd: currentDir
-  });
-
-  const branchName = stdout.trim();
-
-  if (!branchName) {
-    throw new Error("Could not determine the current branch name.");
-  }
-
-  return branchName;
-}
-
 async function listWorktrees() {
   const { stdout } = await captureCommand("git", ["worktree", "list", "--porcelain"], {
     cwd: rootDir
   });
 
   return parseWorktreeListPorcelain(stdout);
+}
+
+async function listDockerPublishedPorts() {
+  const { stdout } = await captureCommand("docker", ["ps", "--format={{.Ports}}"]);
+  const ports = new Set();
+  const portPattern = /(?:0\.0\.0\.0|\[::\]|127\.0\.0\.1|\[::1\]):(\d+)->/gu;
+
+  for (const line of stdout.split(/\r?\n/u)) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+
+    for (const match of line.matchAll(portPattern)) {
+      ports.add(Number(match[1]));
+    }
+  }
+
+  return ports;
 }
 
 async function ensureBranchDoesNotExist(branchName) {
@@ -230,41 +244,55 @@ async function createWorktree(branchName) {
   await runCommand("git", ["worktree", "add", plan.targetPath, "-b", branchName], {
     cwd: rootDir
   });
-  copyEnvDevIntoWorktree(rootDir, plan.targetPath);
+  copySharedDevelopmentFilesIntoWorktree(rootDir, plan.targetPath);
 
   console.log(`Created worktree at ${plan.targetPath}`);
-  console.log("Database mode: shared (.env.dev copied from the main worktree)");
+  console.log("Database mode: shared (copied shared development files from the main worktree)");
 }
 
-async function cloneDatabaseForCurrentWorktree() {
-  const branchName = await getCurrentBranchName();
-  const plan = getCloneDbPlan({
-    branchName,
+async function cloneInfrastructureForCurrentWorktree() {
+  const plan = getCloneInfraPlan({
     currentPath: currentDir
   });
-  const { databaseName: sourceDatabaseName } = getPsqlEnv();
-  const envLocalPath = path.join(currentDir, ".env.dev.local");
-  const existingPrivateDatabaseName = readPrivateDatabaseName(currentDir);
 
-  if (existingPrivateDatabaseName) {
-    throw new Error(`This worktree is already using the private database "${existingPrivateDatabaseName}".`);
+  if (rootDir === currentDir) {
+    throw new Error("Refusing to clone private infrastructure in the main worktree.");
   }
 
-  await createPrivateDatabase({
-    sourceDatabaseName,
-    databaseName: plan.databaseName
+  if (!existsSync(plan.sourceComposePath)) {
+    throw new Error(`Missing ${plan.sourceComposePath}.`);
+  }
+
+  if (existsSync(plan.composePath)) {
+    throw new Error(`This worktree already has private infrastructure at ${plan.composePath}.`);
+  }
+
+  const reservedPorts = await listDockerPublishedPorts();
+  const postgresPort = await selectAvailablePort(process.env.POSTGRES_PORT ?? "55432", {
+    isPortAvailable,
+    reservedPorts
+  });
+  const redisPort = await selectAvailablePort(process.env.REDIS_PORT ?? "56380", {
+    isPortAvailable,
+    reservedPorts: new Set([...reservedPorts, postgresPort])
   });
 
-  const existingLocalText = existsSync(envLocalPath) ? readFileSync(envLocalPath, "utf8") : "";
-  writeFileSync(envLocalPath, buildPrivateDbEnvText(existingLocalText, plan.databaseName), "utf8");
+  copyFileSync(plan.sourceComposePath, plan.composePath);
 
-  await runCommand(getNpmCommand(), ["run", "db:migrate:deploy"], {
-    cwd: currentDir,
-    env: buildPrivateDatabaseProcessEnv(process.env, plan.databaseName)
-  });
+  const existingLocalText = existsSync(plan.envLocalPath) ? readFileSync(plan.envLocalPath, "utf8") : "";
+  writeFileSync(
+    plan.envLocalPath,
+    buildPrivateInfraEnvText(existingLocalText, {
+      postgresPort,
+      redisPort
+    }),
+    "utf8"
+  );
 
-  console.log(`Cloned "${sourceDatabaseName}" into private database "${plan.databaseName}".`);
-  console.log(`Current worktree now uses ${envLocalPath}.`);
+  console.log(`Cloned private infrastructure into ${plan.composePath}.`);
+  console.log(`POSTGRES_PORT=${postgresPort}`);
+  console.log(`REDIS_PORT=${redisPort}`);
+  console.log(`Current worktree now uses ${plan.envLocalPath}.`);
 }
 
 function getNpmCommand() {
@@ -327,8 +355,8 @@ async function main() {
     case "create":
       await createWorktree(command.branchName);
       return;
-    case "clonedb":
-      await cloneDatabaseForCurrentWorktree();
+    case "cloneinfra":
+      await cloneInfrastructureForCurrentWorktree();
       return;
     case "remove":
       await removeWorktree(command.target);

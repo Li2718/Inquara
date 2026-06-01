@@ -1,0 +1,4 @@
+interface:
+  display_name: "Worktree Development"
+  short_description: "Use the managed Inquara worktree workflow."
+  default_prompt: "Use the worktree-development skill for repository-managed worktree setup, private infra, dev servers, merge gates, and cleanup."

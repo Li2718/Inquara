@@ -1,10 +1,16 @@
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const WORKTREE_DATABASE_PREFIX = "inquara_wt_";
-const MAX_POSTGRES_IDENTIFIER_LENGTH = 63;
+export function getSharedDevelopmentFileNames({ envDevExists }) {
+  const sharedFiles = [];
+
+  if (envDevExists) {
+    sharedFiles.push(".env.dev");
+  }
+
+  return sharedFiles;
+}
 
 export function getWorktreeParentDirName({ dotWorktreesExists, worktreesExists }) {
   if (dotWorktreesExists) {
@@ -36,36 +42,15 @@ export function buildWorktreeDirName(branchName) {
     .toLowerCase();
 }
 
-export function buildWorktreeDatabaseName(branchName) {
-  const sanitizedBranchName = branchName
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, "_")
-    .replace(/^_+|_+$/gu, "")
-    .replace(/_+/gu, "_");
-
-  const preferredName = `${WORKTREE_DATABASE_PREFIX}${sanitizedBranchName}`;
-
-  if (preferredName.length <= MAX_POSTGRES_IDENTIFIER_LENGTH) {
-    return preferredName;
-  }
-
-  const digest = createHash("sha1").update(branchName).digest("hex").slice(0, 8);
-  const baseLength = MAX_POSTGRES_IDENTIFIER_LENGTH - WORKTREE_DATABASE_PREFIX.length - digest.length - 1;
-  const baseName = sanitizedBranchName.slice(0, Math.max(1, baseLength)).replace(/_+$/gu, "");
-
-  return `${WORKTREE_DATABASE_PREFIX}${baseName}_${digest}`;
-}
-
-export function buildPrivateDbEnvText(currentText, databaseName) {
+export function buildPrivateInfraEnvText(currentText, { postgresPort, redisPort }) {
   const lines = currentText.length === 0 ? [] : currentText.replace(/\r\n/gu, "\n").split("\n");
+  const managedKeys = new Set(["DATABASE_URL", "POSTGRES_PORT", "REDIS_PORT", "REDIS_URL"]);
   const nextLines = [];
-  let replaced = false;
 
   for (const line of lines) {
-    if (line.startsWith("POSTGRES_DB=")) {
-      nextLines.push(`POSTGRES_DB="${databaseName}"`);
-      replaced = true;
+    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=/u);
+
+    if (match && managedKeys.has(match[1])) {
       continue;
     }
 
@@ -74,32 +59,42 @@ export function buildPrivateDbEnvText(currentText, databaseName) {
     }
   }
 
-  if (!replaced) {
-    nextLines.push(`POSTGRES_DB="${databaseName}"`);
-  }
+  nextLines.push(`POSTGRES_PORT="${postgresPort}"`);
+  nextLines.push(`REDIS_PORT="${redisPort}"`);
+  nextLines.push(`REDIS_URL="redis://localhost:${redisPort}"`);
 
   return `${nextLines.join("\n")}\n`;
+}
+
+export async function selectAvailablePort(
+  preferredPort,
+  { isPortAvailable, reservedPorts = new Set(), scanLimit = 100 } = {}
+) {
+  const startPort = Number(preferredPort);
+
+  if (!Number.isInteger(startPort) || startPort <= 0) {
+    throw new Error(`Invalid port: ${preferredPort}`);
+  }
+
+  for (let offset = 0; offset < scanLimit; offset += 1) {
+    const port = startPort + offset;
+
+    if (reservedPorts.has(port)) {
+      continue;
+    }
+
+    if (!isPortAvailable || (await isPortAvailable(port))) {
+      return port;
+    }
+  }
+
+  throw new Error(`Could not find an available port starting at ${startPort}.`);
 }
 
 export function buildWorktreeDatabaseAdminUrl(databaseUrl) {
   const url = new URL(databaseUrl);
   url.pathname = "/postgres";
   return url.toString();
-}
-
-export function buildPrivateDatabaseProcessEnv(env, databaseName) {
-  const nextEnv = {
-    ...env,
-    POSTGRES_DB: databaseName
-  };
-
-  if (nextEnv.DATABASE_URL) {
-    const databaseUrl = new URL(nextEnv.DATABASE_URL);
-    databaseUrl.pathname = `/${databaseName}`;
-    nextEnv.DATABASE_URL = databaseUrl.toString();
-  }
-
-  return nextEnv;
 }
 
 export function escapePostgresIdentifier(value) {

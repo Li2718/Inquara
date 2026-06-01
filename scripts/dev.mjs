@@ -8,7 +8,6 @@ import {
   createDevRuntimeState,
   doesRuntimeStateMatchExpectation,
   ensureDevComposeExists,
-  getDevComposeProjectName,
   getDevCommandPlan,
   getDevEnvironmentPaths,
   getExistingServiceAction,
@@ -19,6 +18,7 @@ import {
   getUrlFromEnv,
   parseComposePsJson,
   resolveAvailableServerConfig,
+  resolveDevInfrastructure,
   resolveRepoRootFromScript,
   toOriginString,
   withUrlPort
@@ -26,6 +26,7 @@ import {
 
 const rootDir = resolveRepoRootFromScript(import.meta.url);
 const paths = getDevEnvironmentPaths(rootDir);
+const infrastructure = resolveDevInfrastructure(rootDir);
 const command = process.argv[2] ?? "dev";
 let runtimeUrls = null;
 let runtimeState = null;
@@ -138,7 +139,7 @@ async function captureCommand(commandName, args, options = {}) {
 
 function getComposeArgs() {
   ensureDevComposeExists(rootDir);
-  return ["compose", "-p", getDevComposeProjectName(rootDir), "-f", paths.devComposePath];
+  return ["compose", "-p", infrastructure.projectName, "-f", infrastructure.composePath];
 }
 
 async function readComposeServices() {
@@ -169,7 +170,7 @@ async function waitForInfraReady(timeoutMs = 90_000) {
     await sleep(1_000);
   }
 
-  throw new Error("infra_start_failed: postgres did not become ready in time");
+  throw new Error("infra_start_failed: required infrastructure services did not become ready in time");
 }
 
 function sleep(ms) {
@@ -198,7 +199,6 @@ async function resolveRuntimeUrls() {
   const apiServer = getServerConfigFromUrl(apiUrl);
   process.env.API_ORIGIN = toOriginString(apiUrl);
   process.env.NEXT_PUBLIC_API_ORIGIN = process.env.API_ORIGIN;
-
   const webUrl =
     reusableWebUrl ??
     withUrlPort(configuredWebUrl, (await resolveAvailableServerConfig(getServerConfigFromUrl(configuredWebUrl))).port);
@@ -214,7 +214,13 @@ async function resolveRuntimeUrls() {
   }
 
   runtimeUrls = { apiServer, apiUrl, webServer, webUrl };
-  runtimeState = createDevRuntimeState({ apiUrl, webUrl });
+  runtimeState = createDevRuntimeState({
+    apiUrl,
+    databaseUrl: process.env.DATABASE_URL,
+    infrastructure,
+    redisUrl: process.env.REDIS_URL,
+    webUrl
+  });
   return runtimeUrls;
 }
 
@@ -444,7 +450,7 @@ async function bootstrapDevInfra() {
   ensureDevComposeExists(rootDir);
 
   console.log("Starting local development infrastructure...");
-  await runCommand("docker", [...getComposeArgs(), "up", "-d", "postgres"]);
+  await runCommand("docker", [...getComposeArgs(), "up", "-d", "postgres", "redis"]);
   await waitForInfraReady();
 
   console.log("Applying database migrations...");
@@ -585,10 +591,10 @@ async function stopDevApps() {
 }
 
 async function runDev() {
-  const hasDevComposeFile = existsSync(paths.devComposePath);
+  const hasDevInfrastructure = infrastructure.mode !== "missing";
   const plan = getDevCommandPlan({
-    hasDevComposeFile,
-    infraReady: hasDevComposeFile ? await isInfraReady() : false
+    hasDevInfrastructure,
+    infraReady: hasDevInfrastructure ? await isInfraReady() : false
   });
 
   for (const step of plan) {

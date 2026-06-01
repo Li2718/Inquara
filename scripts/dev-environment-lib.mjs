@@ -28,29 +28,67 @@ export function getDevEnvironmentPaths(rootDir) {
 
 export function getDevComposeProjectName(rootDir) {
   const normalizedRootDir = rootDir.endsWith(path.sep) ? rootDir.slice(0, -1) : rootDir;
-  const parentDirName = path.basename(path.dirname(normalizedRootDir));
-  const managedRootDir =
-    parentDirName === ".worktrees" || parentDirName === "worktrees"
-      ? path.basename(path.dirname(path.dirname(normalizedRootDir)))
-      : path.basename(normalizedRootDir);
 
-  return managedRootDir
+  return path.basename(normalizedRootDir)
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "");
 }
 
-export function ensureDevComposeExists(rootDir) {
-  const paths = getDevEnvironmentPaths(rootDir);
+export function getManagedRepoRootDir(rootDir) {
+  const normalizedRootDir = rootDir.endsWith(path.sep) ? rootDir.slice(0, -1) : rootDir;
+  const parentDirName = path.basename(path.dirname(normalizedRootDir));
 
-  if (!existsSync(paths.devComposePath)) {
+  if (parentDirName === ".worktrees" || parentDirName === "worktrees") {
+    return path.dirname(path.dirname(normalizedRootDir));
+  }
+
+  return rootDir;
+}
+
+export function resolveDevInfrastructure(rootDir, { exists = existsSync } = {}) {
+  const localPaths = getDevEnvironmentPaths(rootDir);
+  const mainRootDir = getManagedRepoRootDir(rootDir);
+  const mainPaths = getDevEnvironmentPaths(mainRootDir);
+  const isManagedWorktree = path.normalize(mainRootDir) !== path.normalize(rootDir);
+
+  if (exists(localPaths.devComposePath)) {
+    return {
+      composePath: localPaths.devComposePath,
+      composeRootDir: rootDir,
+      mode: isManagedWorktree ? "private" : "main",
+      projectName: getDevComposeProjectName(rootDir)
+    };
+  }
+
+  if (isManagedWorktree && exists(mainPaths.devComposePath)) {
+    return {
+      composePath: mainPaths.devComposePath,
+      composeRootDir: mainRootDir,
+      mode: "shared",
+      projectName: getDevComposeProjectName(mainRootDir)
+    };
+  }
+
+  return {
+    composePath: localPaths.devComposePath,
+    composeRootDir: rootDir,
+    mode: "missing",
+    projectName: getDevComposeProjectName(rootDir)
+  };
+}
+
+export function ensureDevComposeExists(rootDir) {
+  const infrastructure = resolveDevInfrastructure(rootDir);
+
+  if (infrastructure.mode === "missing") {
     throw new Error(
       "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml, then copy .env.dev.example to .env.dev and adjust them for your machine first."
     );
   }
 
-  return paths;
+  return infrastructure;
 }
 
 export function parseComposePsJson(rawOutput) {
@@ -87,7 +125,7 @@ function isReadyState(row) {
 }
 
 export function areRequiredServicesReady(rows) {
-  const requiredServices = ["postgres"];
+  const requiredServices = ["postgres", "redis"];
 
   return requiredServices.every(serviceName => {
     const row = rows.find(entry => entry.Service === serviceName);
@@ -95,8 +133,8 @@ export function areRequiredServicesReady(rows) {
   });
 }
 
-export function getDevCommandPlan({ hasDevComposeFile, infraReady }) {
-  if (!hasDevComposeFile) {
+export function getDevCommandPlan({ hasDevInfrastructure, infraReady }) {
+  if (!hasDevInfrastructure) {
     throw new Error(
       "Missing docker-compose.dev.yml. Copy docker-compose.dev.example.yml to docker-compose.dev.yml, then copy .env.dev.example to .env.dev and adjust them for your machine first."
     );
@@ -142,12 +180,17 @@ export function toOriginString(url) {
   return url.toString().replace(/\/$/u, "");
 }
 
-export function createDevRuntimeState({ apiUrl, webUrl }) {
+export function createDevRuntimeState({ apiUrl, databaseUrl, infrastructure, redisUrl, webUrl }) {
   const apiOrigin = toOriginString(apiUrl);
   const webOrigin = toOriginString(webUrl);
 
   return {
     apiOrigin,
+    databaseUrl,
+    infrastructureComposePath: infrastructure?.composePath,
+    infrastructureMode: infrastructure?.mode,
+    infrastructureProjectName: infrastructure?.projectName,
+    redisUrl,
     webOrigin,
     nextPublicApiOrigin: apiOrigin,
     nextPublicWsOrigin: apiOrigin.replace(/^http/u, "ws")
@@ -157,7 +200,12 @@ export function createDevRuntimeState({ apiUrl, webUrl }) {
 export function getServiceStateExpectation(serviceName, runtimeState) {
   if (serviceName === "api") {
     return {
-      apiOrigin: runtimeState.apiOrigin
+      apiOrigin: runtimeState.apiOrigin,
+      databaseUrl: runtimeState.databaseUrl,
+      infrastructureComposePath: runtimeState.infrastructureComposePath,
+      infrastructureMode: runtimeState.infrastructureMode,
+      infrastructureProjectName: runtimeState.infrastructureProjectName,
+      redisUrl: runtimeState.redisUrl
     };
   }
 
