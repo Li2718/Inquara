@@ -86,4 +86,32 @@ describe("workspace session store", () => {
     expect(store.getState().snapshot?.nodes[0]?.y).toBe(220);
     expect(store.getState().pendingClientMutationIds).toEqual(["mutation-optimistic-position"]);
   });
+
+  it("applies optimistic canvas organization before the server events arrive", () => {
+    const store = createWorkspaceSessionStore();
+    const child = {
+      ...node,
+      id: "node-2",
+      parentNodeId: "node-1",
+      x: 900,
+      y: 900,
+      createdAt: "2026-05-24T00:01:00.000Z",
+      updatedAt: "2026-05-24T00:01:00.000Z"
+    };
+    store.getState().setSnapshot({
+      ...snapshot,
+      nodes: [node, child]
+    });
+
+    store.getState().applyOptimisticCommand({
+      type: "node.organize",
+      clientMutationId: "mutation-organize",
+      workspaceId: "workspace-1"
+    });
+
+    const nodes = store.getState().snapshot?.nodes ?? [];
+    expect(nodes.find(candidate => candidate.id === "node-1")).toMatchObject({ x: 0, y: 120 });
+    expect(nodes.find(candidate => candidate.id === "node-2")).toMatchObject({ x: 484, y: 120 });
+    expect(store.getState().pendingClientMutationIds).toEqual(["mutation-organize"]);
+  });
 });

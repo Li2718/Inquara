@@ -14,7 +14,7 @@ describe("debug page store", () => {
       {
         page: "canvas",
         workspaceId: "workspace-1",
-        connectionStatus: "connected",
+        leaseState: "active",
         pendingClientMutationCount: 0,
         snapshot: null
       },
@@ -24,7 +24,7 @@ describe("debug page store", () => {
       {
         page: "canvas",
         workspaceId: "workspace-1",
-        connectionStatus: "connected",
+        leaseState: "active",
         pendingClientMutationCount: 1,
         snapshot: null
       },

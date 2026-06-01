@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CanvasNode } from "@inquara/domain";
-import { findFollowupNodePosition, findRestoredNodePosition } from "./branchPlacement";
+import { findFollowupNodePosition } from "./branchPlacement";
 
 function node(overrides: Partial<CanvasNode> = {}): CanvasNode {
   return {
@@ -78,20 +78,4 @@ describe("findFollowupNodePosition", () => {
     expect(position).toEqual({ x: 168, y: 140 });
   });
 
-  it("restores a hidden node at its recorded position when that position is free", () => {
-    const hidden = node({ id: "hidden", x: 900, y: 220, width: 500, height: 620, hiddenAt: "2026-05-28T00:00:00.000Z" });
-
-    const position = findRestoredNodePosition(hidden, [node(), hidden]);
-
-    expect(position).toEqual({ x: 900, y: 220 });
-  });
-
-  it("uses the hidden node's recorded size when restoring around occupied space", () => {
-    const hidden = node({ id: "hidden", x: 900, y: 220, width: 500, height: 620, hiddenAt: "2026-05-28T00:00:00.000Z" });
-    const occupied = node({ id: "occupied", x: 900, y: 220, width: 500, height: 620 });
-
-    const position = findRestoredNodePosition(hidden, [node(), hidden, occupied]);
-
-    expect(position).toEqual({ x: 900, y: 852 });
-  });
 });

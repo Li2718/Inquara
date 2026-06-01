@@ -275,6 +275,55 @@ describe("workspace lease and http command routes", () => {
     await app.close();
   });
 
+  it("organizes canvas nodes through the HTTP command route", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const child = await prisma.canvasNode.create({
+      data: {
+        workspaceId,
+        title: "Branch",
+        x: 900,
+        y: 900,
+        width: 420,
+        height: 520,
+        collapsed: false,
+        parentNodeId: nodeId
+      }
+    });
+    const acquired = await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+    const leaseEpoch = acquired.json().lease.leaseEpoch as number;
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/commands`,
+      cookies: { inquara_session: session },
+      payload: {
+        sessionId: "tab-a",
+        leaseEpoch,
+        command: {
+          type: "node.organize",
+          clientMutationId: "mutation-http-organize",
+          workspaceId
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().events).toHaveLength(2);
+    const root = await prisma.canvasNode.findUniqueOrThrow({ where: { id: nodeId } });
+    const organizedChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: child.id } });
+    expect(root.x).toBe(100);
+    expect(root.y).toBe(120);
+    expect(organizedChild.x).toBe(584);
+    expect(organizedChild.y).toBe(120);
+    await app.close();
+  });
+
   it("streams assistant events over HTTP for the active lease holder", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
     const session = await registerForSession(app, "http-workspace@inquara.local");

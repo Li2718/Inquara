@@ -1865,7 +1865,8 @@ h2 {
   color: var(--ink);
 }
 
-.canvas-reset-view-icon {
+.canvas-reset-view-icon,
+.canvas-organize-layout-icon {
   width: 18px;
   height: 18px;
   display: block;

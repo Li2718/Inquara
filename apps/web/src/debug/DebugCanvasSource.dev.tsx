@@ -9,7 +9,7 @@ export function DebugCanvasSource(props: DebugCanvasSourceProps) {
 
   useEffect(() => {
     setDebugPageSnapshot(props, ownerRef.current);
-  }, [props.connectionStatus, props.pendingClientMutationCount, props.snapshot, props.workspaceId]);
+  }, [props.leaseState, props.pendingClientMutationCount, props.snapshot, props.workspaceId]);
 
   useEffect(
     () => () => {

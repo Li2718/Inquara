@@ -14,7 +14,6 @@ const DEFAULT_BRANCH_WIDTH = 420;
 const DEFAULT_BRANCH_HEIGHT = 520;
 const BRANCH_GAP_X = 64;
 const COLLISION_PADDING = 12;
-const RESTORE_GAP = 12;
 
 type Rect = Point & {
   height: number;
@@ -29,7 +28,7 @@ type BlockedArea = {
   top: number;
 };
 
-type PlacementMode = "followup" | "restore";
+type PlacementMode = "followup";
 
 export function findFollowupNodePosition(
   sourceNode: CanvasNode,
@@ -45,17 +44,6 @@ export function findFollowupNodePosition(
     mode: "followup",
     obstacles: visibleNodeRects(nodes),
     size: { width: DEFAULT_BRANCH_WIDTH, height: DEFAULT_BRANCH_HEIGHT },
-    ...(viewport !== undefined ? { viewport } : {})
-  });
-}
-
-export function findRestoredNodePosition(node: CanvasNode, nodes: CanvasNode[], viewport?: PlacementViewport): Point {
-  return findOpenNodePosition({
-    gap: RESTORE_GAP,
-    ideal: { x: node.x, y: node.y },
-    mode: "restore",
-    obstacles: visibleNodeRects(nodes).filter(rect => rect.id !== node.id),
-    size: { width: node.width, height: node.height },
     ...(viewport !== undefined ? { viewport } : {})
   });
 }
@@ -114,7 +102,6 @@ function scoreCandidate(candidate: Rect, ideal: Point, mode: PlacementMode, view
   const dx = candidate.x - ideal.x;
   const dy = candidate.y - ideal.y;
   const viewportPenalty = scoreViewportPenalty(candidate, viewport);
-  if (mode === "restore") return Math.abs(dx) * 1.4 + Math.abs(dy) + (dy < 0 ? 20 : 0) + viewportPenalty;
 
   return Math.abs(dx) * 1.4 + Math.abs(dy) + (dx < 0 ? 300 : 0) + (dy < 0 ? 20 : 0) + viewportPenalty;
 }

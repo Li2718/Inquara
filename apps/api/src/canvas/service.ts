@@ -1,7 +1,8 @@
 import { prisma, type PrismaClient } from "@inquara/db";
-import type { CanvasEdge, CanvasNode, WorkspaceEvent } from "@inquara/domain";
+import { calculateOrganizedNodePositions, type CanvasEdge, type CanvasNode, type WorkspaceEvent } from "@inquara/domain";
 import type { Prisma } from "@prisma/client";
 import { createEdgeCreatedEvent, createNodeCreatedEvent, createNodeUpdatedEvent } from "../events/factory";
+import { buildHiddenSubtreeSnapshot, resolveRestoredSubtreePositions } from "./hiddenLayout";
 
 type Tx = Prisma.TransactionClient;
 
@@ -37,6 +38,12 @@ export type UpdateNodePositionCommand = {
   nodeId: string;
   x: number;
   y: number;
+};
+
+export type OrganizeCanvasNodesCommand = {
+  type: "node.organize";
+  clientMutationId: string;
+  workspaceId: string;
 };
 
 export type UpdateNodeSizeCommand = {
@@ -220,6 +227,46 @@ export async function updateNodePosition(
   });
 }
 
+export async function organizeCanvasNodes(
+  userId: string,
+  command: OrganizeCanvasNodesCommand,
+  client: PrismaClient = prisma
+): Promise<WorkspaceEvent[]> {
+  return client.$transaction(async tx => {
+    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const nodes = await tx.canvasNode.findMany({
+      where: { workspaceId: command.workspaceId, deletedAt: null },
+      orderBy: { createdAt: "asc" }
+    });
+    const nodeDtos = nodes.map(toCanvasNode);
+    const positions = calculateOrganizedNodePositions(nodeDtos);
+    const updatedNodes: CanvasNode[] = [];
+
+    for (const node of nodes) {
+      const nextPosition = positions.get(node.id);
+      if (!nextPosition) continue;
+      if (node.x === nextPosition.x && node.y === nextPosition.y) {
+        updatedNodes.push(toCanvasNode(node));
+        continue;
+      }
+      const updated = await tx.canvasNode.update({
+        where: { id: node.id },
+        data: { x: nextPosition.x, y: nextPosition.y, version: { increment: 1 } }
+      });
+      updatedNodes.push(toCanvasNode(updated));
+    }
+
+    return updatedNodes.map(node =>
+      createNodeUpdatedEvent({
+        workspaceId: command.workspaceId,
+        version: workspace.version,
+        clientMutationId: command.clientMutationId,
+        node
+      })
+    );
+  });
+}
+
 export async function updateNodeSize(
   userId: string,
   command: UpdateNodeSizeCommand,
@@ -251,17 +298,7 @@ export async function hideNodeSubtree(
     const subtreeIds = collectSubtreeIds(nodes, command.nodeId);
     if (subtreeIds.length === 0) throw new CanvasCommandError("Node was not found.");
 
-    const snapshot = Object.fromEntries(
-      nodes
-        .filter(node => subtreeIds.includes(node.id))
-        .map(node => [
-          node.id,
-          {
-            hiddenAt: node.hiddenAt ? node.hiddenAt.toISOString() : null,
-            scrollTop: node.id === command.nodeId && command.scrollTop !== undefined ? command.scrollTop : node.scrollTop
-          }
-        ])
-    );
+    const snapshot = buildHiddenSubtreeSnapshot(nodes.map(toCanvasNode), command.nodeId, command.scrollTop);
     const now = new Date();
 
     await tx.canvasNode.updateMany({
@@ -306,16 +343,22 @@ export async function restoreNodeBranch(
     const nodes = await tx.canvasNode.findMany({ where: { workspaceId: command.workspaceId, deletedAt: null } });
     const subtreeIds = collectSubtreeIds(nodes, command.nodeId);
     const snapshot = parseHiddenStateSnapshot(node.hiddenStateSnapshot) ?? {};
+    const positions = resolveRestoredSubtreePositions(
+      nodes.map(toCanvasNode),
+      command.nodeId,
+      snapshot,
+      command.x !== undefined && command.y !== undefined ? { x: command.x, y: command.y } : undefined
+    );
 
     for (const subtreeNodeId of subtreeIds) {
       const saved = snapshot[subtreeNodeId];
+      const nextPosition = positions.get(subtreeNodeId);
       await tx.canvasNode.update({
         where: { id: subtreeNodeId },
         data: {
           hiddenAt: subtreeNodeId === command.nodeId ? null : saved?.hiddenAt ? new Date(saved.hiddenAt) : null,
           scrollTop: saved?.scrollTop ?? 0,
-          ...(subtreeNodeId === command.nodeId && command.x !== undefined ? { x: command.x } : {}),
-          ...(subtreeNodeId === command.nodeId && command.y !== undefined ? { y: command.y } : {})
+          ...(nextPosition ? { x: nextPosition.x, y: nextPosition.y } : {})
         }
       });
     }
@@ -504,8 +547,10 @@ function parseHiddenStateSnapshot(value: Prisma.JsonValue | null): CanvasNode["h
   for (const [nodeId, entry] of Object.entries(value)) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
     const hiddenAt = typeof entry.hiddenAt === "string" ? entry.hiddenAt : null;
+    const offsetX = typeof entry.offsetX === "number" ? entry.offsetX : null;
+    const offsetY = typeof entry.offsetY === "number" ? entry.offsetY : null;
     const scrollTop = typeof entry.scrollTop === "number" && entry.scrollTop >= 0 ? entry.scrollTop : 0;
-    snapshot[nodeId] = { hiddenAt, scrollTop };
+    snapshot[nodeId] = { hiddenAt, offsetX, offsetY, scrollTop };
   }
   return snapshot;
 }

@@ -292,6 +292,8 @@ function parseHiddenStateSnapshot(value: Prisma.JsonValue | null): CanvasNode["h
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
     snapshot[nodeId] = {
       hiddenAt: typeof entry.hiddenAt === "string" ? entry.hiddenAt : null,
+      offsetX: typeof entry.offsetX === "number" ? entry.offsetX : null,
+      offsetY: typeof entry.offsetY === "number" ? entry.offsetY : null,
       scrollTop: typeof entry.scrollTop === "number" && entry.scrollTop >= 0 ? entry.scrollTop : 0
     };
   }

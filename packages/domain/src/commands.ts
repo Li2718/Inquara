@@ -34,6 +34,10 @@ export const UpdateNodePositionCommandSchema = BaseCommandSchema.extend({
   y: z.number()
 });
 
+export const OrganizeCanvasNodesCommandSchema = BaseCommandSchema.extend({
+  type: z.literal("node.organize")
+});
+
 export const UpdateNodeSizeCommandSchema = BaseCommandSchema.extend({
   type: z.literal("node.updateSize"),
   nodeId: IdSchema,
@@ -88,6 +92,7 @@ export const WorkspaceCommandSchema = z.discriminatedUnion("type", [
   CreateNodeAtPositionCommandSchema,
   CreateNodeFromSelectionCommandSchema,
   UpdateNodePositionCommandSchema,
+  OrganizeCanvasNodesCommandSchema,
   UpdateNodeSizeCommandSchema,
   UpdateNodeScrollCommandSchema,
   RenameNodeCommandSchema,

@@ -5,6 +5,7 @@ import {
   createNodeFromSelection,
   deleteNodeSubtree,
   hideNodeSubtree,
+  organizeCanvasNodes,
   restoreDeletedNodeSubtree,
   renameNode,
   restoreNodeBranch,
@@ -204,7 +205,7 @@ describe("canvas command services", () => {
     expect(hiddenChild.hiddenAt).toBeTruthy();
     expect(hiddenChild.scrollTop).toBe(233);
     expect(hiddenChild.hiddenStateSnapshot).toMatchObject({
-      [childNode.id]: { hiddenAt: null, scrollTop: 233 }
+      [childNode.id]: { hiddenAt: null, scrollTop: 233, offsetX: 460, offsetY: 0 }
     });
 
     const restoredEvents = await restoreNodeBranch(userId, {
@@ -297,6 +298,120 @@ describe("canvas command services", () => {
     expect(restoredChild.hiddenAt).toBeNull();
     expect(restoredChild.x).toBe(860);
     expect(restoredChild.y).toBe(240);
+  });
+
+  it("restores nested hidden descendants from parent-relative offsets", async () => {
+    const childNode = await prisma.canvasNode.create({
+      data: {
+        workspaceId,
+        title: "Branch",
+        x: 560,
+        y: 100,
+        width: 420,
+        height: 520,
+        collapsed: false,
+        parentNodeId: rootNodeId,
+        sourceNodeId: rootNodeId,
+        sourceMessageId
+      }
+    });
+    const grandchildNode = await prisma.canvasNode.create({
+      data: {
+        workspaceId,
+        title: "Nested branch",
+        x: 1_040,
+        y: 180,
+        width: 420,
+        height: 520,
+        collapsed: false,
+        parentNodeId: childNode.id,
+        sourceNodeId: childNode.id
+      }
+    });
+
+    await hideNodeSubtree(userId, {
+      type: "node.hideSubtree",
+      clientMutationId: "mutation-hide-nested",
+      workspaceId,
+      nodeId: childNode.id
+    });
+
+    await updateNodePosition(userId, {
+      type: "node.updatePosition",
+      clientMutationId: "mutation-move-root",
+      workspaceId,
+      nodeId: rootNodeId,
+      x: 320,
+      y: 412
+    });
+
+    await restoreNodeBranch(userId, {
+      type: "node.restoreBranch",
+      clientMutationId: "mutation-restore-nested",
+      workspaceId,
+      nodeId: childNode.id
+    });
+
+    const restoredChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: childNode.id } });
+    const restoredGrandchild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: grandchildNode.id } });
+    expect(restoredChild.hiddenAt).toBeNull();
+    expect(restoredGrandchild.hiddenAt).toBeNull();
+    expect(restoredChild.x).toBe(780);
+    expect(restoredChild.y).toBe(412);
+    expect(restoredGrandchild.x).toBe(1_260);
+    expect(restoredGrandchild.y).toBe(492);
+  });
+
+  it("organizes only visible nodes and keeps hidden nodes untouched", async () => {
+    const visibleChild = await prisma.canvasNode.create({
+      data: {
+        workspaceId,
+        title: "Visible branch",
+        x: 900,
+        y: 40,
+        width: 420,
+        height: 520,
+        collapsed: false,
+        parentNodeId: rootNodeId,
+        sourceNodeId: rootNodeId,
+        sourceMessageId
+      }
+    });
+    const hiddenChild = await prisma.canvasNode.create({
+      data: {
+        workspaceId,
+        title: "Hidden branch",
+        x: 900,
+        y: 700,
+        width: 420,
+        height: 520,
+        collapsed: false,
+        parentNodeId: rootNodeId,
+        sourceNodeId: rootNodeId,
+        sourceMessageId,
+        hiddenAt: new Date("2026-05-28T00:00:00.000Z")
+      }
+    });
+
+    const events = await organizeCanvasNodes(userId, {
+      type: "node.organize",
+      clientMutationId: "mutation-organize",
+      workspaceId
+    });
+
+    expect(events.map(event => event.type)).toEqual(["workspace.node.updated", "workspace.node.updated"]);
+
+    const refreshedRoot = await prisma.canvasNode.findUniqueOrThrow({ where: { id: rootNodeId } });
+    const refreshedVisibleChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: visibleChild.id } });
+    const refreshedHiddenChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: hiddenChild.id } });
+
+    expect(refreshedRoot.x).toBe(100);
+    expect(refreshedRoot.y).toBe(120);
+    expect(refreshedVisibleChild.x).toBe(584);
+    expect(refreshedVisibleChild.y).toBe(120);
+    expect(refreshedHiddenChild.x).toBe(900);
+    expect(refreshedHiddenChild.y).toBe(700);
+    expect(refreshedHiddenChild.hiddenAt?.toISOString()).toBe("2026-05-28T00:00:00.000Z");
   });
 
   it("soft deletes and restores a node subtree", async () => {

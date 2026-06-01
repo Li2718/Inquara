@@ -26,6 +26,8 @@ export const CanvasNodeSchema = z.object({
   scrollTop: z.number().nonnegative(),
   hiddenStateSnapshot: z.record(z.string(), z.object({
     hiddenAt: IsoDateSchema.nullable(),
+    offsetX: z.number().nullable(),
+    offsetY: z.number().nullable(),
     scrollTop: z.number().nonnegative()
   })).nullable(),
   parentNodeId: IdSchema.nullable(),

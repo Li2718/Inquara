@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import { useCanvasPlacementViewportGetter } from "../canvas/CanvasViewportContext";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
-import { findFollowupNodePosition, findRestoredNodePosition } from "./branchPlacement";
+import { findFollowupNodePosition } from "./branchPlacement";
 import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 import { getLastVisibleSelectionRect, toViewportToolbarPoint } from "./selectionToolbarPosition";
 import { findSourceRange, getTextRangeInElement } from "./sourceRange";
@@ -189,8 +189,7 @@ export function MessageList({ node }: { node: CanvasNode }) {
   function toggleBranch(branchNode: CanvasNode) {
     if (isBlocked) return;
     if (branchNode.hiddenAt) {
-      const position = findRestoredNodePosition(branchNode, state.snapshot?.nodes ?? [], getPlacementViewport());
-      void sendCommand(commands.restoreNodeBranch(branchNode.id, position));
+      void sendCommand(commands.restoreNodeBranch(branchNode.id));
       return;
     }
     void sendCommand(commands.hideNodeSubtree(branchNode.id, branchNode.scrollTop));

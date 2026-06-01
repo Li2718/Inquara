@@ -12,6 +12,7 @@ export {
   EditIcon,
   InquaraBrandIcon,
   MoreVerticalIcon,
+  OrganizeLayoutIcon,
   PlusIcon,
   ResetViewIcon,
   SidebarCollapseIcon,

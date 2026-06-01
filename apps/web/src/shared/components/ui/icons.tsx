@@ -59,6 +59,18 @@ export function ResetViewIcon({ className = "canvas-reset-view-icon", ...props }
   );
 }
 
+export function OrganizeLayoutIcon({ className = "canvas-organize-layout-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <circle cx="6.8" cy="12" r="2.1" />
+      <circle cx="17.2" cy="7" r="2.1" />
+      <circle cx="17.2" cy="17" r="2.1" />
+      <path d="M8.9 12h2.2c1.7 0 2.5-.9 3.3-2.4" />
+      <path d="M8.9 12h2.2c1.7 0 2.5.9 3.3 2.4" />
+    </svg>
+  );
+}
+
 export function CopyIcon({ className = "ui-copy-icon", ...props }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>

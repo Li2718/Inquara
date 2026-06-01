@@ -5,6 +5,7 @@ import {
   createNodeFromSelection,
   deleteNodeSubtree,
   hideNodeSubtree,
+  organizeCanvasNodes,
   renameNode,
   restoreDeletedNodeSubtree,
   restoreNodeBranch,
@@ -34,6 +35,9 @@ export async function dispatchWorkspaceCommand(
   }
   if (command.type === "node.updatePosition") {
     return updateNodePosition(userId, command);
+  }
+  if (command.type === "node.organize") {
+    return organizeCanvasNodes(userId, command);
   }
   if (command.type === "node.updateSize") {
     return updateNodeSize(userId, command);

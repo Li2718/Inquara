@@ -1,6 +1,6 @@
 "use client";
 
-import type { CanvasNode } from "@inquara/domain";
+import { calculateOrganizedNodePositions, type CanvasNode } from "@inquara/domain";
 import {
   applyNodeChanges,
   Background,
@@ -16,7 +16,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
-import { FloatingCircleButton, LoadingState, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
+import { FloatingCircleButton, LoadingState, OrganizeLayoutIcon, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
@@ -280,6 +280,26 @@ function CanvasFlow({
     setNodes(currentNodes => applyNodeChanges(changes, currentNodes) as ChatFlowNode[]);
   };
 
+  const organizeCanvas = useCallback(() => {
+    if (!snapshot || isBlocked) return;
+    const nextPositions = calculateOrganizedNodePositions(snapshot.nodes);
+    if (nextPositions.size === 0) return;
+
+    setNodes(currentNodes =>
+      currentNodes.map(node => {
+        const nextPosition = nextPositions.get(node.id);
+        return nextPosition
+          ? {
+              ...node,
+              position: nextPosition,
+              data: { ...node.data, x: nextPosition.x, y: nextPosition.y }
+            }
+          : node;
+      })
+    );
+    void sendCommand(commands.organizeCanvasNodes());
+  }, [commands, isBlocked, sendCommand, snapshot]);
+
   const onPaneContextMenu = (event: MouseEvent | ReactMouseEvent<Element>) => {
     event.preventDefault();
     const position = screenToFlowPosition({
@@ -359,6 +379,8 @@ function CanvasFlow({
         <CanvasViewportControls
           firstRootNode={firstRootNode}
           isSidebarOpen={isSidebarOpen}
+          isBlocked={isBlocked}
+          onOrganize={organizeCanvas}
           resetViewportRequest={resetViewportRequest}
         />
       ) : null}
@@ -488,11 +510,15 @@ function calculatePlacementViewport(viewport: { x: number; y: number; zoom: numb
 
 function CanvasViewportControls({
   firstRootNode,
+  isBlocked,
   isSidebarOpen,
+  onOrganize,
   resetViewportRequest
 }: {
   firstRootNode: CanvasNode | null;
+  isBlocked: boolean;
   isSidebarOpen: boolean;
+  onOrganize(): void;
   resetViewportRequest: number;
 }) {
   const { setViewport } = useReactFlow();
@@ -526,6 +552,15 @@ function CanvasViewportControls({
       <span className="canvas-viewport-zoom-label" aria-label={`Current zoom ${zoomPercent}%`}>
         {zoomPercent}%
       </span>
+      <FloatingCircleButton
+        size="sm"
+        aria-label="Organize chats into a compact hierarchy"
+        title="Organize"
+        disabled={isBlocked}
+        onClick={onOrganize}
+      >
+        <OrganizeLayoutIcon />
+      </FloatingCircleButton>
       <FloatingCircleButton
         size="sm"
         aria-label="Reset view to root chat"

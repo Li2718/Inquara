@@ -1,5 +1,6 @@
 import {
   applyWorkspaceEvent,
+  calculateOrganizedNodePositions,
   type CanvasEdge,
   type CanvasNode,
   type NodeMessage,
@@ -158,6 +159,26 @@ function applyOptimisticCommand(snapshot: WorkspaceSnapshot, command: WorkspaceC
             }
           : node
       )
+    };
+  }
+
+  if (command.type === "node.organize") {
+    const positions = calculateOrganizedNodePositions(snapshot.nodes);
+    if (positions.size === 0) return snapshot;
+    const now = new Date().toISOString();
+    return {
+      ...snapshot,
+      nodes: snapshot.nodes.map(node => {
+        const position = positions.get(node.id);
+        return position
+          ? {
+              ...node,
+              x: position.x,
+              y: position.y,
+              updatedAt: now
+            }
+          : node;
+      })
     };
   }
 

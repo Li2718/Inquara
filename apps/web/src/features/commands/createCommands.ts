@@ -41,6 +41,13 @@ export function createCommands(workspaceId: string) {
         y: position.y
       };
     },
+    organizeCanvasNodes(): WorkspaceCommand {
+      return {
+        type: "node.organize",
+        clientMutationId: crypto.randomUUID(),
+        workspaceId
+      };
+    },
     updateNodeSize(nodeId: string, size: { width: number; height: number }): WorkspaceCommand {
       return {
         type: "node.updateSize",
