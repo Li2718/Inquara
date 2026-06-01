@@ -1,6 +1,6 @@
 # Chat Message Rendering
 
-> status: active
+> status: archived
 > owner: web
 > updated: 2026-06-02
 > related_docs:
@@ -65,15 +65,16 @@ Visual changes will:
 - Mapped selections inside KaTeX-rendered formula DOM back to the whole formula source range so formula follow-ups remain usable.
 - Disabled pointer hit-testing on KaTeX formula decoration layers so radical SVGs do not block starting text selections inside square-root content.
 - Added focused Vitest coverage for markdown rendering and source range mapping.
+- Verified the implemented renderer with focused Vitest coverage and web typecheck before the final feature checkpoint.
 - Committed implementation checkpoints:
   - `df8ebff feat: render node chat markdown messages`
   - `88f1c96 feat: expand chat markdown rendering`
   - `98b505f feat: support richer markdown edge cases`
+  - `a482bcb feat: stabilize math selection ranges`
 
 ## Remaining Work
 
-- Run authenticated product-page visual acceptance against representative real messages in the in-app browser.
-- Run final verification before integration, including focused Vitest coverage, web typecheck, lint, and the required debug-free production check if a production build is part of the closeout.
+- None for this archived slice.
 
 ## Deferred Or Out Of Scope
 
@@ -81,3 +82,5 @@ Visual changes will:
 - Promoting the renderer into a shared UI layer before a second real use site exists.
 - Full nested markdown support such as multi-paragraph list items, deeply nested lists, and complex nested blockquotes.
 - Fine-grained character-level source mapping inside KaTeX-rendered formula internals.
+- Follow-up refinement for formula text selection and toolbar behavior, tracked outside this archived initiative.
+- Integration closeout checks such as full lint and debug-free verification belong to the eventual merge or release closeout, not this archived feature slice.

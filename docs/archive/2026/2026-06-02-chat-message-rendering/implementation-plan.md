@@ -52,8 +52,9 @@
 - [x] Remove assistant bubble styling while preserving readable product message layout.
 - [x] Style markdown blocks, inline code, code fences, lists, blockquotes, links, tables, images, task lists, and math for both assistant and user messages.
 - [x] Keep KaTeX radical decoration layers from intercepting text selection starts.
-- [ ] Run final focused Vitest coverage, web typecheck, lint, and required closeout verification after authenticated visual acceptance.
+- [x] Run final focused Vitest coverage and web typecheck before archiving this feature slice.
 
 ### Remaining Acceptance Work
 
-- [ ] Verify representative authenticated workspace messages in the in-app browser.
+- Formula selection and toolbar behavior may need a follow-up slice if the product needs finer-grained formula selection than whole-formula source mapping.
+- Full integration closeout verification, including lint and debug-free checks when applicable, belongs to the eventual merge or release closeout.
