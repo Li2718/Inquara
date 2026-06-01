@@ -3,8 +3,13 @@
 import { useEffect } from "react";
 import "./../shared/styles.css";
 import { ErrorScreen } from "../shared/components/product";
+import { LocaleProvider } from "../shared/locale/LocaleProvider";
+import { DEFAULT_LOCALE } from "../shared/locale";
+import { getMessages } from "../shared/messages";
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const messages = getMessages(DEFAULT_LOCALE);
+
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -12,11 +17,13 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   return (
     <html lang="en">
       <body>
-        <ErrorScreen
-          heading="The workspace hit a snag."
-          message="The page could not finish loading. Try again, or return to the canvas from a fresh tab."
-          onRetry={reset}
-        />
+        <LocaleProvider initialLocale={DEFAULT_LOCALE}>
+          <ErrorScreen
+            heading={messages.error.globalHeading}
+            message={messages.error.globalMessage}
+            onRetry={reset}
+          />
+        </LocaleProvider>
       </body>
     </html>
   );

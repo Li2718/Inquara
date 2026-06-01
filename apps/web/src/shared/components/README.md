@@ -132,7 +132,8 @@ When a new shared component is needed:
 
 Implemented shared components:
 
-- `chrome/AppTopBar.tsx` provides the shared app top row for product and admin surfaces, including the Inquara brand mark, account avatar menu, admin entrypoint, and logout confirmation.
+- `chrome/AppTopBar.tsx` provides the shared app top row for product and admin surfaces, including the Inquara brand mark, language menu, account avatar menu, admin entrypoint, and logout confirmation.
+- `chrome/LanguageMenu.tsx` provides the shared app-level language switcher. It uses shared locale state from `apps/web/src/shared/locale/` and shared popup menu primitives rather than owning custom menu behavior.
 - `ui/Button.tsx` provides the shared action button wrapper for primary, secondary, and danger actions while preserving the current button CSS contract. Use it for ordinary text action buttons such as form submit and confirmation actions; keep segmented controls, morph controls, icon-only controls, and specialized canvas affordances on their dedicated components.
 - `ui/IconButton.tsx` provides the shared quiet square icon button wrapper for product toolbars and node headers.
 - `ui/InlineIconButton.tsx` provides the shared text-flow icon button for small actions that sit inline with labels or prose.

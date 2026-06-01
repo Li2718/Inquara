@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } from "@xyflow/react";
 import { CheckIcon, ConfirmDialog, IconButton, MoreVerticalIcon, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
+import { useLocale } from "../../shared/locale/LocaleProvider";
 import { NodeChatPanel } from "../node-chat/NodeChatPanel";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import type { ChatFlowNode } from "./CanvasView";
@@ -15,6 +16,8 @@ function getSafeZoom(zoom: number) {
 }
 
 export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodeProps<ChatFlowNode>) {
+  const { messages } = useLocale();
+  const copy = messages.node;
   const { commands, sendCommand, state } = useWorkspaceSession();
   const updateNodeInternals = useUpdateNodeInternals();
   const zoom = useStore(state => state.transform[2]);
@@ -169,8 +172,8 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
             <IconButton
               ref={menuTriggerRef}
               className="node-menu-trigger nodrag"
-              aria-label="More node actions"
-              title="More actions"
+              aria-label={copy.moreActions}
+              title={copy.moreActions}
               disabled={isBlocked}
               onClick={() => setIsDangerOpen(value => !value)}
             >
@@ -178,13 +181,13 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
             </IconButton>
             <PopupMenu
               className="node-actions-menu nodrag nowheel"
-              aria-label="Node actions"
+              aria-label={copy.actions}
               ignoreRef={menuTriggerRef}
               isOpen={isDangerOpen}
               onClose={() => setIsDangerOpen(false)}
             >
               <PopupMenuItem onClick={startRenaming}>
-                Rename
+                {copy.rename}
               </PopupMenuItem>
               <PopupMenuItem
                 tone="danger"
@@ -193,7 +196,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
                   setIsDeleteDialogOpen(true);
                 }}
               >
-                Delete
+                {copy.delete}
               </PopupMenuItem>
             </PopupMenu>
           </div>
@@ -201,8 +204,8 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
             {canHideBranch ? (
               <IconButton
                 className="hide-branch-button"
-                aria-label="Hide branch"
-                title="Hide branch"
+                aria-label={copy.hideBranch}
+                title={copy.hideBranch}
                 disabled={isBlocked}
                 onClick={hideNode}
               >
@@ -215,8 +218,8 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
         <button
           type="button"
           className="canvas-node-resize-handle nodrag nowheel"
-          aria-label="Resize chat"
-          title="Resize"
+          aria-label={copy.resizeChat}
+          title={copy.resize}
           disabled={isBlocked}
           onPointerDown={startResize}
         />
@@ -224,9 +227,9 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
       <Handle type="source" position={Position.Right} isConnectable={false} style={hiddenHandleStyle} />
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}
-        title="Move chat to trash?"
-        description="This will hide this chat and its branches until you restore them from Trash."
-        confirmLabel="Move to trash"
+        title={copy.moveToTrash}
+        description={copy.moveToTrashDescription}
+        confirmLabel={copy.moveToTrashConfirm}
         confirmTone="danger"
         onCancel={() => setIsDeleteDialogOpen(false)}
         onConfirm={deleteNode}

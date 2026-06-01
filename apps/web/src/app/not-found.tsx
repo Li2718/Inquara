@@ -1,15 +1,20 @@
 import { PageTransitionLink } from "../shared/components/chrome";
+import { getRequestLocale } from "../shared/locale/request";
+import { getMessages } from "../shared/messages";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const messages = getMessages(await getRequestLocale());
+  const copy = messages.notFound;
+
   return (
     <main className="not-found-page">
       <section className="not-found-content" aria-labelledby="not-found-title">
         <p className="eyebrow">Inquara</p>
         <p className="not-found-code">404</p>
-        <h1 id="not-found-title">Page not found</h1>
-        <p className="muted">This page is unavailable or you do not have access to it.</p>
+        <h1 id="not-found-title">{copy.title}</h1>
+        <p className="muted">{copy.message}</p>
         <PageTransitionLink className="not-found-action" href="/">
-          Back to canvas
+          {copy.action}
         </PageTransitionLink>
       </section>
       <div className="not-found-map" aria-hidden="true">

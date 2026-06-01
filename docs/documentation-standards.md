@@ -34,6 +34,7 @@ Current docs in this repository:
 - `docs/architecture.md`
 - `docs/deployment.md`
 - `docs/documentation-standards.md`
+- `docs/multilingual.md`
 - `docs/testing-standards.md`
 - `docs/ui-system.md`
 

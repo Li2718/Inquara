@@ -186,6 +186,23 @@ Before closing a UI task, verify:
 5. Shared exports or component docs were updated when needed.
 6. `typecheck`, `lint`, and relevant build checks still pass.
 
+## Multilingual Rules
+
+All multilingual product work must follow [docs/multilingual.md](docs/multilingual.md).
+
+Use these rules as hard constraints, not optional style guidance.
+
+1. The supported interface locales are `zh-CN` and `en` unless a task explicitly expands the locale set.
+2. The default product locale is `en`, and English is the source language for product UI copy.
+3. New or changed product copy must update every supported locale in the same change.
+4. Translations must preserve product meaning, UI intent, interpolation tokens, and terminology; do not accept unreviewed machine translation or literal word-by-word conversion.
+5. Static product UI copy must come from shared message dictionaries unless the multilingual standard names an exception.
+6. Locale state, dictionaries, formatters, and language-switching UI must live in the shared layers defined by the multilingual standard.
+7. Server-rendered pages must read locale through the shared request-locale helper and render the matching dictionary.
+8. Client components that need translated copy must consume shared locale state and messages.
+9. User-visible date, number, percentage, currency, duration, latency, byte-size, and token-count values must use shared locale-aware formatters.
+10. Do not add locale-prefixed routes, one route tree per language, remote CMS-backed product copy, or database-backed static UI translations unless a future task explicitly changes the multilingual strategy.
+
 ## Test Database Rules
 
 All test creation, deletion, and modification must follow [docs/testing-standards.md](docs/testing-standards.md).

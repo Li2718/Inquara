@@ -1,5 +1,7 @@
 "use client";
 
+import { useLocale } from "../../locale/LocaleProvider";
+
 type ErrorScreenProps = {
   heading?: string;
   message?: string;
@@ -7,23 +9,26 @@ type ErrorScreenProps = {
 };
 
 export function ErrorScreen({
-  heading = "This view lost its thread.",
-  message = "Something interrupted the page while it was loading. Try again, or return to the canvas.",
+  heading,
+  message,
   onRetry
 }: ErrorScreenProps) {
+  const { messages } = useLocale();
+  const copy = messages.error;
+
   return (
     <main className="error-page">
       <section className="error-content" aria-labelledby="error-title">
         <p className="eyebrow">Inquara</p>
-        <p className="error-code">Hold on</p>
-        <h1 id="error-title">{heading}</h1>
-        <p className="muted">{message}</p>
+        <p className="error-code">{copy.holdOn}</p>
+        <h1 id="error-title">{heading ?? copy.defaultHeading}</h1>
+        <p className="muted">{message ?? copy.defaultMessage}</p>
         <div className="error-actions">
           <button type="button" onClick={onRetry}>
-            Try again
+            {copy.tryAgain}
           </button>
           <a className="secondary-button error-home-link" href="/">
-            Back to canvas
+            {copy.backToCanvas}
           </a>
         </div>
       </section>

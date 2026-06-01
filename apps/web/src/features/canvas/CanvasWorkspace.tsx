@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { AppTopBar, usePageTransitionNavigation } from "../../shared/components/chrome";
+import { useLocale } from "../../shared/locale/LocaleProvider";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceLeaseBlocker } from "../workspace-session/WorkspaceLeaseBlocker";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
@@ -17,6 +18,7 @@ export type WorkspaceTransitionNavigateOptions = {
 const WORKSPACE_SWITCH_LEAVE_MS = 90;
 
 export function CanvasWorkspace({ initialSidebarOpen, workspaceId }: { initialSidebarOpen: boolean; workspaceId: string }) {
+  const { messages } = useLocale();
   const [isSidebarOpen, setIsSidebarOpen] = useState(initialSidebarOpen);
   const [isPreparingWorkspaceSwitch, setIsPreparingWorkspaceSwitch] = useState(false);
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function CanvasWorkspace({ initialSidebarOpen, workspaceId }: { initialSi
   }
 
   return (
-    <main className="canvas-page" data-sidebar-open={isSidebarOpen} aria-label="Canvas workspace">
+    <main className="canvas-page" data-sidebar-open={isSidebarOpen} aria-label={messages.canvas.workspace}>
       <WorkspaceSessionProvider workspaceId={workspaceId}>
         <CanvasWorkspaceContent
           workspaceId={workspaceId}
@@ -86,6 +88,7 @@ function CanvasWorkspaceContent({
   onWorkspaceSwitchReady(): void;
   onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
 }) {
+  const { messages } = useLocale();
   const navigation = usePageTransitionNavigation();
   const { state } = useWorkspaceSession();
 
@@ -111,7 +114,7 @@ function CanvasWorkspaceContent({
           });
         }}
       />
-      <section className="canvas-stage" aria-label="Canvas">
+      <section className="canvas-stage" aria-label={messages.canvas.stage}>
         <CanvasView
           isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch}
           isSidebarOpen={isSidebarOpen}

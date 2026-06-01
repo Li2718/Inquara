@@ -6,8 +6,10 @@ import { LoginPage } from "../auth/LoginPage";
 import { apiJson } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { LoadingState } from "../../shared/components/ui";
+import { useLocale } from "../../shared/locale/LocaleProvider";
 
 export function WorkspaceListPage() {
+  const { messages } = useLocale();
   const navigation = usePageTransitionNavigation();
   const [isLoading, setIsLoading] = useState(true);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -26,7 +28,7 @@ export function WorkspaceListPage() {
         items[0] ??
         (await apiJson<Workspace>("/workspaces", {
           method: "POST",
-          body: JSON.stringify({ title: "Research canvas" })
+          body: JSON.stringify({ title: messages.workspaceList.researchCanvas })
         }));
       setNeedsLogin(false);
       await navigation.replace(`/workspaces/${workspace.id}`);
@@ -41,7 +43,7 @@ export function WorkspaceListPage() {
     return (
       <main className="app-shell">
         <section className="workspace-panel workspace-loading-panel">
-          <LoadingState variant="page" aria-label="Opening canvas" />
+          <LoadingState variant="page" aria-label={messages.workspaceList.openingCanvas} />
         </section>
       </main>
     );
@@ -54,7 +56,7 @@ export function WorkspaceListPage() {
   return (
     <main className="app-shell">
       <section className="workspace-panel workspace-loading-panel">
-        <LoadingState variant="page" aria-label="Opening canvas" />
+        <LoadingState variant="page" aria-label={messages.workspaceList.openingCanvas} />
         {error ? <p className="error-text">{error}</p> : null}
       </section>
     </main>

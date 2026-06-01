@@ -4,6 +4,8 @@ import "katex/dist/katex.min.css";
 import { DebugRoot } from "../debug/DebugRoot";
 import { PageTransitionRoot } from "../shared/components/chrome";
 import { getClientFatalErrorFallbackScript } from "../shared/components/product/clientFatalErrorFallback";
+import { LocaleProvider } from "../shared/locale/LocaleProvider";
+import { getRequestLocale } from "../shared/locale/request";
 import "../shared/styles.css";
 
 export const metadata: Metadata = {
@@ -15,9 +17,11 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getRequestLocale();
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body>
         <Script
           id="client-fatal-error-fallback"
@@ -25,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           dangerouslySetInnerHTML={{ __html: getClientFatalErrorFallbackScript() }}
         />
         <PageTransitionRoot />
-        {children}
+        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
         <DebugRoot page="global" />
       </body>
     </html>

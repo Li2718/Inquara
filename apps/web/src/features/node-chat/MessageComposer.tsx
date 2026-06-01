@@ -2,9 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { Button } from "../../shared/components/ui";
+import { useLocale } from "../../shared/locale/LocaleProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 
 export function MessageComposer({ nodeId }: { nodeId: string }) {
+  const { messages } = useLocale();
+  const copy = messages.chat;
   const { commands, sendCommand, state } = useWorkspaceSession();
   const [content, setContent] = useState("");
   const isBlocked = state.leaseState !== "active";
@@ -22,11 +25,11 @@ export function MessageComposer({ nodeId }: { nodeId: string }) {
       <input
         value={content}
         onChange={event => setContent(event.target.value)}
-        placeholder="Ask in this node"
+        placeholder={copy.askPlaceholder}
         disabled={isBlocked}
       />
       <Button type="submit" disabled={!content.trim() || isBlocked}>
-        Send
+        {copy.send}
       </Button>
     </form>
   );

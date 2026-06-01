@@ -4,6 +4,9 @@ import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiJson } from "../../shared/api";
 import { AppTopBar, PageTransitionLink } from "../../shared/components/chrome";
 import { Button, CheckIcon, ChevronDownIcon, ConfirmDialog, CopyIcon, EditIcon, IconButton, InlineIconButton, LoadingState, SkeletonBlock, Toast, TrashIcon } from "../../shared/components/ui";
+import { formatDateTime } from "../../shared/format";
+import { useLocale } from "../../shared/locale/LocaleProvider";
+import { interpolate, type AppMessages } from "../../shared/messages";
 
 type RedemptionCode = {
   code: string;
@@ -24,6 +27,8 @@ type RedemptionCode = {
 type CodeStatus = "active" | "disabled" | "expired" | "exhausted" | "used";
 
 export function RedemptionCodesAdminPage() {
+  const { locale, messages } = useLocale();
+  const copy = messages.adminCodes;
   const [codes, setCodes] = useState<RedemptionCode[]>([]);
   const [invitationOnly, setInvitationOnly] = useState(false);
   const [note, setNote] = useState("");
@@ -52,7 +57,7 @@ export function RedemptionCodesAdminPage() {
         setInvitationOnly(settings.invitationOnly);
         setCodes(codeList);
       } catch (caught) {
-        if (isMounted) setError(caught instanceof Error ? caught.message : "Failed to load admin codes.");
+        if (isMounted) setError(caught instanceof Error ? caught.message : copy.failedLoad);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -77,7 +82,7 @@ export function RedemptionCodesAdminPage() {
       });
     } catch (caught) {
       setInvitationOnly(!next);
-      setError(caught instanceof Error ? caught.message : "Failed to update registration setting.");
+      setError(caught instanceof Error ? caught.message : copy.failedSetting);
     }
   }
 
@@ -101,7 +106,7 @@ export function RedemptionCodesAdminPage() {
       setMaxRedemptions("1");
       await refreshCodes();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to create code.");
+      setError(caught instanceof Error ? caught.message : copy.failedCreate);
     } finally {
       setIsSubmitting(false);
     }
@@ -113,7 +118,7 @@ export function RedemptionCodesAdminPage() {
       await apiJson<RedemptionCode>(`/admin/codes/${code}/disable`, { method: "POST" });
       await refreshCodes();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to disable code.");
+      setError(caught instanceof Error ? caught.message : copy.failedDisable);
     }
   }
 
@@ -123,7 +128,7 @@ export function RedemptionCodesAdminPage() {
       await apiJson<RedemptionCode>(`/admin/codes/${code}/enable`, { method: "POST" });
       await refreshCodes();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to enable code.");
+      setError(caught instanceof Error ? caught.message : copy.failedEnable);
     }
   }
 
@@ -136,7 +141,7 @@ export function RedemptionCodesAdminPage() {
       setCodes(current => current.filter(code => code.code !== deletingCode.code));
       setDeletingCode(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Failed to delete code.");
+      setError(caught instanceof Error ? caught.message : copy.failedDelete);
       setIsDeleting(false);
     }
   }
@@ -148,7 +153,7 @@ export function RedemptionCodesAdminPage() {
       setCopiedCode(code);
       window.setTimeout(() => setCopiedCode(current => (current === code ? null : current)), 1600);
     } catch {
-      setError("Failed to copy code.");
+      setError(copy.failedCopy);
     }
   }
 
@@ -173,7 +178,7 @@ export function RedemptionCodesAdminPage() {
       setEditingNoteCode(null);
       setEditingNote("");
     } catch {
-      setError("Failed to update note.");
+      setError(copy.failedNote);
     }
   }
 
@@ -183,7 +188,7 @@ export function RedemptionCodesAdminPage() {
     return (
       <AdminShell>
         <section className="admin-panel">
-          <LoadingState variant="panel" aria-label="Loading admin" />
+          <LoadingState variant="panel" aria-label={copy.loading} />
           <SkeletonBlock variant="panel" rows={4} />
         </section>
       </AdminShell>
@@ -196,29 +201,29 @@ export function RedemptionCodesAdminPage() {
         <Toast message={error || null} onDismiss={() => setError("")} />
         <div className="admin-header">
           <div>
-            <p className="eyebrow">Admin</p>
-            <h1>Invitation codes</h1>
-            <p className="muted">Manage registration eligibility redemption codes.</p>
+            <p className="eyebrow">{copy.admin}</p>
+            <h1>{copy.heading}</h1>
+            <p className="muted">{copy.subtitle}</p>
           </div>
           <div className="admin-summary">
             <strong>{activeCount}</strong>
-            <span>active</span>
+            <span>{copy.active}</span>
           </div>
         </div>
 
         <div className="admin-setting-row" data-enabled={invitationOnly}>
           <div>
-            <strong>Require invitation code</strong>
-            <p className="muted">Local development and tests default this off unless enabled here.</p>
+            <strong>{copy.requireInvitation}</strong>
+            <p className="muted">{copy.invitationOnlyDescription}</p>
           </div>
           <div className="admin-setting-control">
-            <span>{invitationOnly ? "On" : "Off"}</span>
+            <span>{invitationOnly ? copy.on : copy.off}</span>
             <button
               type="button"
               className="admin-switch"
               role="switch"
               aria-checked={invitationOnly}
-              aria-label="Require invitation code"
+              aria-label={copy.requireInvitation}
               onClick={toggleInvitationOnly}
             >
               <span />
@@ -227,16 +232,16 @@ export function RedemptionCodesAdminPage() {
         </div>
 
         <form className="admin-code-form" onSubmit={createCode}>
-          <label htmlFor="code-note">Note</label>
-          <input id="code-note" value={note} onChange={event => setNote(event.target.value)} placeholder="Optional" />
-          <label htmlFor="max-redemptions">Uses</label>
+          <label htmlFor="code-note">{copy.note}</label>
+          <input id="code-note" value={note} onChange={event => setNote(event.target.value)} placeholder={messages.common.optional} />
+          <label htmlFor="max-redemptions">{copy.maxRedemptions}</label>
           <input id="max-redemptions" type="number" min={1} value={maxRedemptions} onChange={event => setMaxRedemptions(event.target.value)} />
-          <label htmlFor="valid-days">Valid days</label>
-          <input id="valid-days" type="number" min={1} value={validDays} onChange={event => setValidDays(event.target.value)} placeholder="No expiry" />
-          <label htmlFor="expires-at">Or exact expiry</label>
+          <label htmlFor="valid-days">{copy.validDays}</label>
+          <input id="valid-days" type="number" min={1} value={validDays} onChange={event => setValidDays(event.target.value)} placeholder={copy.noExpiry} />
+          <label htmlFor="expires-at">{copy.exactExpiry}</label>
           <input id="expires-at" type="datetime-local" value={expiresAt} onChange={event => setExpiresAt(event.target.value)} />
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Generating..." : "Generate code"}
+            {isSubmitting ? copy.generating : copy.generate}
           </Button>
         </form>
 
@@ -252,13 +257,13 @@ export function RedemptionCodesAdminPage() {
             <article key={code.code} className="admin-code-row" data-status={status} data-used={isUsed}>
               <div>
                 <div className="admin-code-primary">
-                  <button type="button" className="admin-code-copy-button" onClick={() => copyCode(code.code)} aria-label={`Copy invitation code ${code.code}`} title="Copy code">
+                  <button type="button" className="admin-code-copy-button" onClick={() => copyCode(code.code)} aria-label={interpolate(copy.copyInvitationCode, { code: code.code })} title={copy.copyCode}>
                     <strong>{code.code}</strong>
                     <span className="admin-code-copy-icon" aria-hidden="true">
                       <CopyIcon />
                     </span>
                   </button>
-                  {copiedCode === code.code ? <span className="admin-code-copied">Copied</span> : null}
+                  {copiedCode === code.code ? <span className="admin-code-copied">{messages.common.copied}</span> : null}
                 </div>
                 {editingNoteCode === code.code ? (
                   <form
@@ -278,29 +283,29 @@ export function RedemptionCodesAdminPage() {
                       }
                     }}
                   >
-                    <input value={editingNote} onChange={event => setEditingNote(event.target.value)} maxLength={240} aria-label={`Note for ${code.code}`} autoFocus />
-                    <IconButton className="admin-code-note-save" type="submit" aria-label={`Save note for ${code.code}`} title="Save note">
+                    <input value={editingNote} onChange={event => setEditingNote(event.target.value)} maxLength={240} aria-label={interpolate(copy.noteFor, { code: code.code })} autoFocus />
+                    <IconButton className="admin-code-note-save" type="submit" aria-label={interpolate(copy.saveNoteFor, { code: code.code })} title={copy.saveNote}>
                       <CheckIcon />
                     </IconButton>
                   </form>
                 ) : (
                   <div className="admin-code-note-line">
-                    {code.note ? <span>{code.note}</span> : null}<InlineIconButton className="admin-code-note-edit" aria-label={`Edit note for ${code.code}`} title="Edit note" onClick={() => startEditingNote(code)}>
+                    {code.note ? <span>{code.note}</span> : null}<InlineIconButton className="admin-code-note-edit" aria-label={interpolate(copy.editNoteFor, { code: code.code })} title={messages.common.edit} onClick={() => startEditingNote(code)}>
                       <EditIcon />
                     </InlineIconButton>
                   </div>
                 )}
               </div>
               <div className="admin-code-redemption-cell">
-                <span>{code.redemptionCount}/{code.maxRedemptions} used</span>
+                <span>{interpolate(copy.used, { count: code.redemptionCount, max: code.maxRedemptions })}</span>
                 <span className="admin-code-redemption-summary">
-                  <span>{formatFirstRedemptionUser(code)}</span>
+                  <span>{formatFirstRedemptionUser(code, copy)}</span>
                   {code.redemptions.length > 1 ? (
                     <InlineIconButton
                       className="admin-code-users-toggle"
                       aria-expanded={expandedCode === code.code}
-                      aria-label={`${expandedCode === code.code ? "Hide" : "Show"} users for invitation code ${code.code}`}
-                      title={expandedCode === code.code ? "Hide users" : "Show users"}
+                      aria-label={interpolate(expandedCode === code.code ? copy.hideUsersFor : copy.showUsersFor, { code: code.code })}
+                      title={expandedCode === code.code ? copy.hideUsers : copy.showUsers}
                       onClick={() => setExpandedCode(expandedCode === code.code ? null : code.code)}
                     >
                       <ChevronDownIcon />
@@ -316,29 +321,29 @@ export function RedemptionCodesAdminPage() {
                 ) : null}
               </div>
               <div>
-                <span>Source: {code.source}</span>
-                <span>By: {code.createdBy?.email ?? "Unknown"}</span>
+                <span>{interpolate(copy.source, { source: code.source })}</span>
+                <span>{interpolate(copy.by, { email: code.createdBy?.email ?? messages.common.unknown })}</span>
               </div>
               <div>
-                <span>{code.expiresAt ? `Expires ${new Date(code.expiresAt).toLocaleString()}` : "No expiry"}</span>
-                <span className="admin-code-status" data-status={status}>{formatCodeStatus(status)}</span>
+                <span>{code.expiresAt ? interpolate(copy.expires, { date: formatDateTime(locale, code.expiresAt) }) : copy.noExpiry}</span>
+                <span className="admin-code-status" data-status={status}>{formatCodeStatus(status, copy)}</span>
               </div>
               <div className="admin-code-actions">
                 {showStateButton ? (
                   status === "disabled" ? (
                     <Button type="button" className="admin-code-state-button" variant="secondary" disabled={!canToggleDisabled} onClick={() => enableCode(code.code)}>
-                      Enable
+                      {copy.enable}
                     </Button>
                   ) : (
                     <Button type="button" className="admin-code-state-button" variant="danger" disabled={!canToggleDisabled} onClick={() => disableCode(code.code)}>
-                      Disable
+                      {copy.disable}
                     </Button>
                   )
                 ) : (
                   <span className="admin-code-state-placeholder" aria-hidden="true" />
                 )}
                 {canDelete ? (
-                  <InlineIconButton className="admin-code-delete-button" aria-label={`Delete invitation code ${code.code}`} title="Delete code" onClick={() => setDeletingCode(code)}>
+                  <InlineIconButton className="admin-code-delete-button" aria-label={interpolate(copy.deleteCodeAria, { code: code.code })} title={copy.deleteCode} onClick={() => setDeletingCode(code)}>
                     <TrashIcon />
                   </InlineIconButton>
                 ) : (
@@ -351,9 +356,9 @@ export function RedemptionCodesAdminPage() {
         </div>
         <ConfirmDialog
           isOpen={Boolean(deletingCode)}
-          title="Delete invitation code?"
-          description={deletingCode ? `${deletingCode.code} will be permanently deleted. This is only allowed for unused codes.` : undefined}
-          confirmLabel={isDeleting ? "Deleting" : "Delete"}
+          title={copy.deleteConfirm}
+          description={deletingCode ? interpolate(copy.deleteDescription, { code: deletingCode.code }) : undefined}
+          confirmLabel={isDeleting ? messages.common.deleting : messages.common.delete}
           confirmTone="danger"
           isConfirming={isDeleting}
           onCancel={() => setDeletingCode(null)}
@@ -399,31 +404,34 @@ function getCodeStatus(code: RedemptionCode): CodeStatus {
   return "active";
 }
 
-function formatCodeStatus(status: CodeStatus): string {
+function formatCodeStatus(status: CodeStatus, copy: AppMessages["adminCodes"]): string {
   switch (status) {
     case "active":
-      return "Active";
+      return copy.statusActive;
     case "disabled":
-      return "Disabled";
+      return copy.statusDisabled;
     case "expired":
-      return "Expired";
+      return copy.statusExpired;
     case "exhausted":
-      return "Exhausted";
+      return copy.statusExhausted;
     case "used":
-      return "Used";
+      return copy.statusUsed;
   }
 }
 
 function AdminShell({ children }: { children: ReactNode }) {
+  const { messages } = useLocale();
+  const copy = messages.adminCodes;
+
   return (
     <main className="admin-page">
       <AppTopBar />
       <div className="admin-shell">
-        <aside className="admin-sidebar" aria-label="Admin settings">
-          <p className="admin-sidebar-title">Settings</p>
+        <aside className="admin-sidebar" aria-label={copy.settings}>
+          <p className="admin-sidebar-title">{copy.settings}</p>
           <nav className="admin-nav">
             <PageTransitionLink className="admin-nav-link" href="/admin/codes" aria-current="page">
-              邀请码
+              {copy.navCodes}
             </PageTransitionLink>
           </nav>
         </aside>
@@ -433,8 +441,8 @@ function AdminShell({ children }: { children: ReactNode }) {
   );
 }
 
-function formatFirstRedemptionUser(code: RedemptionCode): string {
-  if (code.redemptions.length === 0) return "Unused";
+function formatFirstRedemptionUser(code: RedemptionCode, copy: AppMessages["adminCodes"]): string {
+  if (code.redemptions.length === 0) return copy.unused;
   const firstUser = code.redemptions[0]?.user;
-  return firstUser?.name || firstUser?.email || "Unknown user";
+  return firstUser?.name || firstUser?.email || copy.unknownUser;
 }

@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "../../api";
+import { useLocale } from "../../locale/LocaleProvider";
+import { interpolate } from "../../messages";
 import { usePageTransitionNavigation } from "./usePageTransitionNavigation";
+import { LanguageMenu } from "./LanguageMenu";
 import { ConfirmDialog, FloatingCircleButton, InquaraBrandIcon, PopupMenu, PopupMenuItem } from "../ui";
 
 type CurrentUser = {
@@ -19,6 +22,8 @@ type AppTopBarProps = {
 };
 
 export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
+  const { messages } = useLocale();
+  const copy = messages.appTopBar;
   const navigation = usePageTransitionNavigation();
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -64,7 +69,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
         items[0] ??
         (await apiJson<Workspace>("/workspaces", {
           method: "POST",
-          body: JSON.stringify({ title: "Research canvas" })
+          body: JSON.stringify({ title: messages.workspaceList.researchCanvas })
         }));
       await navigation.push(`/workspaces/${workspace.id}`);
     } finally {
@@ -72,7 +77,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
     }
   }
 
-  const userLabel = currentUser?.name || currentUser?.email || "Account";
+  const userLabel = currentUser?.name || currentUser?.email || messages.common.account;
   const userInitial = useMemo(() => {
     const source = currentUser?.name || currentUser?.email || "";
     return source.trim().slice(0, 1).toUpperCase() || "A";
@@ -94,22 +99,23 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
       <button
         type="button"
         className="app-top-brand"
-        aria-label={isCanvasRoute ? "Reset canvas view" : "Back to canvas"}
-        title={isCanvasRoute ? "Reset view" : "Back to canvas"}
+        aria-label={isCanvasRoute ? copy.resetCanvasView : copy.backToCanvas}
+        title={isCanvasRoute ? copy.resetView : copy.backToCanvas}
         onClick={handleBrandClick}
       >
         <InquaraBrandIcon className="app-top-brand-mark" />
         <span className="app-top-brand-name">
           Inquara
-          <span className="app-top-brand-badge">Alpha</span>
+          <span className="app-top-brand-badge">{copy.alpha}</span>
         </span>
       </button>
       <div className="app-top-account">
+        <LanguageMenu />
         <FloatingCircleButton
           ref={accountMenuTriggerRef}
           className="app-top-account-button"
           size="md"
-          aria-label={`Account: ${userLabel}`}
+          aria-label={interpolate(copy.accountAria, { user: userLabel })}
           aria-expanded={isAccountMenuOpen}
           aria-haspopup="menu"
           title={userLabel}
@@ -119,7 +125,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
         </FloatingCircleButton>
         <PopupMenu
           className="app-top-account-menu"
-          aria-label="Account menu"
+          aria-label={copy.accountMenu}
           ignoreRef={accountMenuTriggerRef}
           isOpen={isAccountMenuOpen}
           onClose={() => setIsAccountMenuOpen(false)}
@@ -137,7 +143,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
               }}
               disabled={isOpeningCanvas}
             >
-              {isAdminRoute ? (isOpeningCanvas ? "Opening canvas..." : "回到画布") : "管理后台"}
+              {isAdminRoute ? (isOpeningCanvas ? copy.openingCanvas : copy.backToCanvas) : copy.admin}
             </PopupMenuItem>
           ) : null}
           <PopupMenuItem
@@ -148,15 +154,15 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
             }}
             disabled={isLoggingOut}
           >
-            {isLoggingOut ? "Logging out..." : "Log out"}
+            {isLoggingOut ? copy.loggingOut : copy.logOut}
           </PopupMenuItem>
         </PopupMenu>
       </div>
       <ConfirmDialog
         isOpen={isLogoutDialogOpen}
-        title="Log out?"
-        description="You will need to sign in again on this device."
-        confirmLabel={isLoggingOut ? "Logging out..." : "Log out"}
+        title={copy.logOutConfirm}
+        description={copy.logOutDescription}
+        confirmLabel={isLoggingOut ? copy.loggingOut : copy.logOut}
         confirmTone="danger"
         isConfirming={isLoggingOut}
         onCancel={() => setIsLogoutDialogOpen(false)}
