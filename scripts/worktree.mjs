@@ -2,19 +2,28 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFil
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
+import net from "node:net";
 import { Client } from "pg";
 import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
-import { getCloneDbPlan, getCreatePlan, getRemovePlan, parseWorktreeCommand } from "./worktree-cli.mjs";
+import {
+  getCloneDbPlan,
+  getCloneInfraPlan,
+  getCreatePlan,
+  getRemovePlan,
+  parseWorktreeCommand
+} from "./worktree-cli.mjs";
 import {
   buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
   buildPrivateDbEnvText,
+  buildPrivateInfraEnvText,
   escapePostgresIdentifier,
   getSharedDevelopmentFileNames,
   getManagedWorktreeRootDir,
   getWorktreeParentDirName,
   parseWorktreeListPorcelain,
   readPrivateDatabaseName,
+  selectAvailablePort,
   selectWorktreeEntry
 } from "./worktree-lib.mjs";
 
@@ -23,6 +32,22 @@ const currentDir = process.cwd();
 
 loadDevelopmentEnv(rootDir);
 ensureDatabaseUrl(process.env);
+
+async function isPortAvailable(port, host = "127.0.0.1") {
+  return new Promise(resolve => {
+    const server = net.createServer();
+
+    server.once("error", () => {
+      resolve(false);
+    });
+    server.once("listening", () => {
+      server.close(() => {
+        resolve(true);
+      });
+    });
+    server.listen(port, host);
+  });
+}
 
 function quoteWindowsArg(value) {
   if (value.length === 0) {
@@ -213,6 +238,24 @@ async function listWorktrees() {
   return parseWorktreeListPorcelain(stdout);
 }
 
+async function listDockerPublishedPorts() {
+  const { stdout } = await captureCommand("docker", ["ps", "--format={{.Ports}}"]);
+  const ports = new Set();
+  const portPattern = /(?:0\.0\.0\.0|\[::\]|127\.0\.0\.1|\[::1\]):(\d+)->/gu;
+
+  for (const line of stdout.split(/\r?\n/u)) {
+    if (line.trim().length === 0) {
+      continue;
+    }
+
+    for (const match of line.matchAll(portPattern)) {
+      ports.add(Number(match[1]));
+    }
+  }
+
+  return ports;
+}
+
 async function ensureBranchDoesNotExist(branchName) {
   const { stdout } = await captureCommand("git", ["branch", "--list", branchName], {
     cwd: rootDir
@@ -270,6 +313,51 @@ async function cloneDatabaseForCurrentWorktree() {
 
   console.log(`Cloned "${sourceDatabaseName}" into private database "${plan.databaseName}".`);
   console.log(`Current worktree now uses ${envLocalPath}.`);
+}
+
+async function cloneInfrastructureForCurrentWorktree() {
+  const plan = getCloneInfraPlan({
+    currentPath: currentDir
+  });
+
+  if (rootDir === currentDir) {
+    throw new Error("Refusing to clone private infrastructure in the main worktree.");
+  }
+
+  if (!existsSync(plan.sourceComposePath)) {
+    throw new Error(`Missing ${plan.sourceComposePath}.`);
+  }
+
+  if (existsSync(plan.composePath)) {
+    throw new Error(`This worktree already has private infrastructure at ${plan.composePath}.`);
+  }
+
+  const reservedPorts = await listDockerPublishedPorts();
+  const postgresPort = await selectAvailablePort(process.env.POSTGRES_PORT ?? "55432", {
+    isPortAvailable,
+    reservedPorts
+  });
+  const redisPort = await selectAvailablePort(process.env.REDIS_PORT ?? "56380", {
+    isPortAvailable,
+    reservedPorts: new Set([...reservedPorts, postgresPort])
+  });
+
+  copyFileSync(plan.sourceComposePath, plan.composePath);
+
+  const existingLocalText = existsSync(plan.envLocalPath) ? readFileSync(plan.envLocalPath, "utf8") : "";
+  writeFileSync(
+    plan.envLocalPath,
+    buildPrivateInfraEnvText(existingLocalText, {
+      postgresPort,
+      redisPort
+    }),
+    "utf8"
+  );
+
+  console.log(`Cloned private infrastructure into ${plan.composePath}.`);
+  console.log(`POSTGRES_PORT=${postgresPort}`);
+  console.log(`REDIS_PORT=${redisPort}`);
+  console.log(`Current worktree now uses ${plan.envLocalPath}.`);
 }
 
 function getNpmCommand() {
@@ -334,6 +422,9 @@ async function main() {
       return;
     case "clonedb":
       await cloneDatabaseForCurrentWorktree();
+      return;
+    case "cloneinfra":
+      await cloneInfrastructureForCurrentWorktree();
       return;
     case "remove":
       await removeWorktree(command.target);

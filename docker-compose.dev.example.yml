@@ -18,6 +18,14 @@ services:
       timeout: 5s
       retries: 20
       start_period: 5s
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-56380}:6379"
+    volumes:
+      - inquara-redis:/data
+    restart: unless-stopped
 
 volumes:
   inquara-postgres:
+  inquara-redis:

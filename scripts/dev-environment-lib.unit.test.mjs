@@ -138,6 +138,38 @@ describe("dev environment helpers", () => {
     });
   });
 
+  it("tracks infrastructure-sensitive API runtime settings", () => {
+    const runtimeState = createDevRuntimeState({
+      apiUrl: new URL("http://localhost:4000"),
+      databaseUrl: "postgresql://inquara:inquara@localhost:55433/inquara?schema=public",
+      infrastructure: {
+        composePath: "/workspace/inquara/.worktrees/feature-debug-toolbar/docker-compose.dev.yml",
+        mode: "private",
+        projectName: "feature-debug-toolbar"
+      },
+      redisUrl: "redis://localhost:56381",
+      webUrl: new URL("http://localhost:3001")
+    });
+
+    expect(getServiceStateExpectation("api", runtimeState)).toEqual({
+      apiOrigin: "http://localhost:4000",
+      databaseUrl: "postgresql://inquara:inquara@localhost:55433/inquara?schema=public",
+      infrastructureComposePath: "/workspace/inquara/.worktrees/feature-debug-toolbar/docker-compose.dev.yml",
+      infrastructureMode: "private",
+      infrastructureProjectName: "feature-debug-toolbar",
+      redisUrl: "redis://localhost:56381"
+    });
+    expect(
+      doesRuntimeStateMatchExpectation(
+        {
+          ...runtimeState,
+          databaseUrl: "postgresql://inquara:inquara@localhost:55432/inquara?schema=public"
+        },
+        getServiceStateExpectation("api", runtimeState)
+      )
+    ).toBe(false);
+  });
+
   it("detects when a running web process was started with stale API settings", () => {
     const runtimeState = createDevRuntimeState({
       apiUrl: new URL("http://localhost:4002"),

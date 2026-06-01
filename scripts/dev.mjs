@@ -214,7 +214,13 @@ async function resolveRuntimeUrls() {
   }
 
   runtimeUrls = { apiServer, apiUrl, webServer, webUrl };
-  runtimeState = createDevRuntimeState({ apiUrl, webUrl });
+  runtimeState = createDevRuntimeState({
+    apiUrl,
+    databaseUrl: process.env.DATABASE_URL,
+    infrastructure,
+    redisUrl: process.env.REDIS_URL,
+    webUrl
+  });
   return runtimeUrls;
 }
 

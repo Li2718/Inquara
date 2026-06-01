@@ -16,6 +16,7 @@
     "dev:stop": "node scripts/dev.mjs stop",
     "worktree:create": "node scripts/worktree.mjs create",
     "worktree:clonedb": "node scripts/worktree.mjs clonedb",
+    "worktree:cloneinfra": "node scripts/worktree.mjs cloneinfra",
     "worktree:remove": "node scripts/worktree.mjs remove",
     "dev:api": "node scripts/run-workspace.mjs @inquara/api dev",
     "dev:web": "node scripts/run-workspace.mjs @inquara/web dev",

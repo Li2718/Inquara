@@ -91,6 +91,55 @@ export function buildPrivateDbEnvText(currentText, databaseName) {
   return `${nextLines.join("\n")}\n`;
 }
 
+export function buildPrivateInfraEnvText(currentText, { postgresPort, redisPort }) {
+  const lines = currentText.length === 0 ? [] : currentText.replace(/\r\n/gu, "\n").split("\n");
+  const managedKeys = new Set(["DATABASE_URL", "POSTGRES_PORT", "REDIS_PORT", "REDIS_URL"]);
+  const nextLines = [];
+
+  for (const line of lines) {
+    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=/u);
+
+    if (match && managedKeys.has(match[1])) {
+      continue;
+    }
+
+    if (line.length > 0) {
+      nextLines.push(line);
+    }
+  }
+
+  nextLines.push(`POSTGRES_PORT="${postgresPort}"`);
+  nextLines.push(`REDIS_PORT="${redisPort}"`);
+  nextLines.push(`REDIS_URL="redis://localhost:${redisPort}"`);
+
+  return `${nextLines.join("\n")}\n`;
+}
+
+export async function selectAvailablePort(
+  preferredPort,
+  { isPortAvailable, reservedPorts = new Set(), scanLimit = 100 } = {}
+) {
+  const startPort = Number(preferredPort);
+
+  if (!Number.isInteger(startPort) || startPort <= 0) {
+    throw new Error(`Invalid port: ${preferredPort}`);
+  }
+
+  for (let offset = 0; offset < scanLimit; offset += 1) {
+    const port = startPort + offset;
+
+    if (reservedPorts.has(port)) {
+      continue;
+    }
+
+    if (!isPortAvailable || (await isPortAvailable(port))) {
+      return port;
+    }
+  }
+
+  throw new Error(`Could not find an available port starting at ${startPort}.`);
+}
+
 export function buildWorktreeDatabaseAdminUrl(databaseUrl) {
   const url = new URL(databaseUrl);
   url.pathname = "/postgres";

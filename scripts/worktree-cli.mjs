@@ -1,7 +1,7 @@
 import path from "node:path";
 import { buildWorktreeDatabaseName, buildWorktreeDirName } from "./worktree-lib.mjs";
 
-const USAGE = "Usage: node scripts/worktree.mjs <create|clonedb|remove>";
+const USAGE = "Usage: node scripts/worktree.mjs <create|clonedb|cloneinfra|remove>";
 
 export function parseWorktreeCommand(argv) {
   const [command, value] = argv;
@@ -18,6 +18,12 @@ export function parseWorktreeCommand(argv) {
   }
 
   if (command === "clonedb") {
+    return {
+      command
+    };
+  }
+
+  if (command === "cloneinfra") {
     return {
       command
     };
@@ -51,6 +57,15 @@ export function getCloneDbPlan({ branchName, currentPath }) {
     branchName,
     currentPath,
     databaseName: buildWorktreeDatabaseName(branchName)
+  };
+}
+
+export function getCloneInfraPlan({ currentPath }) {
+  return {
+    composePath: path.join(currentPath, "docker-compose.dev.yml"),
+    currentPath,
+    envLocalPath: path.join(currentPath, ".env.dev.local"),
+    sourceComposePath: path.join(currentPath, "docker-compose.dev.example.yml")
   };
 }
 

@@ -17,6 +17,7 @@ Use the repository worktree commands instead:
 
 ```bash
 npm run worktree:create <branch-name>
+npm run worktree:cloneinfra
 npm run worktree:clonedb
 npm run worktree:remove <branch-name-or-path>
 ```
@@ -55,6 +56,20 @@ Initial worktree database mode is also shared. A newly created worktree starts b
 Most worktrees should reuse the main workspace infrastructure. If a worktree needs to change development infrastructure itself, such as changing `docker-compose.dev.yml`, adding infrastructure services, or changing service ports, give that worktree an explicit private infrastructure copy first.
 
 A managed worktree is considered private-infrastructure mode when it has its own `docker-compose.dev.yml`. In that mode, `npm run dev` uses the current worktree's compose file and compose project instead of the main workspace infrastructure.
+
+Create the private infrastructure copy from inside the worktree:
+
+```bash
+npm run worktree:cloneinfra
+```
+
+What `worktree:cloneinfra` does:
+
+- copies `docker-compose.dev.example.yml` to `docker-compose.dev.yml` in the current worktree
+- finds available host ports for PostgreSQL and Redis, avoiding ports already published by Docker containers
+- writes the worktree-local port overrides to `.env.dev.local`
+
+After this step, `npm run dev` starts and uses the worktree's private compose project.
 
 Keep worktree-local infrastructure overrides in `.env.dev.local` when possible. Do not use private infrastructure merely to isolate application data; use the private database workflow for that.
 

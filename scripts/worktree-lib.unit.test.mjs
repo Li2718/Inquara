@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getSharedDevelopmentFileNames,
+  buildPrivateInfraEnvText,
   buildPrivateDbEnvText,
   buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
@@ -9,6 +10,7 @@ import {
   getManagedWorktreeRootDir,
   getWorktreeParentDirName,
   parseWorktreeListPorcelain,
+  selectAvailablePort,
   selectWorktreeEntry
 } from "./worktree-lib.mjs";
 
@@ -84,6 +86,30 @@ describe("worktree helpers", () => {
     expect(nextText).toBe(
       'API_ORIGIN="http://localhost:4999"\nPOSTGRES_DB="inquara_wt_feature_debug_toolbar"\n'
     );
+  });
+
+  it("writes private infrastructure port overrides and removes stale DATABASE_URL values", () => {
+    const nextText = buildPrivateInfraEnvText(
+      'POSTGRES_DB="inquara_wt_feature"\nDATABASE_URL="postgresql://old.example/inquara"\nAI_PROVIDER="fake"\n',
+      {
+        postgresPort: 55433,
+        redisPort: 56381
+      }
+    );
+
+    expect(nextText).toBe(
+      'POSTGRES_DB="inquara_wt_feature"\nAI_PROVIDER="fake"\nPOSTGRES_PORT="55433"\nREDIS_PORT="56381"\nREDIS_URL="redis://localhost:56381"\n'
+    );
+  });
+
+  it("skips Docker-published ports when selecting private infrastructure ports", async () => {
+    await expect(
+      selectAvailablePort("55432", {
+        isPortAvailable: async () => true,
+        reservedPorts: new Set([55432, 55433]),
+        scanLimit: 5
+      })
+    ).resolves.toBe(55434);
   });
 
   it("parses git worktree porcelain output", () => {

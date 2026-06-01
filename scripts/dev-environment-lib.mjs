@@ -180,12 +180,17 @@ export function toOriginString(url) {
   return url.toString().replace(/\/$/u, "");
 }
 
-export function createDevRuntimeState({ apiUrl, webUrl }) {
+export function createDevRuntimeState({ apiUrl, databaseUrl, infrastructure, redisUrl, webUrl }) {
   const apiOrigin = toOriginString(apiUrl);
   const webOrigin = toOriginString(webUrl);
 
   return {
     apiOrigin,
+    databaseUrl,
+    infrastructureComposePath: infrastructure?.composePath,
+    infrastructureMode: infrastructure?.mode,
+    infrastructureProjectName: infrastructure?.projectName,
+    redisUrl,
     webOrigin,
     nextPublicApiOrigin: apiOrigin,
     nextPublicWsOrigin: apiOrigin.replace(/^http/u, "ws")
@@ -195,7 +200,12 @@ export function createDevRuntimeState({ apiUrl, webUrl }) {
 export function getServiceStateExpectation(serviceName, runtimeState) {
   if (serviceName === "api") {
     return {
-      apiOrigin: runtimeState.apiOrigin
+      apiOrigin: runtimeState.apiOrigin,
+      databaseUrl: runtimeState.databaseUrl,
+      infrastructureComposePath: runtimeState.infrastructureComposePath,
+      infrastructureMode: runtimeState.infrastructureMode,
+      infrastructureProjectName: runtimeState.infrastructureProjectName,
+      redisUrl: runtimeState.redisUrl
     };
   }
 
