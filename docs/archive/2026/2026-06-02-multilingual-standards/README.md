@@ -1,6 +1,6 @@
 # Multilingual Standards
 
-> status: active
+> status: archived
 > owner: codex
 > last_updated: 2026-06-02
 > related_docs:
@@ -32,9 +32,9 @@ Out of scope:
 - changing routes, database schema, API contracts, or deployment configuration
 - adding any locale beyond `zh-CN` and `en`
 
-## Current Status
+## Archived Status
 
-Implemented and verified.
+Implemented, verified, accepted, and archived on 2026-06-02.
 
 An isolated managed worktree and branch exist for this topic: `multilingual-standards`.
 
@@ -61,8 +61,7 @@ An isolated managed worktree and branch exist for this topic: `multilingual-stan
 
 ## Remaining Work
 
-- User review of implemented behavior and `docs/multilingual.md`.
-- Decide whether to archive this initiative after acceptance.
+- None for this archived slice.
 
 ## Deferred Or Out Of Scope
 
@@ -74,4 +73,4 @@ An isolated managed worktree and branch exist for this topic: `multilingual-stan
 
 ## Next Step
 
-Review the implemented multilingual behavior and `docs/multilingual.md`, then archive this initiative after acceptance.
+No next step for this archived slice.
