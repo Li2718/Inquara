@@ -28,5 +28,6 @@ describe("shared messages", () => {
   it("returns localized Chinese product copy", () => {
     expect(getMessages("zh-CN").auth.loginAction).toBe("登录");
     expect(getMessages("zh-CN").workspaceSidebar.canvases).toBe("画布");
+    expect(getMessages("zh-CN").canvas.askFollowUp).toBe("继续追问");
   });
 });

@@ -78,6 +78,7 @@ export const messages = {
     },
     canvas: {
       actions: "Canvas actions",
+      askFollowUp: "Ask follow-up",
       currentZoom: "Current zoom {percent}%",
       loadingCanvas: "Loading canvas",
       newChat: "New chat",
@@ -268,6 +269,7 @@ export const messages = {
     },
     canvas: {
       actions: "画布操作",
+      askFollowUp: "继续追问",
       currentZoom: "当前缩放 {percent}%",
       loadingCanvas: "正在加载画布",
       newChat: "新建聊天",
