@@ -1,11 +1,11 @@
 "use client";
 
 import type { Workspace } from "@inquara/domain";
-import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiJson } from "../../api";
+import { usePageTransitionNavigation } from "./usePageTransitionNavigation";
 import { ConfirmDialog, FloatingCircleButton, InquaraBrandIcon, PopupMenu, PopupMenuItem } from "../ui";
 
 type CurrentUser = {
@@ -19,7 +19,7 @@ type AppTopBarProps = {
 };
 
 export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
-  const router = useRouter();
+  const navigation = usePageTransitionNavigation();
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -48,8 +48,8 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
     try {
       await apiJson<void>("/auth/logout", { method: "POST" });
       setIsLogoutDialogOpen(false);
-      router.replace("/");
-      router.refresh();
+      await navigation.replace("/");
+      navigation.router.refresh();
     } catch {
       setIsLoggingOut(false);
     }
@@ -66,7 +66,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
           method: "POST",
           body: JSON.stringify({ title: "Research canvas" })
         }));
-      router.push(`/workspaces/${workspace.id}`);
+      await navigation.push(`/workspaces/${workspace.id}`);
     } finally {
       setIsOpeningCanvas(false);
     }
@@ -132,7 +132,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
                 if (isAdminRoute) {
                   await openCanvas();
                 } else {
-                  router.push("/admin");
+                  await navigation.push("/admin");
                 }
               }}
               disabled={isOpeningCanvas}

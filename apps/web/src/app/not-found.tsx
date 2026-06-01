@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageTransitionLink } from "../shared/components/chrome";
 
 export default function NotFound() {
   return (
@@ -8,9 +8,9 @@ export default function NotFound() {
         <p className="not-found-code">404</p>
         <h1 id="not-found-title">Page not found</h1>
         <p className="muted">This page is unavailable or you do not have access to it.</p>
-        <Link className="not-found-action" href="/">
+        <PageTransitionLink className="not-found-action" href="/">
           Back to canvas
-        </Link>
+        </PageTransitionLink>
       </section>
       <div className="not-found-map" aria-hidden="true">
         <span className="not-found-line not-found-line-a" />

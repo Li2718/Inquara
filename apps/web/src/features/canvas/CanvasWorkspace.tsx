@@ -1,20 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
-import { AppTopBar } from "../../shared/components/chrome";
+import { AppTopBar, usePageTransitionNavigation } from "../../shared/components/chrome";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { WORKSPACE_SIDEBAR_OPEN_COOKIE, WORKSPACE_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
 import { CanvasView } from "./CanvasView";
 
-const WORKSPACE_SWITCH_LEAVE_MS = 90;
-
 export type WorkspaceTransitionNavigateOptions = {
   replace?: boolean;
 };
+
+const WORKSPACE_SWITCH_LEAVE_MS = 90;
 
 export function CanvasWorkspace({ initialSidebarOpen, workspaceId }: { initialSidebarOpen: boolean; workspaceId: string }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(initialSidebarOpen);
@@ -86,7 +85,7 @@ function CanvasWorkspaceContent({
   onWorkspaceSwitchReady(): void;
   onWorkspaceSwitchStart(targetWorkspaceId: string): Promise<void>;
 }) {
-  const router = useRouter();
+  const navigation = usePageTransitionNavigation();
   const { state } = useWorkspaceSession();
 
   useEffect(() => {
@@ -105,7 +104,10 @@ function CanvasWorkspaceContent({
         onToggle={onToggleSidebar}
         onWorkspaceNavigate={async (targetWorkspaceId, options) => {
           if (targetWorkspaceId === workspaceId) return;
-          await navigateWithWorkspaceTransition(router, targetWorkspaceId, onWorkspaceSwitchStart, options);
+          await navigation.navigate(`/workspaces/${targetWorkspaceId}`, {
+            ...(options?.replace === undefined ? {} : { replace: options.replace }),
+            beforeNavigate: () => onWorkspaceSwitchStart(targetWorkspaceId)
+          });
         }}
       />
       <section className="canvas-stage" aria-label="Canvas">
@@ -125,19 +127,4 @@ function CanvasWorkspaceContent({
       />
     </>
   );
-}
-
-export async function navigateWithWorkspaceTransition(
-  router: ReturnType<typeof useRouter>,
-  targetWorkspaceId: string,
-  startTransition: (targetWorkspaceId: string) => Promise<void>,
-  options: WorkspaceTransitionNavigateOptions = {}
-) {
-  await startTransition(targetWorkspaceId);
-  const href = `/workspaces/${targetWorkspaceId}`;
-  if (options.replace) {
-    router.replace(href);
-  } else {
-    router.push(href);
-  }
 }

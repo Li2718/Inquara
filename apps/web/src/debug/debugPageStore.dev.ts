@@ -3,24 +3,59 @@
 import { useSyncExternalStore } from "react";
 import type { CanvasDebugSnapshot, DebugPageSnapshot } from "./debugTypes";
 
-let snapshot: DebugPageSnapshot = { page: "global" };
+type DebugPageOwner = symbol;
+
+type DebugPageState = {
+  owner: DebugPageOwner | null;
+  snapshot: DebugPageSnapshot;
+};
+
+type ClearDebugPageSnapshotOptions = {
+  defer?: boolean;
+};
+
+let state: DebugPageState = {
+  owner: null,
+  snapshot: { page: "global" }
+};
 const serverSnapshot = { page: "global" } satisfies DebugPageSnapshot;
 const listeners = new Set<() => void>();
 
-export function setDebugPageSnapshot(nextSnapshot: CanvasDebugSnapshot) {
-  snapshot = nextSnapshot;
+export function setDebugPageSnapshot(nextSnapshot: CanvasDebugSnapshot, owner: DebugPageOwner) {
+  state = {
+    owner,
+    snapshot: nextSnapshot
+  };
   emit();
 }
 
-export function clearDebugPageSnapshot(workspaceId: string) {
-  if (snapshot.page === "canvas" && snapshot.workspaceId === workspaceId) {
-    snapshot = { page: "global" };
+export function clearDebugPageSnapshot(
+  workspaceId: string,
+  owner: DebugPageOwner,
+  options: ClearDebugPageSnapshotOptions = {}
+) {
+  if (options.defer) {
+    queueMicrotask(() => {
+      clearDebugPageSnapshot(workspaceId, owner);
+    });
+    return;
+  }
+
+  if (state.snapshot.page === "canvas" && state.snapshot.workspaceId === workspaceId && state.owner === owner) {
+    state = {
+      owner: null,
+      snapshot: { page: "global" }
+    };
     emit();
   }
 }
 
 export function useDebugPageSnapshot() {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+export function readDebugPageSnapshotForTest() {
+  return state.snapshot;
 }
 
 function subscribe(listener: () => void) {
@@ -31,7 +66,7 @@ function subscribe(listener: () => void) {
 }
 
 function getSnapshot() {
-  return snapshot;
+  return state.snapshot;
 }
 
 function getServerSnapshot() {
