@@ -1,14 +1,15 @@
 "use client";
 
 import type { CanvasNode, NodeMessage } from "@inquara/domain";
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useCanvasPlacementViewportGetter } from "../canvas/CanvasViewportContext";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { findFollowupNodePosition } from "./branchPlacement";
+import { MessageMarkdown } from "./MessageMarkdown";
 import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
 import { getLastVisibleSelectionRect, toViewportToolbarPoint } from "./selectionToolbarPosition";
-import { findSourceRange, getTextRangeInElement } from "./sourceRange";
+import { findSourceRange, getRangeContainerElement, getSourceRangeInElement, getTextRangeInElement } from "./sourceRange";
 
 type SelectionState = {
   message: NodeMessage;
@@ -144,10 +145,13 @@ export function MessageList({ node }: { node: CanvasNode }) {
       setSelection(null);
       return;
     }
-    const messageElement = range?.commonAncestorContainer.parentElement?.closest<HTMLElement>("[data-message-content]");
+    const rangeElement = getRangeContainerElement(range?.commonAncestorContainer ?? null);
+    const messageElement = rangeElement?.closest<HTMLElement>("[data-message-content]");
     const sourceRange =
       range && messageElement && element.contains(messageElement)
-        ? getTextRangeInElement(messageElement, range) ?? findSourceRange(message.content, selected)
+        ? getSourceRangeInElement(messageElement, range) ??
+          getTextRangeInElement(messageElement, range) ??
+          findSourceRange(message.content, selected)
         : findSourceRange(message.content, selected);
     if (!sourceRange) {
       setSelection(null);
@@ -210,13 +214,11 @@ export function MessageList({ node }: { node: CanvasNode }) {
           onMouseUp={() => captureSelection(message)}
           data-message-content
         >
-          <p>
-            <MessageContent
-              message={message}
-              branchNodes={(state.snapshot?.nodes ?? []).filter(node => node.sourceMessageId === message.id && !node.deletedAt)}
-              onToggleBranch={toggleBranch}
-            />
-          </p>
+          <MessageContent
+            message={message}
+            branchNodes={(state.snapshot?.nodes ?? []).filter(node => node.sourceMessageId === message.id && !node.deletedAt)}
+            onToggleBranch={toggleBranch}
+          />
           {message.status !== "complete" ? <small>{message.status}</small> : null}
         </article>
       ))}
@@ -245,44 +247,5 @@ function MessageContent({
   onToggleBranch(node: CanvasNode): void;
 }) {
   const content = message.content || (message.status === "streaming" ? "Thinking..." : "");
-  const sortedBranches = [...branchNodes]
-    .filter(node => node.sourceRangeStart !== null && node.sourceRangeEnd !== null)
-    .sort((left, right) => (left.sourceRangeStart ?? 0) - (right.sourceRangeStart ?? 0));
-  if (sortedBranches.length === 0) return <>{content}</>;
-
-  const parts: ReactNode[] = [];
-  let cursor = 0;
-  for (const branch of sortedBranches) {
-    const start = branch.sourceRangeStart ?? 0;
-    const end = branch.sourceRangeEnd ?? start;
-    if (start < cursor || start >= content.length || end <= start) continue;
-    if (cursor < start) parts.push(<span key={`${branch.id}-before`}>{content.slice(cursor, start)}</span>);
-    parts.push(
-      <span
-        key={branch.id}
-        role="button"
-        tabIndex={0}
-        className="source-highlight"
-        data-hidden={branch.hiddenAt ? "true" : "false"}
-        onMouseDown={event => {
-          if (event.detail > 1) event.preventDefault();
-        }}
-        onClick={() => onToggleBranch(branch)}
-        onDoubleClick={event => {
-          event.preventDefault();
-          window.getSelection()?.removeAllRanges();
-        }}
-        onKeyDown={event => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          event.preventDefault();
-          onToggleBranch(branch);
-        }}
-      >
-        {content.slice(start, Math.min(end, content.length))}
-      </span>
-    );
-    cursor = Math.min(end, content.length);
-  }
-  if (cursor < content.length) parts.push(<span key="tail">{content.slice(cursor)}</span>);
-  return <>{parts}</>;
+  return <MessageMarkdown content={content} branches={branchNodes} onToggleBranch={onToggleBranch} />;
 }
