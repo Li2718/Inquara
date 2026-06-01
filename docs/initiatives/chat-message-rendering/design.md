@@ -12,10 +12,14 @@ Stored message content remains markdown text. The UI adds a feature-owned render
   - feature-owned renderer for node chat markdown output and source-highlight decoration
 - `apps/web/src/features/node-chat/messageMarkdownModel.ts`
   - small markdown parser and source-aware block model
+- `apps/web/src/features/node-chat/mathRender.ts`
+  - KaTeX-backed math renderer for formula tokens parsed by the message markdown model
 - `apps/web/src/features/node-chat/sourceRange.ts`
   - source-range recovery helper for rendered markdown fragments
 - `apps/web/src/features/node-chat/MessageList.tsx`
   - swaps plain-text rendering for markdown rendering and uses source-aware range recovery
+- `apps/web/src/app/layout.tsx`
+  - imports KaTeX's global stylesheet for formula rendering
 - `apps/web/src/shared/styles.css`
   - updates message layout and markdown presentation
 
@@ -25,4 +29,6 @@ The message renderer must keep source ranges aligned to the raw markdown string,
 
 ## Trade-Off
 
-This slice uses a small feature-owned parser instead of adding a new dependency. That keeps the change self-contained inside the isolated worktree and avoids dependency installation risk, at the cost of supporting a practical markdown subset rather than full CommonMark.
+This slice uses a small feature-owned parser for practical markdown coverage instead of adopting a full CommonMark pipeline. That keeps source-offset behavior explicit and local to node chat, at the cost of supporting a practical subset rather than full CommonMark.
+
+Math rendering is the exception: formulas use KaTeX instead of hand-rendered text because the product needs real mathematical layout, not styled LaTeX source. The parser still owns delimiter detection and source offsets; KaTeX owns the formula DOM.

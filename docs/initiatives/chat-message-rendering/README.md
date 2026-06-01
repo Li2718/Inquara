@@ -2,7 +2,7 @@
 
 > status: active
 > owner: web
-> updated: 2026-06-01
+> updated: 2026-06-02
 > related_docs:
 > - `docs/ui-system.md`
 > - `apps/web/src/shared/components/README.md`
@@ -58,15 +58,24 @@ Visual changes will:
 - Audited the current message rendering and source selection implementation.
 - Chose a feature-owned markdown renderer instead of adding a cross-surface shared component.
 - Created the isolated managed worktree `chat-message-rendering`.
+- Removed assistant bubble surface styling while keeping user messages visually distinct.
+- Added feature-owned markdown parsing and rendering for headings, paragraphs, lists, blockquotes, fenced code, inline formatting, links, images, thematic breaks, task lists, tables, table alignment, and escaped table pipes.
+- Added KaTeX rendering for `$...$`, `\(...\)`, `\[...\]`, and `$$...$$` math content.
+- Preserved source offset metadata for rendered text fragments so selection follow-ups and branch highlights still map back to raw message content.
+- Added focused Vitest coverage for markdown rendering and source range mapping.
+- Committed implementation checkpoints:
+  - `df8ebff feat: render node chat markdown messages`
+  - `88f1c96 feat: expand chat markdown rendering`
+  - `98b505f feat: support richer markdown edge cases`
 
 ## Remaining Work
 
-- Add failing tests for markdown rendering and source offset recovery.
-- Implement the markdown renderer and source-offset mapping helpers.
-- Update node chat rendering and message styles.
-- Run focused tests plus web typecheck and lint verification.
+- Run authenticated product-page visual acceptance against representative real messages in the in-app browser.
+- Decide whether formula branch highlights need fine-grained mapping inside KaTeX-rendered content, or whether block-level formula source ranges are sufficient for this initiative.
+- Run final verification before integration, including focused Vitest coverage, web typecheck, lint, and the required debug-free production check if a production build is part of the closeout.
 
 ## Deferred Or Out Of Scope
 
 - Full CommonMark compliance beyond the formats that current node chat content needs most often.
 - Promoting the renderer into a shared UI layer before a second real use site exists.
+- Full nested markdown support such as multi-paragraph list items, deeply nested lists, and complex nested blockquotes.
