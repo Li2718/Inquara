@@ -8,6 +8,7 @@ const BaseCommandSchema = z.object({
 
 export const CreateNodeAtPositionCommandSchema = BaseCommandSchema.extend({
   type: z.literal("node.createAtPosition"),
+  nodeId: IdSchema,
   title: z.string().min(1).default("New chat"),
   x: z.number(),
   y: z.number()
@@ -15,6 +16,8 @@ export const CreateNodeAtPositionCommandSchema = BaseCommandSchema.extend({
 
 export const CreateNodeFromSelectionCommandSchema = BaseCommandSchema.extend({
   type: z.literal("node.createFromSelection"),
+  nodeId: IdSchema,
+  edgeId: IdSchema,
   sourceNodeId: IdSchema,
   sourceMessageId: IdSchema,
   sourceQuote: z.string().min(1).max(2000),
@@ -76,6 +79,8 @@ export const RestoreDeletedNodeSubtreeCommandSchema = BaseCommandSchema.extend({
 export const SendUserMessageCommandSchema = BaseCommandSchema.extend({
   type: z.literal("message.sendUserMessage"),
   nodeId: IdSchema,
+  userMessageId: IdSchema,
+  assistantMessageId: IdSchema,
   content: z.string().min(1).max(20000)
 });
 

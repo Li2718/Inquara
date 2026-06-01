@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { AppTopBar } from "../../shared/components/chrome";
 import { WorkspaceSidebar } from "../workspaces/WorkspaceSidebar";
+import { WorkspaceLeaseBlocker } from "../workspace-session/WorkspaceLeaseBlocker";
 import { WorkspaceSessionProvider } from "../workspace-session/WorkspaceSessionProvider";
 import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
 import { WORKSPACE_SIDEBAR_OPEN_COOKIE, WORKSPACE_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
@@ -115,11 +116,17 @@ function CanvasWorkspaceContent({
           resetViewportRequest={resetViewportRequest}
           routeWorkspaceId={workspaceId}
         />
+        <WorkspaceLeaseBlocker
+          isVisible={state.leaseState === "blocked-stale" || state.leaseState === "recovering"}
+          isRecovering={state.leaseState === "recovering"}
+          message={state.errorMessage}
+          onRetry={() => window.location.reload()}
+        />
       </section>
       <DebugCanvasSource
         page="canvas"
         workspaceId={workspaceId}
-        connectionStatus={state.connectionStatus}
+        leaseState={state.leaseState}
         pendingClientMutationCount={state.pendingClientMutationIds.length}
         snapshot={state.snapshot}
       />

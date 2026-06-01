@@ -1,12 +1,11 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
-import websocket from "@fastify/websocket";
 import { loadConfig, type AppConfig } from "@inquara/config";
 import Fastify from "fastify";
 import { ZodError } from "zod";
 import { registerDebugRoutes } from "./debug/routes";
 import { registerRoutes } from "./http/routes";
-import { registerRealtimeRoutes } from "./realtime/ws";
+import { createWorkspaceLeaseStore } from "./leases/service";
 
 export type BuildAppOptions = {
   env?: Partial<AppConfig> & Record<string, string | undefined>;
@@ -28,12 +27,10 @@ export async function buildApp(options: BuildAppOptions = {}) {
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
   });
   await app.register(cookie);
-  await app.register(websocket);
-  await registerRoutes(app, config);
+  await registerRoutes(app, config, createWorkspaceLeaseStore(config));
   if (options.env?.NODE_ENV !== "production" && process.env.NODE_ENV !== "production") {
     await registerDebugRoutes(app);
   }
-  await registerRealtimeRoutes(app, config);
 
   return app;
 }

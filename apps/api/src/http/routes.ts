@@ -1,6 +1,8 @@
 import type { AppConfig } from "@inquara/config";
+import { WorkspaceCommandSchema, type WorkspaceCommand } from "@inquara/domain";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
+import { createAIProvider } from "../ai/factory";
 import {
   listActiveUserSessions,
   revokeAllUserSessions,
@@ -32,9 +34,18 @@ import {
   registerWithPassword,
   WorkspaceNotFoundError
 } from "../workspaces/service";
+import { CanvasCommandError } from "../canvas/service";
+import { InMemoryWorkspaceLeaseStore, type WorkspaceLeaseStore } from "../leases/service";
+import { MessageCommandError, MessageStreamingInterruptedError } from "../messages/service";
+import {
+  dispatchWorkspaceCommand,
+  streamWorkspaceMessageCommand,
+  UnsupportedWorkspaceCommandError
+} from "../workspace-commands/service";
 
 const sessionCookieName = "inquara_session";
 const rememberedSessionMaxAgeSeconds = 30 * 24 * 60 * 60;
+const workspaceLeaseTtlSeconds = 15;
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -59,6 +70,20 @@ const UpdateRegistrationSettingsSchema = z.object({
   invitationOnly: z.boolean()
 });
 
+const LeaseMutationSchema = z.object({
+  sessionId: z.string().min(1)
+});
+
+const RenewLeaseSchema = LeaseMutationSchema.extend({
+  leaseEpoch: z.number().int().positive()
+});
+
+const CommandEnvelopeSchema = z.object({
+  sessionId: z.string().min(1),
+  leaseEpoch: z.number().int().positive(),
+  command: z.unknown()
+});
+
 const CreateRedemptionCodeSchema = z.object({
   expiresAt: z.string().datetime().nullable().optional(),
   maxRedemptions: z.number().int().min(1).optional(),
@@ -70,8 +95,14 @@ const UpdateRedemptionCodeNoteSchema = z.object({
   note: z.string().max(240).nullable()
 });
 
-export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig): Promise<void> {
+export async function registerRoutes(
+  _app: FastifyInstance,
+  _config?: AppConfig,
+  leaseStore: WorkspaceLeaseStore = new InMemoryWorkspaceLeaseStore()
+): Promise<void> {
   const app = _app;
+  const config = _config;
+  const aiProvider = config ? createAIProvider(config) : null;
   app.get("/healthz", async () => ({ ok: true }));
 
   app.post("/auth/register", async (request, reply) => {
@@ -293,6 +324,176 @@ export async function registerRoutes(_app: FastifyInstance, _config?: AppConfig)
       throw error;
     }
   });
+
+  app.post("/workspaces/:workspaceId/lease/acquire", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+    const body = LeaseMutationSchema.parse(request.body ?? {});
+
+    try {
+      await getWorkspaceSnapshot(userId, params.workspaceId);
+      return leaseStore.acquire({
+        workspaceId: params.workspaceId,
+        sessionId: body.sessionId,
+        ttlSeconds: workspaceLeaseTtlSeconds,
+        now: new Date()
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) {
+        return reply.code(404).send({ error: "Workspace not found" });
+      }
+      throw error;
+    }
+  });
+
+  app.post("/workspaces/:workspaceId/lease/renew", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+    const body = RenewLeaseSchema.parse(request.body ?? {});
+
+    try {
+      await getWorkspaceSnapshot(userId, params.workspaceId);
+      const result = await leaseStore.renew({
+        workspaceId: params.workspaceId,
+        sessionId: body.sessionId,
+        leaseEpoch: body.leaseEpoch,
+        ttlSeconds: workspaceLeaseTtlSeconds,
+        now: new Date()
+      });
+      if (result.status === "stale") {
+        return reply.code(409).send({ error: "Workspace lease is stale." });
+      }
+      return result;
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) {
+        return reply.code(404).send({ error: "Workspace not found" });
+      }
+      throw error;
+    }
+  });
+
+  app.post("/workspaces/:workspaceId/lease/release", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+    const body = LeaseMutationSchema.parse(request.body ?? {});
+
+    try {
+      await getWorkspaceSnapshot(userId, params.workspaceId);
+      await leaseStore.release({
+        workspaceId: params.workspaceId,
+        sessionId: body.sessionId
+      });
+      return reply.code(204).send();
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) {
+        return reply.code(404).send({ error: "Workspace not found" });
+      }
+      throw error;
+    }
+  });
+
+  app.get("/workspaces/:workspaceId/lease/status", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+    const query = LeaseMutationSchema.parse(request.query ?? {});
+
+    try {
+      await getWorkspaceSnapshot(userId, params.workspaceId);
+      return leaseStore.getStatus({
+        workspaceId: params.workspaceId,
+        sessionId: query.sessionId,
+        now: new Date()
+      });
+    } catch (error) {
+      if (error instanceof WorkspaceNotFoundError) {
+        return reply.code(404).send({ error: "Workspace not found" });
+      }
+      throw error;
+    }
+  });
+
+  app.post("/workspaces/:workspaceId/commands", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    const params = request.params as { workspaceId: string };
+    const body = parseCommandEnvelope(request.body);
+
+    try {
+      if (body.command.workspaceId !== params.workspaceId) {
+        return reply.code(400).send({ error: "Workspace command target does not match the route." });
+      }
+      await assertWorkspaceLease(leaseStore, {
+        workspaceId: params.workspaceId,
+        sessionId: body.sessionId,
+        leaseEpoch: body.leaseEpoch
+      });
+      const events = await dispatchWorkspaceCommand(userId, body.command);
+      return { events };
+    } catch (error) {
+      return handleWorkspaceCommandError(error, reply);
+    }
+  });
+
+  app.post("/workspaces/:workspaceId/messages/stream", async (request, reply) => {
+    const userId = await requireUserId(request, reply);
+    if (!userId) return;
+    if (!aiProvider) {
+      return reply.code(500).send({ error: "AI provider is unavailable." });
+    }
+    const params = request.params as { workspaceId: string };
+    const body = parseCommandEnvelope(request.body);
+
+    if (body.command.type !== "message.sendUserMessage") {
+      return reply.code(400).send({ error: "Expected a message.sendUserMessage command." });
+    }
+    if (body.command.workspaceId !== params.workspaceId) {
+      return reply.code(400).send({ error: "Workspace command target does not match the route." });
+    }
+
+    let streamStarted = false;
+    try {
+      await assertWorkspaceLease(leaseStore, {
+        workspaceId: params.workspaceId,
+        sessionId: body.sessionId,
+        leaseEpoch: body.leaseEpoch
+      });
+      reply.hijack();
+      reply.header("Content-Type", "application/x-ndjson; charset=utf-8");
+      reply.header("Cache-Control", "no-store");
+      reply.raw.writeHead(200);
+      streamStarted = true;
+      await streamWorkspaceMessageCommand(
+        userId,
+        body.command,
+        aiProvider,
+        async event => {
+          reply.raw.write(`${JSON.stringify({ type: "event", event })}\n`);
+        },
+        async () => {
+          await assertWorkspaceLease(leaseStore, {
+            workspaceId: params.workspaceId,
+            sessionId: body.sessionId,
+            leaseEpoch: body.leaseEpoch
+          });
+        }
+      );
+      reply.raw.end();
+      return;
+    } catch (error) {
+      if (streamStarted) {
+        reply.raw.write(
+          `${JSON.stringify({ type: "error", error: error instanceof Error ? error.message : "Stream failed." })}\n`
+        );
+        reply.raw.end();
+        return;
+      }
+      return handleWorkspaceCommandError(error, reply);
+    }
+  });
 }
 
 async function requireUserId(request: FastifyRequest, reply: FastifyReply): Promise<string | null> {
@@ -366,4 +567,48 @@ function resolveExpiresAt(body: z.infer<typeof CreateRedemptionCodeSchema>): Dat
     return expiresAt;
   }
   return null;
+}
+
+function parseCommandEnvelope(body: unknown): z.infer<typeof CommandEnvelopeSchema> & { command: WorkspaceCommand } {
+  const parsed = CommandEnvelopeSchema.parse(body ?? {});
+  return {
+    ...parsed,
+    command: WorkspaceCommandSchema.parse(parsed.command)
+  };
+}
+
+async function assertWorkspaceLease(
+  leaseStore: WorkspaceLeaseStore,
+  input: {
+    workspaceId: string;
+    sessionId: string;
+    leaseEpoch: number;
+  }
+): Promise<void> {
+  const renewed = await leaseStore.renew({
+    workspaceId: input.workspaceId,
+    sessionId: input.sessionId,
+    leaseEpoch: input.leaseEpoch,
+    ttlSeconds: workspaceLeaseTtlSeconds,
+    now: new Date()
+  });
+  if (renewed.status === "stale") {
+    throw new MessageStreamingInterruptedError("Workspace lease is stale.");
+  }
+}
+
+function handleWorkspaceCommandError(error: unknown, reply: FastifyReply) {
+  if (error instanceof WorkspaceNotFoundError) {
+    return reply.code(404).send({ error: "Workspace not found" });
+  }
+  if (error instanceof CanvasCommandError || error instanceof MessageCommandError) {
+    return reply.code(400).send({ error: error.message });
+  }
+  if (error instanceof UnsupportedWorkspaceCommandError) {
+    return reply.code(400).send({ error: error.message });
+  }
+  if (error instanceof MessageStreamingInterruptedError) {
+    return reply.code(409).send({ error: error.message });
+  }
+  throw error;
 }

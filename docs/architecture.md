@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build the first production version of Inquara: an account-based personal AI thinking workspace where each user can create multiple infinite canvases, place chat nodes on a canvas, ask questions inside nodes, branch follow-up nodes from selected assistant text, and keep multiple browser windows for the same account synchronized in real time.
+Build the first production version of Inquara: an account-based personal AI thinking workspace where each user can create multiple infinite canvases, place chat nodes on a canvas, ask questions inside nodes, branch follow-up nodes from selected assistant text, and edit one workspace at a time through a single-active-client lease model.
 
 The first production version should preserve the interaction proven by the demo while replacing the demo's in-memory state and static JavaScript with a maintainable TypeScript architecture, durable storage, authenticated APIs, and a real-time event pipeline.
 
@@ -19,8 +19,8 @@ The first production version should preserve the interaction proven by the demo 
 - Node dragging, resizing if needed, folding, and basic deletion.
 - Edges between related nodes.
 - Persistent nodes, edges, and messages.
-- Real-time synchronization across multiple windows opened by the same user.
-- AI streaming where all windows viewing the same workspace can see the same assistant reply stream.
+- Local-first workspace editing with a single active editing client per workspace.
+- AI streaming over HTTP for the active workspace client.
 - Error handling for failed commands, disconnected real-time sessions, and failed AI responses.
 
 ### Out Of Scope For The First Version
@@ -43,7 +43,7 @@ apps/web
   Next.js application for authenticated product UI and canvas experience.
 
 apps/api
-  Fastify service for HTTP APIs, WebSocket synchronization, and AI streaming.
+  Fastify service for HTTP APIs, workspace lease enforcement, command mutation routes, and AI streaming.
 
 packages/domain
   Shared TypeScript types, command/event schemas, and validation helpers.
@@ -55,17 +55,17 @@ packages/config
   Shared environment parsing and runtime configuration.
 ```
 
-This is preferred over a pure Next.js full-stack design because Inquara's core experience depends on long-lived WebSocket connections and AI stream fanout. Keeping those responsibilities in a dedicated Fastify service makes the real-time path easier to reason about and easier to deploy independently. Next.js can focus on routing, authenticated pages, and the user interface.
+This is preferred over a pure Next.js full-stack design because Inquara's core experience depends on authenticated workspace mutation routes, lease enforcement, and AI stream handling. Keeping those responsibilities in a dedicated Fastify service makes the mutation and streaming path easier to reason about and easier to deploy independently. Next.js can focus on routing, authenticated pages, and the user interface.
 
 ## Technology Stack
 
 - Language: TypeScript.
 - Web app: Next.js, React, React Flow, TanStack Query, Zustand or a small `useSyncExternalStore` store.
-- API app: Fastify, `@fastify/websocket`, Zod or Valibot for runtime schemas.
+- API app: Fastify, Redis-backed workspace leases, and Zod or Valibot for runtime schemas.
 - Database: PostgreSQL.
 - ORM: Prisma.
 - Authentication: Auth.js or a hosted auth provider with server-side session verification. The design only requires a stable `userId` in the API layer.
-- Real-time transport: WebSocket.
+- Workspace mutation transport: authenticated HTTP routes.
 - AI provider integration: server-side AI gateway using an OpenAI-compatible streaming interface where practical.
 
 ## Debug System Rules
@@ -361,7 +361,7 @@ Example events:
 
 Each client-originated command should include a `clientMutationId`. When the server broadcasts the resulting event, the originating window can use that id to reconcile optimistic UI state without applying the same change twice.
 
-## Real-Time Synchronization
+## Workspace Session Model
 
 Use the server as the authority for workspace state.
 
@@ -370,8 +370,9 @@ Initial load:
 ```text
 1. Web app requests GET /workspaces/:workspaceId/snapshot.
 2. API verifies the authenticated user owns the workspace.
-3. API returns workspace metadata, nodes, edges, messages, and current workspace version.
-4. Web app opens a WebSocket subscription for the workspace.
+3. Web app acquires a workspace lease for a tab-scoped session id.
+4. If acquired, API returns the current lease epoch.
+5. Web app loads workspace metadata, nodes, edges, messages, and current workspace version.
 ```
 
 Editing flow:
@@ -379,22 +380,23 @@ Editing flow:
 ```text
 1. User performs an action in the canvas.
 2. Web app applies a local optimistic update when the action is low risk.
-3. Web app sends a command to the API.
-4. API validates ownership and command shape.
+3. Web app sends a lease-aware HTTP command to the API.
+4. API validates ownership, lease epoch, and command shape.
 5. API writes the change to Postgres.
 6. API increments the workspace version.
-7. API broadcasts an event to all open sockets subscribed to that workspace.
-8. All windows apply the event.
+7. API returns the resulting workspace events, or streams them for assistant replies.
+8. The active client reconciles optimistic state with the returned events.
 ```
 
 Conflict handling:
 
-- The first version uses last-write-wins for simple node fields such as position, title, and collapsed state.
+- Each workspace has exactly one active editing client at a time.
+- A newer client may take over the lease immediately.
+- A displaced client becomes stale and blocked until it can reacquire and refetch the snapshot.
 - Each workspace has a monotonic `version`.
-- If a client detects a missing or out-of-order event, it refetches the full snapshot.
 - Offline editing is not supported in the first version.
 
-This approach is enough for one user with multiple windows and avoids the complexity of CRDTs until true multi-user collaboration exists.
+This approach is enough for one user moving between windows, tabs, or devices and avoids the complexity of live multi-client merge behavior until true multi-user collaboration exists.
 
 ## AI Streaming Flow
 
@@ -404,15 +406,15 @@ Flow:
 
 ```text
 1. User submits a message in a node.
-2. Web app sends `message.sendUserMessage`.
+2. Web app sends `message.sendUserMessage` to the HTTP streaming route together with the current lease epoch.
 3. API creates a complete user message.
 4. API creates an assistant message with `status = streaming` and empty content.
-5. API broadcasts `workspace.message.created`.
+5. API streams `workspace.message.created`.
 6. API builds model context from the node's message history and source quote metadata.
 7. API calls the configured AI provider with streaming enabled.
 8. For each received chunk:
    - append chunk to an in-memory buffer
-   - broadcast `workspace.message.delta`
+   - stream `workspace.message.delta`
 9. When generation completes:
    - persist the full assistant message content
    - mark status as `complete`
@@ -444,8 +446,8 @@ apps/web/src/features/canvas
 apps/web/src/features/node-chat
   Message list, composer, streaming assistant display, retry UI.
 
-apps/web/src/features/realtime
-  WebSocket client, subscription lifecycle, reconnect logic, event application.
+apps/web/src/features/workspace-session
+  Workspace lease lifecycle, optimistic HTTP mutation flow, stale-blocking recovery, and streamed assistant handling.
 
 apps/web/src/shared
   UI primitives, hooks, formatting, utilities.
@@ -470,7 +472,7 @@ Responsibilities:
 Does not own:
 
 - Canvas state mutation logic.
-- WebSocket event application.
+- Workspace event application and optimistic mutation reconciliation.
 - AI message sending logic.
 
 Primary interfaces:
@@ -506,8 +508,8 @@ Responsibilities:
 
 - Loading the initial workspace snapshot.
 - Creating the in-memory workspace store from the snapshot.
-- Opening the WebSocket subscription after snapshot load.
-- Reconnecting and refetching the snapshot when event gaps are detected.
+- Acquiring the workspace lease before enabling editing.
+- Polling for recovery and refetching the snapshot after stale takeover or network recovery.
 - Exposing the live workspace state to canvas and chat modules.
 
 Primary interfaces:
@@ -517,7 +519,7 @@ Primary interfaces:
 - `useWorkspaceState(selector)`
 - `dispatchWorkspaceCommand(command)`
 
-This module is the bridge between HTTP snapshot loading, WebSocket events, and UI state.
+This module is the bridge between snapshot loading, lease state, HTTP mutation flows, streaming replies, and UI state.
 
 #### `features/canvas`
 
@@ -567,26 +569,17 @@ Primary interfaces:
 
 This module should not know about React Flow internals. It reports branchable selections to the canvas module through callbacks.
 
-#### `features/realtime`
+#### `features/workspace-session`
 
-Owns the browser WebSocket client.
+Owns the browser workspace lease client and mutation session state.
 
 Responsibilities:
 
-- Connecting to the API WebSocket endpoint.
-- Authenticating the socket using the current session.
-- Subscribing to one workspace.
-- Receiving, validating, and ordering events.
-- Reconnecting with backoff.
-- Reporting event gaps to `workspace-session`.
-
-Primary interfaces:
-
-- `createRealtimeClient(config)`
-- `subscribeToWorkspace(workspaceId, handlers)`
-- `sendCommand(command)`
-
-This module should not mutate React state directly. It passes events to `workspace-session`.
+- Acquiring, renewing, and releasing workspace leases.
+- Polling for recovery when the client becomes stale.
+- Sending workspace commands over HTTP.
+- Streaming assistant replies over HTTP.
+- Reporting `active`, `recovering`, and `blocked-stale` state changes to the rest of the product.
 
 #### `features/commands`
 
@@ -622,7 +615,7 @@ State responsibilities:
 
 - TanStack Query handles initial snapshots and HTTP mutations.
 - A small workspace store holds the live canvas state after snapshot load.
-- The WebSocket client applies server events to the workspace store.
+- The workspace session feature applies optimistic changes and server events to that store.
 - React Flow renders controlled nodes and edges from the workspace store.
 
 The canvas node component should include a message list and composer, but the logic for sending messages should stay in the node-chat feature so it can be tested separately from React Flow.
@@ -636,7 +629,7 @@ Workspace route
   -> WorkspaceSessionProvider
   -> GET workspace snapshot
   -> initialize workspace store
-  -> open WebSocket subscription
+  -> acquire workspace lease
   -> render CanvasView
 ```
 
@@ -646,8 +639,8 @@ Dragging a node:
 React Flow node drag
   -> canvas module creates node.updatePosition command
   -> workspace-session applies optimistic position update
-  -> realtime client sends command
-  -> API persists and broadcasts workspace.node.updated
+  -> session client sends HTTP command
+  -> API persists and returns workspace.node.updated
   -> workspace-session reconciles optimistic state with server event
 ```
 
@@ -656,9 +649,9 @@ Sending a message:
 ```text
 MessageComposer submit
   -> node-chat creates message.sendUserMessage command
-  -> realtime client sends command
+  -> session client sends HTTP streaming request
   -> API creates user and assistant messages
-  -> workspace-session receives message events and deltas
+  -> workspace-session receives streamed message events and deltas
   -> NodeChatPanel renders the stream
 ```
 
@@ -671,7 +664,7 @@ MessageList selection
   -> user confirms follow-up
   -> canvas creates node.createFromSelection command
   -> API creates child node and edge
-  -> all windows receive node and edge events
+  -> active client receives node and edge events
 ```
 
 ## Backend Architecture
@@ -694,8 +687,8 @@ apps/api/src/canvas
 apps/api/src/messages
   User message creation, assistant retry, message persistence.
 
-apps/api/src/realtime
-  WebSocket server, workspace subscriptions, event broadcasting.
+apps/api/src/leases
+  Workspace lease acquisition, renewal, release, and recovery priority logic.
 
 apps/api/src/ai
   Provider abstraction, context building, stream handling.
@@ -705,7 +698,7 @@ Backend rules:
 
 - Every workspace command must verify `workspace.ownerId === currentUser.id`.
 - All writes go through command handlers, not direct route-level database mutations.
-- Command handlers return the persisted result and the event or events to broadcast.
+- Command handlers return the persisted result and the event or events to return or stream.
 - The AI gateway is the only code allowed to call external model providers.
 - API routes should never expose provider API keys to the browser.
 
@@ -719,7 +712,7 @@ Responsibilities:
 
 - Registering plugins.
 - Registering HTTP routes.
-- Registering the WebSocket endpoint.
+- Registering workspace lease, mutation, and streaming routes.
 - Attaching request ids and logging.
 - Converting thrown domain errors into HTTP responses.
 
@@ -739,7 +732,7 @@ Responsibilities:
 - Exposing `requireUser(request)`.
 - Providing authorization helpers such as `requireWorkspaceOwner(userId, workspaceId)`.
 
-The rest of the backend should depend on this module for identity checks instead of parsing auth details directly. WebSocket handlers must attach message listeners synchronously and await session verification inside message handling so the first client message cannot be lost while authentication is still loading.
+The rest of the backend should depend on this module for identity checks instead of parsing auth details directly.
 
 #### `workspaces`
 
@@ -825,26 +818,16 @@ Primary interfaces:
 
 This module should expose a provider-neutral stream interface so the app can change model providers later without touching canvas or message command code.
 
-#### `realtime`
+#### `leases`
 
-Owns WebSocket sessions and workspace event fanout.
+Owns workspace lease coordination and active-session enforcement.
 
 Responsibilities:
 
-- Authenticating socket connections.
-- Tracking which sockets are subscribed to each workspace.
-- Validating incoming command envelopes.
-- Dispatching commands to the correct backend service.
-- Broadcasting events to subscribed sockets.
-- Sending reconnect or resync instructions when needed.
-
-Primary interfaces:
-
-- `subscribe(socket, workspaceId)`
-- `broadcastWorkspaceEvent(workspaceId, event)`
-- `handleCommandEnvelope(socket, envelope)`
-
-This module should not contain database write logic. It dispatches commands and broadcasts the resulting events.
+- Acquiring, renewing, and releasing one active editing lease per workspace.
+- Recording waiter priority after takeover.
+- Determining when a blocked client may recover.
+- Rejecting stale writers through lease epoch validation.
 
 #### `events`
 
@@ -883,8 +866,8 @@ Business rules should stay in feature services, not in generic database helpers.
 Example: create a follow-up from selected assistant text.
 
 ```text
-WebSocket command envelope
-  -> realtime.handleCommandEnvelope
+HTTP command envelope
+  -> lease validation
   -> auth.requireWorkspaceOwner
   -> canvas.createNodeFromSelection
   -> database transaction:
@@ -894,33 +877,33 @@ WebSocket command envelope
        increment workspace version
   -> events.createNodeCreatedEvent
   -> events.createEdgeCreatedEvent
-  -> realtime.broadcastWorkspaceEvent
+  -> HTTP response returns workspace events
 ```
 
 Example: send a message and stream an assistant reply.
 
 ```text
-WebSocket command envelope
-  -> realtime.handleCommandEnvelope
+HTTP command envelope
+  -> lease validation
   -> messages.sendUserMessage
   -> database transaction:
        create user message
        create assistant placeholder
        increment workspace version
-  -> broadcast message.created events
+  -> stream message.created events
   -> ai.streamAssistantReply
   -> for each chunk:
-       broadcast message.delta
+       stream message.delta
   -> messages.completeAssistantMessage
-  -> broadcast message.updated
+  -> stream message.updated
 ```
 
 ## Error Handling
 
 Client behavior:
 
-- Show reconnect status when WebSocket disconnects.
-- Refetch snapshot after reconnect if events may have been missed.
+- Show blocked or recovering state when lease ownership is lost or when network recovery is in progress.
+- Refetch the snapshot after stale recovery before editing resumes.
 - Roll back optimistic updates when a command fails.
 - Show failed assistant messages inline with a retry action.
 - Keep the user's submitted message even when the assistant response fails.
@@ -941,14 +924,14 @@ Use tests at the boundaries where mistakes are most likely:
 - Domain tests for command validation and event reducers.
 - Database integration tests for workspace ownership, node creation, branch creation, and message persistence.
 - API tests for snapshot loading and command endpoints.
-- WebSocket tests for subscribing to a workspace and receiving broadcast events.
+- Lease and HTTP route tests for takeover, stale rejection, and streamed replies.
 - AI gateway tests with a fake streaming provider.
 - Frontend component tests for node composer, message streaming display, and selection follow-up creation.
-- A Playwright smoke test for logging in, creating a workspace, asking a question, branching from selected text, and seeing updates in a second browser context.
+- A Playwright smoke test for logging in, creating a workspace, asking a question, branching from selected text, and verifying takeover or stale blocking across two browser contexts.
 
 Database-backed tests must be isolated from local development data.
 
-- API, database integration, WebSocket, and Playwright e2e tests that write to the database must run against a temporary PostgreSQL database started with `testcontainers`.
+- API, database integration, lease/streaming route, and Playwright e2e tests that write to the database must run against a temporary PostgreSQL database started with `testcontainers`.
 - Test setup must apply the real Prisma migrations to the temporary database before the test suite writes data.
 - Tests must not default to the local development database URL from `.env.dev` or any developer-local env file when they perform destructive cleanup.
 - Destructive cleanup such as `deleteMany()` belongs behind the shared ephemeral test database helper, not inside individual test files.

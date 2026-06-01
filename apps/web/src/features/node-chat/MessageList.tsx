@@ -22,6 +22,7 @@ type SelectionState = {
 export function MessageList({ node }: { node: CanvasNode }) {
   const { state, commands, sendCommand } = useWorkspaceSession();
   const { getPlacementViewport } = useCanvasPlacementViewportGetter();
+  const isBlocked = state.leaseState !== "active";
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -85,7 +86,8 @@ export function MessageList({ node }: { node: CanvasNode }) {
     shouldStickToBottomRef.current = isScrolledNearBottom(element);
     if (scrollSaveTimerRef.current) window.clearTimeout(scrollSaveTimerRef.current);
     scrollSaveTimerRef.current = window.setTimeout(() => {
-      sendCommand(commands.updateNodeScroll(node.id, element.scrollTop));
+      if (isBlocked) return;
+      void sendCommand(commands.updateNodeScroll(node.id, element.scrollTop));
     }, 250);
   }
 
@@ -168,8 +170,9 @@ export function MessageList({ node }: { node: CanvasNode }) {
 
   function askFollowUp() {
     if (!selection) return;
+    if (isBlocked) return;
     const position = findFollowupNodePosition(node, state.snapshot?.nodes ?? [], getPlacementViewport());
-    sendCommand(
+    void sendCommand(
       commands.createNodeFromSelection({
         sourceNodeId: node.id,
         sourceMessageId: selection.message.id,
@@ -184,12 +187,13 @@ export function MessageList({ node }: { node: CanvasNode }) {
   }
 
   function toggleBranch(branchNode: CanvasNode) {
+    if (isBlocked) return;
     if (branchNode.hiddenAt) {
       const position = findRestoredNodePosition(branchNode, state.snapshot?.nodes ?? [], getPlacementViewport());
-      sendCommand(commands.restoreNodeBranch(branchNode.id, position));
+      void sendCommand(commands.restoreNodeBranch(branchNode.id, position));
       return;
     }
-    sendCommand(commands.hideNodeSubtree(branchNode.id, branchNode.scrollTop));
+    void sendCommand(commands.hideNodeSubtree(branchNode.id, branchNode.scrollTop));
   }
 
   return (

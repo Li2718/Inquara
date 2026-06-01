@@ -44,7 +44,7 @@ Test execution paths that coordinate multiple steps and can fail by being wired 
 
 Examples:
 
-- WebSocket subscription and fanout.
+- Workspace lease takeover, stale rejection, and streamed reply delivery.
 - AI streaming, partial output persistence, and failure handling.
 - Reconnect or stale-event handling.
 - Provider request/response normalization.
@@ -94,7 +94,7 @@ Do not test implementation trivia unless it is the actual contract.
 
 - Pure domain tests for deterministic rules where the inputs and outputs express product behavior.
 - API and service tests for authentication, ownership checks, persistence, command handling, and AI context construction.
-- WebSocket tests for subscription, broadcast, reconnect, ordering, and multi-window synchronization behavior.
+- Lease and HTTP route tests for takeover, stale rejection, recovery, ordering, and streamed reply behavior.
 - Focused frontend tests for interaction logic that is hard to trust through API tests alone.
 - Playwright smoke tests for critical end-to-end flows that depend on real browser behavior.
 
@@ -129,14 +129,14 @@ Rules:
 
 ### API And Database-Backed Tests
 
-Database-backed API/service/WebSocket tests may live in `apps/api/src/test/` because they share the API test harness and ephemeral database lifecycle.
+Database-backed API/service/lease/streaming tests may live in `apps/api/src/test/` because they share the API test harness and ephemeral database lifecycle.
 
 Current examples:
 
 - `apps/api/src/test/app.test.ts`
 - `apps/api/src/test/canvas.test.ts`
 - `apps/api/src/test/messages.test.ts`
-- `apps/api/src/test/realtime.test.ts`
+- `apps/api/src/test/workspace-http.test.ts`
 
 Rules:
 
@@ -213,7 +213,7 @@ When adding a source-level guardrail, the test name must describe the risk, not 
 
 Database-backed tests must follow the architecture rules:
 
-- API, database integration, WebSocket, and Playwright e2e tests that write data must use the shared ephemeral PostgreSQL setup based on `testcontainers`.
+- API, database integration, lease/streaming route, and Playwright e2e tests that write data must use the shared ephemeral PostgreSQL setup based on `testcontainers`.
 - Destructive tests must not default to the local development database URL from `.env.dev` or any developer-local env file.
 - Direct database cleanup such as `deleteMany()` belongs in the shared test database helper, not individual test files.
 - If Docker or `testcontainers` fails, stop and report the blocker instead of replacing it with a simplified local workaround.

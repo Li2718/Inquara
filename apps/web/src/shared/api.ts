@@ -25,6 +25,19 @@ export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<
   return response.json() as Promise<T>;
 }
 
+export async function apiRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (init.body !== undefined && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return fetch(`${API_ORIGIN}${path}`, {
+    ...init,
+    credentials: "include",
+    headers
+  });
+}
+
 async function readApiErrorMessage(response: Response): Promise<string> {
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {

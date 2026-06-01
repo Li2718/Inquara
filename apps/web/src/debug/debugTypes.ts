@@ -1,5 +1,5 @@
 import type { WorkspaceSnapshot } from "@inquara/domain";
-import type { ConnectionStatus } from "../features/workspace-session/store";
+import type { WorkspaceLeaseState } from "../features/workspace-session/store";
 
 export type DebugRootProps = {
   page: "global";
@@ -8,7 +8,7 @@ export type DebugRootProps = {
 export type CanvasDebugSnapshot = {
   page: "canvas";
   workspaceId: string;
-  connectionStatus: ConnectionStatus;
+  leaseState: WorkspaceLeaseState;
   pendingClientMutationCount: number;
   snapshot: WorkspaceSnapshot | null;
 };

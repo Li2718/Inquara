@@ -15,9 +15,10 @@ function getSafeZoom(zoom: number) {
 }
 
 export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodeProps<ChatFlowNode>) {
-  const { commands, sendCommand } = useWorkspaceSession();
+  const { commands, sendCommand, state } = useWorkspaceSession();
   const updateNodeInternals = useUpdateNodeInternals();
   const zoom = useStore(state => state.transform[2]);
+  const isBlocked = state.leaseState !== "active";
   const [isDangerOpen, setIsDangerOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -59,8 +60,8 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
         height: activeResize.originHeight + (event.clientY - activeResize.startY) / zoomScale
       });
       setDraftSize(nextSize);
-      if (nextSize.width !== data.width || nextSize.height !== data.height) {
-        sendCommand(commands.updateNodeSize(id, nextSize));
+      if (!isBlocked && (nextSize.width !== data.width || nextSize.height !== data.height)) {
+        void sendCommand(commands.updateNodeSize(id, nextSize));
       }
     };
 
@@ -72,16 +73,18 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
       window.removeEventListener("pointerup", stopResize);
       window.removeEventListener("pointercancel", stopResize);
     };
-  }, [commands, data.height, data.width, id, sendCommand, zoom]);
+  }, [commands, data.height, data.width, id, isBlocked, sendCommand, zoom]);
 
   function hideNode() {
+    if (isBlocked) return;
     const list = document.querySelector(`[data-node-id="${id}"] .message-list`);
     const scrollTop = list instanceof HTMLElement ? list.scrollTop : data.scrollTop;
-    sendCommand(commands.hideNodeSubtree(id, scrollTop));
+    void sendCommand(commands.hideNodeSubtree(id, scrollTop));
   }
 
   function deleteNode() {
-    sendCommand(commands.deleteNodeSubtree(id));
+    if (isBlocked) return;
+    void sendCommand(commands.deleteNodeSubtree(id));
     setIsDeleteDialogOpen(false);
     setIsDangerOpen(false);
   }
@@ -99,10 +102,12 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
       setDraftTitle(data.title);
       return;
     }
-    sendCommand(commands.renameNode(id, nextTitle));
+    if (isBlocked) return;
+    void sendCommand(commands.renameNode(id, nextTitle));
   }
 
   function startResize(event: PointerEvent<HTMLButtonElement>) {
+    if (isBlocked) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -166,6 +171,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
               className="node-menu-trigger nodrag"
               aria-label="More node actions"
               title="More actions"
+              disabled={isBlocked}
               onClick={() => setIsDangerOpen(value => !value)}
             >
               <MoreVerticalIcon />
@@ -193,7 +199,13 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
           </div>
           <div className="canvas-node-actions">
             {canHideBranch ? (
-              <IconButton className="hide-branch-button" aria-label="Hide branch" title="Hide branch" onClick={hideNode}>
+              <IconButton
+                className="hide-branch-button"
+                aria-label="Hide branch"
+                title="Hide branch"
+                disabled={isBlocked}
+                onClick={hideNode}
+              >
                 <CheckIcon />
               </IconButton>
             ) : null}
@@ -205,6 +217,7 @@ export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodePro
           className="canvas-node-resize-handle nodrag nowheel"
           aria-label="Resize chat"
           title="Resize"
+          disabled={isBlocked}
           onPointerDown={startResize}
         />
       </div>

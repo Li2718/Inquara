@@ -71,6 +71,7 @@ function CanvasFlow({
   routeWorkspaceId: string;
 }) {
   const { state, commands, sendCommand } = useWorkspaceSession();
+  const isBlocked = state.leaseState !== "active";
   const { screenToFlowPosition } = useReactFlow();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
@@ -257,7 +258,7 @@ function CanvasFlow({
   }, []);
 
   const onNodeDragStop: OnNodeDrag = (_event, node) => {
-    sendCommand(commands.updateNodePosition(node.id, node.position));
+    void sendCommand(commands.updateNodePosition(node.id, node.position));
   };
 
   const onNodesChange = (changes: NodeChange<ChatFlowNode>[]) => {
@@ -280,11 +281,12 @@ function CanvasFlow({
 
   const createNodeFromContextMenu = () => {
     if (!contextMenu) return;
+    if (isBlocked) return;
     const position = { x: contextMenu.flowX, y: contextMenu.flowY };
     setContextMenu(null);
     if (contextMenuCreateTimerRef.current) window.clearTimeout(contextMenuCreateTimerRef.current);
     contextMenuCreateTimerRef.current = window.setTimeout(() => {
-      sendCommand(commands.createNodeAtPosition(position));
+      void sendCommand(commands.createNodeAtPosition(position));
       contextMenuCreateTimerRef.current = null;
     }, CANVAS_CONTEXT_MENU_EXIT_MS);
   };
@@ -303,7 +305,7 @@ function CanvasFlow({
       data-workspace-transition={
         isPreparingWorkspaceSwitch || isShowingStaleSnapshot
           ? "leaving"
-          : state.connectionStatus === "connecting" || isSettlingWorkspace
+          : state.leaseState === "acquiring" || state.leaseState === "recovering" || isSettlingWorkspace
             ? "entering"
             : "idle"
       }
@@ -319,6 +321,8 @@ function CanvasFlow({
           onPaneContextMenu={onPaneContextMenu}
           nodesConnectable={false}
           elementsSelectable={false}
+          nodesDraggable={!isBlocked}
+          panOnDrag={!isBlocked}
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={28} size={1} />

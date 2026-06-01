@@ -9,6 +9,7 @@ export type CreateNodeAtPositionCommand = {
   type: "node.createAtPosition";
   clientMutationId: string;
   workspaceId: string;
+  nodeId: string;
   title?: string;
   x: number;
   y: number;
@@ -18,6 +19,8 @@ export type CreateNodeFromSelectionCommand = {
   type: "node.createFromSelection";
   clientMutationId: string;
   workspaceId: string;
+  nodeId: string;
+  edgeId: string;
   sourceNodeId: string;
   sourceMessageId: string;
   sourceQuote: string;
@@ -101,6 +104,7 @@ export async function createNodeAtPosition(
     const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
     const node = await tx.canvasNode.create({
       data: {
+        id: command.nodeId,
         workspaceId: command.workspaceId,
         title: command.title || "New chat",
         x: command.x,
@@ -141,6 +145,7 @@ export async function createNodeFromSelection(
 
     const child = await tx.canvasNode.create({
       data: {
+        id: command.nodeId,
         workspaceId: command.workspaceId,
         title: "Follow-up",
         x: command.x,
@@ -159,6 +164,7 @@ export async function createNodeFromSelection(
 
     const edge = await tx.canvasEdge.create({
       data: {
+        id: command.edgeId,
         workspaceId: command.workspaceId,
         sourceNodeId: sourceNode.id,
         targetNodeId: child.id,

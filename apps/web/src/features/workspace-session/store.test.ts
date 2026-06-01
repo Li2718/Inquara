@@ -44,6 +44,7 @@ describe("workspace session store", () => {
   it("applies events and clears acknowledged client mutations", () => {
     const store = createWorkspaceSessionStore();
     store.getState().setSnapshot(snapshot);
+    store.getState().setLeaseState("active");
     store.getState().markPending("mutation-1");
 
     const event: WorkspaceEvent = {
@@ -66,5 +67,23 @@ describe("workspace session store", () => {
 
     expect(store.getState().snapshot?.nodes[0]?.x).toBe(90);
     expect(store.getState().pendingClientMutationIds).toEqual([]);
+  });
+
+  it("applies optimistic node movement before the server event arrives", () => {
+    const store = createWorkspaceSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyOptimisticCommand({
+      type: "node.updatePosition",
+      clientMutationId: "mutation-optimistic-position",
+      workspaceId: "workspace-1",
+      nodeId: "node-1",
+      x: 180,
+      y: 220
+    });
+
+    expect(store.getState().snapshot?.nodes[0]?.x).toBe(180);
+    expect(store.getState().snapshot?.nodes[0]?.y).toBe(220);
+    expect(store.getState().pendingClientMutationIds).toEqual(["mutation-optimistic-position"]);
   });
 });

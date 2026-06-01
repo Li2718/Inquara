@@ -7,13 +7,13 @@ import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvid
 export function MessageComposer({ nodeId }: { nodeId: string }) {
   const { commands, sendCommand, state } = useWorkspaceSession();
   const [content, setContent] = useState("");
-  const isDisconnected = state.connectionStatus === "disconnected";
+  const isBlocked = state.leaseState !== "active";
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = content.trim();
-    if (!trimmed || isDisconnected) return;
-    sendCommand(commands.sendUserMessage(nodeId, trimmed));
+    if (!trimmed || isBlocked) return;
+    void sendCommand(commands.sendUserMessage(nodeId, trimmed));
     setContent("");
   }
 
@@ -23,9 +23,9 @@ export function MessageComposer({ nodeId }: { nodeId: string }) {
         value={content}
         onChange={event => setContent(event.target.value)}
         placeholder="Ask in this node"
-        disabled={isDisconnected}
+        disabled={isBlocked}
       />
-      <Button type="submit" disabled={!content.trim() || isDisconnected}>
+      <Button type="submit" disabled={!content.trim() || isBlocked}>
         Send
       </Button>
     </form>

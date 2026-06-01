@@ -26,6 +26,21 @@ export function getDevEnvironmentPaths(rootDir) {
   };
 }
 
+export function getDevComposeProjectName(rootDir) {
+  const normalizedRootDir = rootDir.endsWith(path.sep) ? rootDir.slice(0, -1) : rootDir;
+  const parentDirName = path.basename(path.dirname(normalizedRootDir));
+  const managedRootDir =
+    parentDirName === ".worktrees" || parentDirName === "worktrees"
+      ? path.basename(path.dirname(path.dirname(normalizedRootDir)))
+      : path.basename(normalizedRootDir);
+
+  return managedRootDir
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+}
+
 export function ensureDevComposeExists(rootDir) {
   const paths = getDevEnvironmentPaths(rootDir);
 
