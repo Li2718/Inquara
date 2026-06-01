@@ -29,8 +29,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           dangerouslySetInnerHTML={{ __html: getClientFatalErrorFallbackScript() }}
         />
         <PageTransitionRoot />
-        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
-        <DebugRoot page="global" />
+        <LocaleProvider initialLocale={locale}>
+          {children}
+          <DebugRoot page="global" />
+        </LocaleProvider>
       </body>
     </html>
   );

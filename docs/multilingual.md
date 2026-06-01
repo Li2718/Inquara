@@ -12,7 +12,7 @@ Inquara supports these interface locales:
 
 Do not add another interface locale unless the task explicitly expands the supported locale set. A feature that adds user-visible product copy must keep every supported locale complete in the same change.
 
-The default product locale is `en`.
+The default product locale is `en`. Treat this as the fallback source locale, not as a reason to ignore a user's browser language preference.
 
 English is the source language for product UI copy. Other supported locales are translations of the English source copy unless a product owner explicitly defines a locale-specific exception.
 
@@ -35,6 +35,14 @@ The product should not use:
 - hard-coded page-local product copy when the copy should be translated
 - remote CMS-backed copy management
 - database-backed translation strings for static product UI
+
+## Locale State Model
+
+When the user has not manually selected a language, choose the first supported locale from the browser or request language preferences. Client-side browser preference should use `navigator.languages` first and `navigator.language` as a fallback. Server-rendered first views should use the request `Accept-Language` header.
+
+Only a user action in the language switcher counts as a manual language selection. Manual selections must be stored with both the selected locale and an explicit manual source marker. A persisted locale without the manual source marker must not override current browser language preferences.
+
+Unsupported browser languages fall back to `en`. Match regional English variants such as `en-US` to `en`, and match Chinese variants such as `zh`, `zh-CN`, or `zh-Hans-CN` to `zh-CN`.
 
 ## Placement Rules
 

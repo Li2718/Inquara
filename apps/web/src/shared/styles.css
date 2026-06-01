@@ -3126,6 +3126,26 @@ h2 {
   padding: 9px 10px 10px;
 }
 
+.debug-panel-section {
+  border-top: 1px solid var(--debug-row);
+}
+
+.debug-panel-toggle {
+  width: calc(100% - 20px);
+  margin: 10px;
+  justify-content: center;
+}
+
+.debug-panel-details .debug-panel-list {
+  padding-top: 0;
+}
+
+.debug-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px 10px;
+}
+
 .debug-panel-row {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);
