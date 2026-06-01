@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { buildNormalWebCommand, decideWebStartupMode, isMainModule, startWeb } from "./web-start.mjs";
 
 describe("web startup selector", () => {
@@ -16,8 +18,10 @@ describe("web startup selector", () => {
     });
   });
 
-  it("recognizes the script entrypoint on Windows paths", () => {
-    expect(isMainModule("file:///Z:/fixture/inquara/scripts/web-start.mjs", "Z:\\fixture\\inquara\\scripts\\web-start.mjs")).toBe(true);
+  it("recognizes the script entrypoint", () => {
+    const scriptPath = path.join("fixtures", "inquara", "scripts", "web-start.mjs");
+
+    expect(isMainModule(pathToFileURL(scriptPath).href, scriptPath)).toBe(true);
   });
 
   it("starts the setup server when no user exists", async () => {

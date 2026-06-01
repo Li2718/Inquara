@@ -7,7 +7,7 @@ import {
   parseWorktreeCommand
 } from "./worktree-cli.mjs";
 
-const fixtureMainRoot = "/workspace/inquara";
+const fixtureMainRoot = path.join("fixtures", "inquara");
 const fixtureWorktreeRoot = path.join(fixtureMainRoot, ".worktrees", "feature-debug-toolbar");
 
 describe("worktree command parsing", () => {

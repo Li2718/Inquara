@@ -49,6 +49,14 @@ If the repository uses `docs/archive/`:
 1. Treat it as retained historical context, not the current source of truth.
 2. Keep archived package names time-oriented if time is the archive's primary lookup axis.
 
+## Repository Hygiene Rules
+
+1. Do not commit local workstation absolute paths in code, tests, documentation, configuration, fixtures, or snapshots.
+2. This applies to every collaborator and operating system, including Windows drive paths and UNC paths, macOS and Linux home directories, WSL mount paths, temporary directories, and workspace checkout directories.
+3. Use repository-relative paths, fixture-relative paths, placeholders such as `<repo-root>`, URLs, documented environment variables, or runtime-discovered paths instead.
+4. If a real absolute path must exist at runtime, it must be supplied by the user's local environment and kept out of committed source files.
+5. New tests or examples must not use fake local absolute paths as fixtures; model paths with relative test data unless the behavior specifically requires path-format parsing.
+
 ## Debug Rules
 
 Debug implementation work must follow the hard rules in [docs/architecture.md](docs/architecture.md).

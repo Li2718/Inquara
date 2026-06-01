@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { createSetupServerHandler, isMainModule } from "./setup-server.mjs";
 
 describe("setup server", () => {
@@ -22,8 +24,10 @@ describe("setup server", () => {
     expect(html).toContain("name=\"email\"");
   });
 
-  it("recognizes the script entrypoint on Windows paths", () => {
-    expect(isMainModule("file:///Z:/fixture/inquara/scripts/setup-server.mjs", "Z:\\fixture\\inquara\\scripts\\setup-server.mjs")).toBe(true);
+  it("recognizes the script entrypoint", () => {
+    const scriptPath = path.join("fixtures", "inquara", "scripts", "setup-server.mjs");
+
+    expect(isMainModule(pathToFileURL(scriptPath).href, scriptPath)).toBe(true);
   });
 
   it("does not reflect submitted passwords when validation fails", async () => {

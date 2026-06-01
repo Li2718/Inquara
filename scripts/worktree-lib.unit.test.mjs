@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import path from "node:path";
 import {
   getSharedDevelopmentFileNames,
   buildPrivateInfraEnvText,
@@ -11,9 +12,9 @@ import {
   selectWorktreeEntry
 } from "./worktree-lib.mjs";
 
-const fixtureMainRoot = "/workspace/inquara";
-const fixtureWorktreeRoot = `${fixtureMainRoot}/.worktrees/feature/debug-toolbar`;
-const fixtureHyphenatedWorktreeRoot = `${fixtureMainRoot}/.worktrees/feature-debug-toolbar`;
+const fixtureMainRoot = path.join("fixtures", "inquara");
+const fixtureWorktreeRoot = path.join(fixtureMainRoot, ".worktrees", "feature", "debug-toolbar");
+const fixtureHyphenatedWorktreeRoot = path.join(fixtureMainRoot, ".worktrees", "feature-debug-toolbar");
 
 describe("worktree helpers", () => {
   it("copies only environment defaults for a shared-infra worktree", () => {
