@@ -1,7 +1,7 @@
 import path from "node:path";
-import { buildWorktreeDatabaseName, buildWorktreeDirName } from "./worktree-lib.mjs";
+import { buildWorktreeDirName } from "./worktree-lib.mjs";
 
-const USAGE = "Usage: node scripts/worktree.mjs <create|clonedb|cloneinfra|remove>";
+const USAGE = "Usage: node scripts/worktree.mjs <create|cloneinfra|remove>";
 
 export function parseWorktreeCommand(argv) {
   const [command, value] = argv;
@@ -13,12 +13,6 @@ export function parseWorktreeCommand(argv) {
 
     return {
       branchName: value,
-      command
-    };
-  }
-
-  if (command === "clonedb") {
-    return {
       command
     };
   }
@@ -49,14 +43,6 @@ export function getCreatePlan({ branchName, rootDir, worktreeParentDirName }) {
     copyEnvDev: true,
     mode: "shared",
     targetPath: path.join(rootDir, worktreeParentDirName, buildWorktreeDirName(branchName))
-  };
-}
-
-export function getCloneDbPlan({ branchName, currentPath }) {
-  return {
-    branchName,
-    currentPath,
-    databaseName: buildWorktreeDatabaseName(branchName)
   };
 }
 

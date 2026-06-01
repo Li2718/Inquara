@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import path from "node:path";
 import {
-  getCloneDbPlan,
   getCloneInfraPlan,
   getCreatePlan,
   getRemovePlan,
@@ -9,13 +8,10 @@ import {
 } from "./worktree-cli.mjs";
 
 describe("worktree command parsing", () => {
-  it("parses create, clonedb, cloneinfra, and remove commands", () => {
+  it("parses create, cloneinfra, and remove commands", () => {
     expect(parseWorktreeCommand(["create", "feature/debug-toolbar"])).toEqual({
       branchName: "feature/debug-toolbar",
       command: "create"
-    });
-    expect(parseWorktreeCommand(["clonedb"])).toEqual({
-      command: "clonedb"
     });
     expect(parseWorktreeCommand(["cloneinfra"])).toEqual({
       command: "cloneinfra"
@@ -28,10 +24,10 @@ describe("worktree command parsing", () => {
 
   it("rejects missing required command arguments", () => {
     expect(() => parseWorktreeCommand(["create"])).toThrow(
-      "Usage: node scripts/worktree.mjs <create|clonedb|cloneinfra|remove>"
+      "Usage: node scripts/worktree.mjs <create|cloneinfra|remove>"
     );
     expect(() => parseWorktreeCommand(["remove"])).toThrow(
-      "Usage: node scripts/worktree.mjs <create|clonedb|cloneinfra|remove>"
+      "Usage: node scripts/worktree.mjs <create|cloneinfra|remove>"
     );
   });
 });
@@ -49,19 +45,6 @@ describe("worktree plans", () => {
       copyEnvDev: true,
       mode: "shared",
       targetPath: path.join("/workspace/inquara", ".worktrees", "feature-debug-toolbar")
-    });
-  });
-
-  it("creates a private database plan for the current worktree", () => {
-    expect(
-      getCloneDbPlan({
-        branchName: "feature/debug-toolbar",
-        currentPath: "/workspace/inquara/.worktrees/feature-debug-toolbar"
-      })
-    ).toEqual({
-      branchName: "feature/debug-toolbar",
-      currentPath: "/workspace/inquara/.worktrees/feature-debug-toolbar",
-      databaseName: "inquara_wt_feature_debug_toolbar"
     });
   });
 

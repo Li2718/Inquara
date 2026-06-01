@@ -2,11 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   getSharedDevelopmentFileNames,
   buildPrivateInfraEnvText,
-  buildPrivateDbEnvText,
-  buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
   escapePostgresIdentifier,
-  buildWorktreeDatabaseName,
   getManagedWorktreeRootDir,
   getWorktreeParentDirName,
   parseWorktreeListPorcelain,
@@ -29,18 +26,6 @@ describe("worktree helpers", () => {
     expect(getWorktreeParentDirName({ dotWorktreesExists: false, worktreesExists: false })).toBe(".worktrees");
   });
 
-  it("builds a sanitized database name from the branch", () => {
-    expect(buildWorktreeDatabaseName("feature/debug-toolbar")).toBe("inquara_wt_feature_debug_toolbar");
-    expect(buildWorktreeDatabaseName("Fix Login")).toBe("inquara_wt_fix_login");
-  });
-
-  it("hashes long database names down to the PostgreSQL limit", () => {
-    const databaseName = buildWorktreeDatabaseName("feature/" + "very-long-name-".repeat(8));
-
-    expect(databaseName.length).toBeLessThanOrEqual(63);
-    expect(databaseName).toMatch(/^inquara_wt_[a-z0-9_]+_[a-f0-9]{8}$/u);
-  });
-
   it("builds a maintenance database URL from the app database URL", () => {
     expect(
       buildWorktreeDatabaseAdminUrl("postgresql://dev_user:dev%20password@localhost:55433/inquara_dev?schema=public")
@@ -49,43 +34,6 @@ describe("worktree helpers", () => {
 
   it("escapes PostgreSQL identifiers before embedding them in SQL", () => {
     expect(escapePostgresIdentifier('inquara"danger')).toBe('"inquara""danger"');
-  });
-
-  it("writes only the private database override when no local env exists", () => {
-    expect(buildPrivateDbEnvText("", "inquara_wt_feature_debug_toolbar")).toBe(
-      'POSTGRES_DB="inquara_wt_feature_debug_toolbar"\n'
-    );
-  });
-
-  it("rebuilds DATABASE_URL when switching a process env to a private database", () => {
-    expect(
-      buildPrivateDatabaseProcessEnv(
-        {
-          POSTGRES_USER: "inquara",
-          POSTGRES_PASSWORD: "inquara",
-          POSTGRES_HOST: "localhost",
-          POSTGRES_PORT: "55432",
-          POSTGRES_DB: "inquara",
-          POSTGRES_SCHEMA: "public",
-          DATABASE_URL: "postgresql://inquara:inquara@localhost:55432/inquara?schema=public"
-        },
-        "inquara_wt_feature_debug_toolbar"
-      )
-    ).toMatchObject({
-      POSTGRES_DB: "inquara_wt_feature_debug_toolbar",
-      DATABASE_URL: "postgresql://inquara:inquara@localhost:55432/inquara_wt_feature_debug_toolbar?schema=public"
-    });
-  });
-
-  it("updates the private database override without dropping unrelated local env keys", () => {
-    const nextText = buildPrivateDbEnvText(
-      'API_ORIGIN="http://localhost:4999"\nPOSTGRES_DB="old_db"\n',
-      "inquara_wt_feature_debug_toolbar"
-    );
-
-    expect(nextText).toBe(
-      'API_ORIGIN="http://localhost:4999"\nPOSTGRES_DB="inquara_wt_feature_debug_toolbar"\n'
-    );
   });
 
   it("writes private infrastructure port overrides and removes stale DATABASE_URL values", () => {

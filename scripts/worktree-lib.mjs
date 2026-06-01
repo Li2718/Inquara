@@ -1,10 +1,6 @@
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-
-const WORKTREE_DATABASE_PREFIX = "inquara_wt_";
-const MAX_POSTGRES_IDENTIFIER_LENGTH = 63;
 
 export function getSharedDevelopmentFileNames({ envDevExists }) {
   const sharedFiles = [];
@@ -44,51 +40,6 @@ export function buildWorktreeDirName(branchName) {
     .replace(/[^A-Za-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "")
     .toLowerCase();
-}
-
-export function buildWorktreeDatabaseName(branchName) {
-  const sanitizedBranchName = branchName
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, "_")
-    .replace(/^_+|_+$/gu, "")
-    .replace(/_+/gu, "_");
-
-  const preferredName = `${WORKTREE_DATABASE_PREFIX}${sanitizedBranchName}`;
-
-  if (preferredName.length <= MAX_POSTGRES_IDENTIFIER_LENGTH) {
-    return preferredName;
-  }
-
-  const digest = createHash("sha1").update(branchName).digest("hex").slice(0, 8);
-  const baseLength = MAX_POSTGRES_IDENTIFIER_LENGTH - WORKTREE_DATABASE_PREFIX.length - digest.length - 1;
-  const baseName = sanitizedBranchName.slice(0, Math.max(1, baseLength)).replace(/_+$/gu, "");
-
-  return `${WORKTREE_DATABASE_PREFIX}${baseName}_${digest}`;
-}
-
-export function buildPrivateDbEnvText(currentText, databaseName) {
-  const lines = currentText.length === 0 ? [] : currentText.replace(/\r\n/gu, "\n").split("\n");
-  const nextLines = [];
-  let replaced = false;
-
-  for (const line of lines) {
-    if (line.startsWith("POSTGRES_DB=")) {
-      nextLines.push(`POSTGRES_DB="${databaseName}"`);
-      replaced = true;
-      continue;
-    }
-
-    if (line.length > 0) {
-      nextLines.push(line);
-    }
-  }
-
-  if (!replaced) {
-    nextLines.push(`POSTGRES_DB="${databaseName}"`);
-  }
-
-  return `${nextLines.join("\n")}\n`;
 }
 
 export function buildPrivateInfraEnvText(currentText, { postgresPort, redisPort }) {
@@ -144,21 +95,6 @@ export function buildWorktreeDatabaseAdminUrl(databaseUrl) {
   const url = new URL(databaseUrl);
   url.pathname = "/postgres";
   return url.toString();
-}
-
-export function buildPrivateDatabaseProcessEnv(env, databaseName) {
-  const nextEnv = {
-    ...env,
-    POSTGRES_DB: databaseName
-  };
-
-  if (nextEnv.DATABASE_URL) {
-    const databaseUrl = new URL(nextEnv.DATABASE_URL);
-    databaseUrl.pathname = `/${databaseName}`;
-    nextEnv.DATABASE_URL = databaseUrl.toString();
-  }
-
-  return nextEnv;
 }
 
 export function escapePostgresIdentifier(value) {

@@ -6,16 +6,13 @@ import net from "node:net";
 import { Client } from "pg";
 import { ensureDatabaseUrl, loadDevelopmentEnv } from "./dev-env.mjs";
 import {
-  getCloneDbPlan,
   getCloneInfraPlan,
   getCreatePlan,
   getRemovePlan,
   parseWorktreeCommand
 } from "./worktree-cli.mjs";
 import {
-  buildPrivateDatabaseProcessEnv,
   buildWorktreeDatabaseAdminUrl,
-  buildPrivateDbEnvText,
   buildPrivateInfraEnvText,
   escapePostgresIdentifier,
   getSharedDevelopmentFileNames,
@@ -180,23 +177,6 @@ function getPsqlEnv() {
   return parseDatabaseUrl(databaseUrl);
 }
 
-async function createPrivateDatabase({ sourceDatabaseName, databaseName }) {
-  const { adminDatabaseUrl } = getPsqlEnv();
-  const client = new Client({
-    connectionString: adminDatabaseUrl
-  });
-
-  await client.connect();
-
-  try {
-    await client.query(
-      `CREATE DATABASE ${escapePostgresIdentifier(databaseName)} WITH TEMPLATE ${escapePostgresIdentifier(sourceDatabaseName)}`
-    );
-  } finally {
-    await client.end();
-  }
-}
-
 async function dropDatabase(databaseName) {
   const { adminDatabaseUrl } = getPsqlEnv();
   const client = new Client({
@@ -214,20 +194,6 @@ async function dropDatabase(databaseName) {
   } finally {
     await client.end();
   }
-}
-
-async function getCurrentBranchName() {
-  const { stdout } = await captureCommand("git", ["branch", "--show-current"], {
-    cwd: currentDir
-  });
-
-  const branchName = stdout.trim();
-
-  if (!branchName) {
-    throw new Error("Could not determine the current branch name.");
-  }
-
-  return branchName;
 }
 
 async function listWorktrees() {
@@ -282,37 +248,6 @@ async function createWorktree(branchName) {
 
   console.log(`Created worktree at ${plan.targetPath}`);
   console.log("Database mode: shared (copied shared development files from the main worktree)");
-}
-
-async function cloneDatabaseForCurrentWorktree() {
-  const branchName = await getCurrentBranchName();
-  const plan = getCloneDbPlan({
-    branchName,
-    currentPath: currentDir
-  });
-  const { databaseName: sourceDatabaseName } = getPsqlEnv();
-  const envLocalPath = path.join(currentDir, ".env.dev.local");
-  const existingPrivateDatabaseName = readPrivateDatabaseName(currentDir);
-
-  if (existingPrivateDatabaseName) {
-    throw new Error(`This worktree is already using the private database "${existingPrivateDatabaseName}".`);
-  }
-
-  await createPrivateDatabase({
-    sourceDatabaseName,
-    databaseName: plan.databaseName
-  });
-
-  const existingLocalText = existsSync(envLocalPath) ? readFileSync(envLocalPath, "utf8") : "";
-  writeFileSync(envLocalPath, buildPrivateDbEnvText(existingLocalText, plan.databaseName), "utf8");
-
-  await runCommand(getNpmCommand(), ["run", "db:migrate:deploy"], {
-    cwd: currentDir,
-    env: buildPrivateDatabaseProcessEnv(process.env, plan.databaseName)
-  });
-
-  console.log(`Cloned "${sourceDatabaseName}" into private database "${plan.databaseName}".`);
-  console.log(`Current worktree now uses ${envLocalPath}.`);
 }
 
 async function cloneInfrastructureForCurrentWorktree() {
@@ -419,9 +354,6 @@ async function main() {
   switch (command.command) {
     case "create":
       await createWorktree(command.branchName);
-      return;
-    case "clonedb":
-      await cloneDatabaseForCurrentWorktree();
       return;
     case "cloneinfra":
       await cloneInfrastructureForCurrentWorktree();

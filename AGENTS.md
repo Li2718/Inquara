@@ -213,10 +213,4 @@ Development server and build verification work must follow the hard rules in [do
 
 ## Worktree Rules
 
-Managed git worktree work must follow [docs/worktree-development.md](docs/worktree-development.md).
-
-Use these rules as hard constraints, not optional style guidance.
-
-1. Before creating, cloning, or removing a repository worktree, read `docs/worktree-development.md`.
-2. Do not create ad hoc worktrees when the managed repository worktree workflow applies.
-3. If a worktree will do schema-changing or destructive database work, run `npm run worktree:clonedb` in that worktree before continuing.
+Managed git worktree work must follow the repo-local skill at [.codex/skills/worktree-development/SKILL.md](.codex/skills/worktree-development/SKILL.md).
