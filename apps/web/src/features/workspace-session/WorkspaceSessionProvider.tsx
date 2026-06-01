@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { apiJson, apiRequest } from "../../shared/api";
 import { createCommands } from "../commands/createCommands";
+import { cancelPendingWorkspaceLeaseRelease, scheduleWorkspaceLeaseRelease } from "./leaseReleaseScheduler";
 import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
 
 type WorkspaceSessionContextValue = {
@@ -53,6 +54,7 @@ const workspaceSnapshotCache = new Map<string, WorkspaceSnapshot>();
 const renewIntervalMs = 5_000;
 const stalePollMinMs = 8_000;
 const stalePollJitterMs = 2_000;
+const leaseReleaseDelayMs = 250;
 const sessionStorageKeyPrefix = "inquara.workspace-session";
 
 export function WorkspaceSessionProvider({
@@ -73,6 +75,7 @@ export function WorkspaceSessionProvider({
   const commands = useMemo(() => createCommands(workspaceId), [workspaceId]);
 
   useEffect(() => {
+    cancelPendingWorkspaceLeaseRelease(workspaceId);
     sessionIdRef.current = getOrCreateSessionId(workspaceId);
     releasedRef.current = false;
     const cachedSnapshot = workspaceSnapshotCache.get(workspaceId);
@@ -95,7 +98,7 @@ export function WorkspaceSessionProvider({
       clearBlockedPollTimer();
       if (!releasedRef.current) {
         releasedRef.current = true;
-        void releaseLease();
+        scheduleWorkspaceLeaseRelease(workspaceId, releaseLease, leaseReleaseDelayMs);
       }
     };
   }, [router, workspaceId]);

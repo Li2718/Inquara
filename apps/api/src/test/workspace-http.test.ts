@@ -62,6 +62,142 @@ describe("workspace lease and http command routes", () => {
     await app.close();
   });
 
+  it("allows explicit reacquire over HTTP after a session was displaced", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const session = await registerForSession(app, "http-workspace@inquara.local");
+
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-b" }
+    });
+
+    const reacquired = await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+
+    expect(reacquired.statusCode).toBe(200);
+    expect(reacquired.json().status).toBe("active");
+    expect(reacquired.json().lease.holderSessionId).toBe("tab-a");
+    expect(reacquired.json().lease.leaseEpoch).toBe(3);
+    await app.close();
+  });
+
+  it("keeps passive recovery ordered after release over HTTP", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const session = await registerForSession(app, "http-workspace@inquara.local");
+
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-b" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-c" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/release`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-c" }
+    });
+
+    const earliest = await app.inject({
+      method: "GET",
+      url: `/workspaces/${workspaceId}/lease/status?sessionId=tab-b`,
+      cookies: { inquara_session: session }
+    });
+    const later = await app.inject({
+      method: "GET",
+      url: `/workspaces/${workspaceId}/lease/status?sessionId=tab-a`,
+      cookies: { inquara_session: session }
+    });
+
+    expect(earliest.statusCode).toBe(200);
+    expect(earliest.json().status).toBe("available");
+    expect(earliest.json().displacedSeq).toBe(2);
+    expect(later.statusCode).toBe(200);
+    expect(later.json().status).toBe("blocked");
+    expect(later.json().displacedSeq).toBe(3);
+    expect(later.json().currentHolderSessionId).toBeNull();
+    await app.close();
+  });
+
+  it("allows explicit reacquire over HTTP even when another waiter has passive priority", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const session = await registerForSession(app, "http-workspace@inquara.local");
+
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-b" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-c" }
+    });
+    await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/release`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-c" }
+    });
+
+    const reacquired = await app.inject({
+      method: "POST",
+      url: `/workspaces/${workspaceId}/lease/acquire`,
+      cookies: { inquara_session: session },
+      payload: { sessionId: "tab-a" }
+    });
+
+    expect(reacquired.statusCode).toBe(200);
+    expect(reacquired.json().status).toBe("active");
+    expect(reacquired.json().lease.holderSessionId).toBe("tab-a");
+    expect(reacquired.json().lease.leaseEpoch).toBe(5);
+    await app.close();
+  });
+
   it("rejects stale command writes after a takeover", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
     const session = await registerForSession(app, "http-workspace@inquara.local");

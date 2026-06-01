@@ -45,25 +45,43 @@ describe("workspace lease store", () => {
     expect(takeover.lease.leaseEpoch).toBe(2);
   });
 
-  it("blocks displaced sessions until they regain priority", async () => {
+  it("allows a displaced session to take over again on explicit reacquire", async () => {
     const store = createStore();
     await store.acquire(createInput({ sessionId: "session-1" }));
     await store.acquire(createInput({ sessionId: "session-2", now: new Date("2026-06-01T10:00:01.000Z") }));
 
-    const blocked = await store.acquire(
+    const reacquired = await store.acquire(
       createInput({
         sessionId: "session-1",
         now: new Date("2026-06-01T10:00:02.000Z")
       })
     );
 
-    expect(blocked.status).toBe("blocked");
-    if (blocked.status !== "blocked") throw new Error("Expected blocked lease.");
-    expect(blocked.currentHolderSessionId).toBe("session-2");
-    expect(blocked.displacedSeq).toBe(1);
+    expect(reacquired.status).toBe("active");
+    if (reacquired.status !== "active") throw new Error("Expected active lease.");
+    expect(reacquired.lease.holderSessionId).toBe("session-1");
+    expect(reacquired.lease.leaseEpoch).toBe(3);
   });
 
-  it("returns the earliest displaced waiter to active after release", async () => {
+  it("still reports displaced sessions as blocked while they wait passively", async () => {
+    const store = createStore();
+    await store.acquire(createInput({ sessionId: "session-1" }));
+    await store.acquire(createInput({ sessionId: "session-2", now: new Date("2026-06-01T10:00:01.000Z") }));
+
+    const status = await store.getStatus(
+      createStatusInput({
+        sessionId: "session-1",
+        now: new Date("2026-06-01T10:00:02.000Z")
+      })
+    );
+
+    expect(status.status).toBe("blocked");
+    if (status.status !== "blocked") throw new Error("Expected blocked status.");
+    expect(status.currentHolderSessionId).toBe("session-2");
+    expect(status.displacedSeq).toBe(1);
+  });
+
+  it("allows explicit reacquire to bypass waiter priority after release", async () => {
     const store = createStore();
     await store.acquire(createInput({ sessionId: "session-a" }));
     await store.acquire(createInput({ sessionId: "session-b", now: new Date("2026-06-01T10:00:01.000Z") }));
@@ -84,7 +102,39 @@ describe("workspace lease store", () => {
     expect(reacquired.status).toBe("active");
     if (reacquired.status !== "active") throw new Error("Expected active lease.");
     expect(reacquired.lease.holderSessionId).toBe("session-a");
-    expect(reacquired.lease.leaseEpoch).toBe(4);
+    expect(reacquired.lease.leaseEpoch).toBe(5);
+  });
+
+  it("still reserves passive recovery for the earliest displaced waiter after release", async () => {
+    const store = createStore();
+    await store.acquire(createInput({ sessionId: "session-a" }));
+    await store.acquire(createInput({ sessionId: "session-b", now: new Date("2026-06-01T10:00:01.000Z") }));
+    await store.acquire(createInput({ sessionId: "session-a", now: new Date("2026-06-01T10:00:02.000Z") }));
+    await store.acquire(createInput({ sessionId: "session-c", now: new Date("2026-06-01T10:00:03.000Z") }));
+    await store.release({
+      workspaceId: "workspace-1",
+      sessionId: "session-c"
+    });
+
+    const earliest = await store.getStatus(
+      createStatusInput({
+        sessionId: "session-b",
+        now: new Date("2026-06-01T10:00:04.000Z")
+      })
+    );
+    const later = await store.getStatus(
+      createStatusInput({
+        sessionId: "session-a",
+        now: new Date("2026-06-01T10:00:04.000Z")
+      })
+    );
+
+    expect(earliest.status).toBe("available");
+    if (earliest.status !== "available") throw new Error("Expected available status.");
+    expect(earliest.displacedSeq).toBe(2);
+    expect(later.status).toBe("blocked");
+    if (later.status !== "blocked") throw new Error("Expected blocked status.");
+    expect(later.displacedSeq).toBe(3);
   });
 
   it("rejects renew from a stale session", async () => {

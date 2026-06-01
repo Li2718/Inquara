@@ -112,23 +112,6 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
     }
 
     if (!workspace.lease) {
-      const highestPriorityWaiter = this.getHighestPriorityWaiter(workspace);
-      const currentWaiter = workspace.waiters.get(input.sessionId);
-      if (highestPriorityWaiter && highestPriorityWaiter.sessionId !== input.sessionId) {
-        if (currentWaiter) {
-          workspace.waiters.set(input.sessionId, {
-            ...currentWaiter,
-            lastSeenAt: input.now.toISOString()
-          });
-        }
-        return {
-          status: "blocked",
-          currentHolderSessionId: null,
-          displacedSeq: currentWaiter?.displacedSeq ?? null,
-          expiresAt: null
-        };
-      }
-
       const lease = this.createLease(input.workspaceId, input.sessionId, workspace, input.ttlSeconds, input.now);
       workspace.waiters.delete(input.sessionId);
       workspace.lease = lease;
@@ -140,21 +123,8 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
 
     this.ensureWaiter(workspace, workspace.lease.holderSessionId, input.now);
 
-    const existingWaiter = workspace.waiters.get(input.sessionId);
-    if (existingWaiter) {
-      workspace.waiters.set(input.sessionId, {
-        ...existingWaiter,
-        lastSeenAt: input.now.toISOString()
-      });
-      return {
-        status: "blocked",
-        currentHolderSessionId: workspace.lease.holderSessionId,
-        displacedSeq: existingWaiter.displacedSeq,
-        expiresAt: workspace.lease.expiresAt
-      };
-    }
-
     const lease = this.createLease(input.workspaceId, input.sessionId, workspace, input.ttlSeconds, input.now);
+    workspace.waiters.delete(input.sessionId);
     workspace.lease = lease;
     return {
       status: "active",
@@ -335,26 +305,6 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
       }
 
       if (!state.lease) {
-        const highestPriorityWaiter = getHighestPriorityWaiter(state);
-        const currentWaiter = state.waiters.get(input.sessionId);
-        if (highestPriorityWaiter && highestPriorityWaiter.sessionId !== input.sessionId) {
-          if (currentWaiter) {
-            state.waiters.set(input.sessionId, {
-              ...currentWaiter,
-              lastSeenAt: input.now.toISOString()
-            });
-          }
-          return {
-            state,
-            result: {
-              status: "blocked",
-              currentHolderSessionId: null,
-              displacedSeq: currentWaiter?.displacedSeq ?? null,
-              expiresAt: null
-            }
-          };
-        }
-
         const lease = createLease(input.workspaceId, input.sessionId, state, input.ttlSeconds, input.now);
         state.waiters.delete(input.sessionId);
         state.lease = lease;
@@ -365,24 +315,8 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
       }
 
       ensureWaiter(state, state.lease.holderSessionId, input.now);
-      const existingWaiter = state.waiters.get(input.sessionId);
-      if (existingWaiter) {
-        state.waiters.set(input.sessionId, {
-          ...existingWaiter,
-          lastSeenAt: input.now.toISOString()
-        });
-        return {
-          state,
-          result: {
-            status: "blocked",
-            currentHolderSessionId: state.lease.holderSessionId,
-            displacedSeq: existingWaiter.displacedSeq,
-            expiresAt: state.lease.expiresAt
-          }
-        };
-      }
-
       const lease = createLease(input.workspaceId, input.sessionId, state, input.ttlSeconds, input.now);
+      state.waiters.delete(input.sessionId);
       state.lease = lease;
       return {
         state,

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Button } from "../../shared/components/ui";
 
 export function WorkspaceLeaseBlocker({
@@ -22,11 +23,11 @@ export function WorkspaceLeaseBlocker({
         <h2>{isRecovering ? "Waiting to restore editing" : "This workspace is active in another client"}</h2>
         <p>
           {message ??
-            "The content shown here may be out of date. Editing stays disabled until this client becomes active again."}
+            "The content shown here may be out of date. Editing stays disabled until this client reconnects and becomes active again."}
         </p>
         <div className="workspace-lease-blocker-actions">
           <Button type="button" onClick={onRetry}>
-            Check again
+            Try reconnecting
           </Button>
         </div>
       </div>
