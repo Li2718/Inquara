@@ -69,6 +69,8 @@ describe("client fatal error fallback", () => {
 
     expect(harness.documentElement.attributes.get("data-client-fatal-error")).toBe("true");
     expect(harness.body.innerHTML).not.toBe("");
+    expect(harness.body.innerHTML).not.toContain("Back to canvas");
+    expect(harness.body.innerHTML).not.toContain("href=\"/\"");
     expect(harness.reloadListeners).toHaveLength(1);
   });
 

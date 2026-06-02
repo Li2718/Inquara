@@ -9,17 +9,15 @@ export function getClientFatalErrorFallbackScript() {
   var MANUAL_LOCALE_SOURCE = "manual";
   var copy = {
     en: {
-      backToCanvas: "Back to canvas",
       heading: "The workspace hit a snag.",
       holdOn: "Hold on",
-      message: "The page could not finish loading. Reload the page, or return to the canvas from a fresh tab.",
+      message: "The page could not finish loading. Please reload the page.",
       reload: "Reload"
     },
     "zh-CN": {
-      backToCanvas: "回到画布",
       heading: "工作区遇到问题。",
       holdOn: "请稍候",
-      message: "页面未能完成加载。请刷新页面，或从新标签页返回画布。",
+      message: "页面未能完成加载。请刷新页面。",
       reload: "刷新"
     }
   };
@@ -85,7 +83,7 @@ export function getClientFatalErrorFallbackScript() {
     var text = copy[locale] || copy.en;
     document.documentElement.lang = locale;
     document.documentElement.setAttribute("data-client-fatal-error", "true");
-    document.body.innerHTML = '<main class="error-page" data-client-fatal-error-page="true"><section class="error-content" aria-labelledby="error-title"><p class="eyebrow">Inquara</p><p class="error-code">' + escapeHtml(text.holdOn) + '</p><h1 id="error-title">' + escapeHtml(text.heading) + '</h1><p class="muted">' + escapeHtml(text.message) + '</p><div class="error-actions"><button type="button" data-client-fatal-reload="true">' + escapeHtml(text.reload) + '</button><a class="secondary-button error-home-link" href="/">' + escapeHtml(text.backToCanvas) + '</a></div></section><div class="error-map" aria-hidden="true"><span class="error-line error-line-a"></span><span class="error-line error-line-b"></span><span class="error-line error-line-c"></span><span class="error-node error-node-a"></span><span class="error-node error-node-b"></span><span class="error-node error-node-c"></span><span class="error-node error-node-d"></span></div></main>';
+    document.body.innerHTML = '<main class="error-page" data-client-fatal-error-page="true"><section class="error-content" aria-labelledby="error-title"><p class="eyebrow">Inquara</p><p class="error-code">' + escapeHtml(text.holdOn) + '</p><h1 id="error-title">' + escapeHtml(text.heading) + '</h1><p class="muted">' + escapeHtml(text.message) + '</p><div class="error-actions"><button type="button" data-client-fatal-reload="true">' + escapeHtml(text.reload) + '</button></div></section><div class="error-map" aria-hidden="true"><span class="error-line error-line-a"></span><span class="error-line error-line-b"></span><span class="error-line error-line-c"></span><span class="error-node error-node-a"></span><span class="error-node error-node-b"></span><span class="error-node error-node-c"></span><span class="error-node error-node-d"></span></div></main>';
 
     var reloadButton = document.querySelector("[data-client-fatal-reload]");
     if (reloadButton) {

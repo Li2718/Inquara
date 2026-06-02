@@ -126,11 +126,11 @@ export const messages = {
     error: {
       backToCanvas: "Back to canvas",
       defaultHeading: "This view lost its thread.",
-      defaultMessage: "Something interrupted the page while it was loading. Try again, or return to the canvas.",
+      defaultMessage: "Something interrupted the page while it was loading. Please reload the page.",
       globalHeading: "The workspace hit a snag.",
-      globalMessage: "The page could not finish loading. Try again, or return to the canvas from a fresh tab.",
+      globalMessage: "The page could not finish loading. Please reload the page.",
       holdOn: "Hold on",
-      tryAgain: "Try again"
+      tryAgain: "Reload"
     },
     notFound: {
       action: "Back to canvas",
@@ -343,11 +343,11 @@ export const messages = {
     error: {
       backToCanvas: "回到画布",
       defaultHeading: "此视图暂时中断。",
-      defaultMessage: "页面加载时被中断。请重试，或返回画布。",
+      defaultMessage: "页面加载时被中断。请刷新页面。",
       globalHeading: "工作区遇到问题。",
-      globalMessage: "页面未能完成加载。请重试，或从新标签页返回画布。",
+      globalMessage: "页面未能完成加载。请刷新页面。",
       holdOn: "请稍候",
-      tryAgain: "重试"
+      tryAgain: "刷新"
     },
     notFound: {
       action: "回到画布",

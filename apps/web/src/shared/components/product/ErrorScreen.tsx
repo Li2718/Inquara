@@ -27,9 +27,6 @@ export function ErrorScreen({
           <button type="button" onClick={onRetry}>
             {copy.tryAgain}
           </button>
-          <a className="secondary-button error-home-link" href="/">
-            {copy.backToCanvas}
-          </a>
         </div>
       </section>
       <div className="error-map" aria-hidden="true">

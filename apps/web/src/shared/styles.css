@@ -1307,16 +1307,6 @@ h2 {
   margin-top: 8px;
 }
 
-.error-home-link {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-weight: 700;
-}
-
 .error-map {
   position: relative;
   z-index: 1;
