@@ -1,6 +1,6 @@
 # Canvas Domain Rename
 
-> status: active
+> status: archived
 > owner: codex
 > last_updated: 2026-06-02
 > related_docs:
@@ -9,6 +9,8 @@
 > - `docs/testing-standards.md`
 > - `docs/ui-system.md`
 > - `apps/web/src/shared/components/README.md`
+> archived_from: `docs/initiatives/canvas-domain-rename/`
+> archived_reason: implementation completed, verified, and committed
 > archive_when: Product code, database schema, current docs, and tests consistently use canvas for the product domain concept; excluded tooling and historical documentation remain intentionally unchanged; verification has passed; durable naming rules have been reflected into current long-term docs when needed.
 
 ## Purpose
@@ -44,7 +46,7 @@ Explicitly out of scope:
 
 ## Current Status
 
-Implementation and verification are complete in the isolated worktree.
+Archived after implementation and verification completed.
 
 ## Completed Work
 
@@ -68,7 +70,7 @@ Implementation and verification are complete in the isolated worktree.
 
 ## Remaining Work
 
-- Commit the completed migration branch
+None.
 
 ## Deferred Or Out Of Scope
 
@@ -78,4 +80,4 @@ Implementation and verification are complete in the isolated worktree.
 
 ## Next Step
 
-Commit the completed migration branch.
+None.
