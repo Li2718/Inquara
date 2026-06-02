@@ -1,5 +1,5 @@
 import type { AppConfig } from "@inquara/config";
-import { WorkspaceCommandSchema, type WorkspaceCommand } from "@inquara/domain";
+import { CanvasCommandSchema, type CanvasCommand } from "@inquara/domain";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { createAIProvider } from "../ai/factory";
@@ -24,29 +24,29 @@ import {
   setInvitationOnlyRegistration
 } from "../settings/service";
 import {
-  archiveWorkspace,
+  archiveCanvas,
   AuthError,
-  createWorkspace,
+  createCanvas,
   getUser,
-  getWorkspaceSnapshot,
-  listWorkspaces,
+  getCanvasSnapshot,
+  listCanvases,
   loginWithPassword,
-  renameWorkspace,
+  renameCanvas,
   registerWithPassword,
-  WorkspaceNotFoundError
-} from "../workspaces/service";
+  CanvasNotFoundError
+} from "../canvases/service";
 import { CanvasCommandError } from "../canvas/service";
-import { InMemoryWorkspaceLeaseStore, type WorkspaceLeaseStore } from "../leases/service";
+import { InMemoryCanvasLeaseStore, type CanvasLeaseStore } from "../leases/service";
 import { MessageCommandError, MessageStreamingInterruptedError } from "../messages/service";
 import {
-  dispatchWorkspaceCommand,
-  streamWorkspaceMessageCommand,
-  UnsupportedWorkspaceCommandError
-} from "../workspace-commands/service";
+  dispatchCanvasCommand,
+  streamCanvasMessageCommand,
+  UnsupportedCanvasCommandError
+} from "../canvas-commands/service";
 
 const sessionCookieName = "inquara_session";
 const rememberedSessionMaxAgeSeconds = 30 * 24 * 60 * 60;
-const workspaceLeaseTtlSeconds = 15;
+const canvasLeaseTtlSeconds = 15;
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -59,11 +59,11 @@ const LoginSchema = RegisterSchema.extend({
   password: z.string().min(1)
 });
 
-const CreateWorkspaceSchema = z.object({
+const CreateCanvasSchema = z.object({
   title: z.string().min(1).max(120)
 });
 
-const UpdateWorkspaceSchema = z.object({
+const UpdateCanvasSchema = z.object({
   title: z.string().min(1).max(120)
 });
 
@@ -99,7 +99,7 @@ const UpdateRedemptionCodeNoteSchema = z.object({
 export async function registerRoutes(
   _app: FastifyInstance,
   _config?: AppConfig,
-  leaseStore: WorkspaceLeaseStore = new InMemoryWorkspaceLeaseStore()
+  leaseStore: CanvasLeaseStore = new InMemoryCanvasLeaseStore()
 ): Promise<void> {
   const app = _app;
   const config = _config;
@@ -272,199 +272,199 @@ export async function registerRoutes(
     return setInvitationOnlyRegistration(body.invitationOnly);
   });
 
-  app.get("/workspaces", async (request, reply) => {
+  app.get("/canvases", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    return listWorkspaces(userId);
+    return listCanvases(userId);
   });
 
-  app.post("/workspaces", async (request, reply) => {
+  app.post("/canvases", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const body = CreateWorkspaceSchema.parse(request.body);
-    return createWorkspace(userId, body.title);
+    const body = CreateCanvasSchema.parse(request.body);
+    return createCanvas(userId, body.title);
   });
 
-  app.patch("/workspaces/:workspaceId", async (request, reply) => {
+  app.patch("/canvases/:canvasId", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
-    const body = UpdateWorkspaceSchema.parse(request.body);
+    const params = request.params as { canvasId: string };
+    const body = UpdateCanvasSchema.parse(request.body);
 
     try {
-      return await renameWorkspace(userId, params.workspaceId, body.title);
+      return await renameCanvas(userId, params.canvasId, body.title);
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.delete("/workspaces/:workspaceId", async (request, reply) => {
+  app.delete("/canvases/:canvasId", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
 
     try {
-      await archiveWorkspace(userId, params.workspaceId);
+      await archiveCanvas(userId, params.canvasId);
       return reply.code(204).send();
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.get("/workspaces/:workspaceId/snapshot", async (request, reply) => {
+  app.get("/canvases/:canvasId/snapshot", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
 
     try {
-      return await getWorkspaceSnapshot(userId, params.workspaceId);
+      return await getCanvasSnapshot(userId, params.canvasId);
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.post("/workspaces/:workspaceId/lease/acquire", async (request, reply) => {
+  app.post("/canvases/:canvasId/lease/acquire", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
     const body = LeaseMutationSchema.parse(request.body ?? {});
 
     try {
-      await getWorkspaceSnapshot(userId, params.workspaceId);
+      await getCanvasSnapshot(userId, params.canvasId);
       return leaseStore.acquire({
-        workspaceId: params.workspaceId,
+        canvasId: params.canvasId,
         sessionId: body.sessionId,
-        ttlSeconds: workspaceLeaseTtlSeconds,
+        ttlSeconds: canvasLeaseTtlSeconds,
         now: new Date()
       });
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.post("/workspaces/:workspaceId/lease/renew", async (request, reply) => {
+  app.post("/canvases/:canvasId/lease/renew", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
     const body = RenewLeaseSchema.parse(request.body ?? {});
 
     try {
-      await getWorkspaceSnapshot(userId, params.workspaceId);
+      await getCanvasSnapshot(userId, params.canvasId);
       const result = await leaseStore.renew({
-        workspaceId: params.workspaceId,
+        canvasId: params.canvasId,
         sessionId: body.sessionId,
         leaseEpoch: body.leaseEpoch,
-        ttlSeconds: workspaceLeaseTtlSeconds,
+        ttlSeconds: canvasLeaseTtlSeconds,
         now: new Date()
       });
       if (result.status === "stale") {
-        return reply.code(409).send({ error: "Workspace lease is stale." });
+        return reply.code(409).send({ error: "Canvas lease is stale." });
       }
       return result;
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.post("/workspaces/:workspaceId/lease/release", async (request, reply) => {
+  app.post("/canvases/:canvasId/lease/release", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
     const body = LeaseMutationSchema.parse(request.body ?? {});
 
     try {
-      await getWorkspaceSnapshot(userId, params.workspaceId);
+      await getCanvasSnapshot(userId, params.canvasId);
       await leaseStore.release({
-        workspaceId: params.workspaceId,
+        canvasId: params.canvasId,
         sessionId: body.sessionId
       });
       return reply.code(204).send();
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.get("/workspaces/:workspaceId/lease/status", async (request, reply) => {
+  app.get("/canvases/:canvasId/lease/status", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
     const query = LeaseMutationSchema.parse(request.query ?? {});
 
     try {
-      await getWorkspaceSnapshot(userId, params.workspaceId);
+      await getCanvasSnapshot(userId, params.canvasId);
       return leaseStore.getStatus({
-        workspaceId: params.workspaceId,
+        canvasId: params.canvasId,
         sessionId: query.sessionId,
         now: new Date()
       });
     } catch (error) {
-      if (error instanceof WorkspaceNotFoundError) {
-        return reply.code(404).send({ error: "Workspace not found" });
+      if (error instanceof CanvasNotFoundError) {
+        return reply.code(404).send({ error: "Canvas not found" });
       }
       throw error;
     }
   });
 
-  app.post("/workspaces/:workspaceId/commands", async (request, reply) => {
+  app.post("/canvases/:canvasId/commands", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
     const body = parseCommandEnvelope(request.body);
 
     try {
-      if (body.command.workspaceId !== params.workspaceId) {
-        return reply.code(400).send({ error: "Workspace command target does not match the route." });
+      if (body.command.canvasId !== params.canvasId) {
+        return reply.code(400).send({ error: "Canvas command target does not match the route." });
       }
-      await assertWorkspaceLease(leaseStore, {
-        workspaceId: params.workspaceId,
+      await assertCanvasLease(leaseStore, {
+        canvasId: params.canvasId,
         sessionId: body.sessionId,
         leaseEpoch: body.leaseEpoch
       });
-      const events = await dispatchWorkspaceCommand(userId, body.command);
+      const events = await dispatchCanvasCommand(userId, body.command);
       return { events };
     } catch (error) {
-      return handleWorkspaceCommandError(error, reply);
+      return handleCanvasCommandError(error, reply);
     }
   });
 
-  app.post("/workspaces/:workspaceId/messages/stream", async (request, reply) => {
+  app.post("/canvases/:canvasId/messages/stream", async (request, reply) => {
     const userId = await requireUserId(request, reply);
     if (!userId) return;
     if (!aiProvider) {
       return reply.code(500).send({ error: "AI provider is unavailable." });
     }
-    const params = request.params as { workspaceId: string };
+    const params = request.params as { canvasId: string };
     const body = parseCommandEnvelope(request.body);
 
     if (body.command.type !== "message.sendUserMessage") {
       return reply.code(400).send({ error: "Expected a message.sendUserMessage command." });
     }
-    if (body.command.workspaceId !== params.workspaceId) {
-      return reply.code(400).send({ error: "Workspace command target does not match the route." });
+    if (body.command.canvasId !== params.canvasId) {
+      return reply.code(400).send({ error: "Canvas command target does not match the route." });
     }
 
     let streamStarted = false;
     try {
-      await assertWorkspaceLease(leaseStore, {
-        workspaceId: params.workspaceId,
+      await assertCanvasLease(leaseStore, {
+        canvasId: params.canvasId,
         sessionId: body.sessionId,
         leaseEpoch: body.leaseEpoch
       });
@@ -473,7 +473,7 @@ export async function registerRoutes(
       reply.header("Cache-Control", "no-store");
       reply.raw.writeHead(200);
       streamStarted = true;
-      await streamWorkspaceMessageCommand(
+      await streamCanvasMessageCommand(
         userId,
         body.command,
         aiProvider,
@@ -481,8 +481,8 @@ export async function registerRoutes(
           reply.raw.write(`${JSON.stringify({ type: "event", event })}\n`);
         },
         async () => {
-          await assertWorkspaceLease(leaseStore, {
-            workspaceId: params.workspaceId,
+          await assertCanvasLease(leaseStore, {
+            canvasId: params.canvasId,
             sessionId: body.sessionId,
             leaseEpoch: body.leaseEpoch
           });
@@ -498,7 +498,7 @@ export async function registerRoutes(
         reply.raw.end();
         return;
       }
-      return handleWorkspaceCommandError(error, reply);
+      return handleCanvasCommandError(error, reply);
     }
   });
 }
@@ -576,42 +576,42 @@ function resolveExpiresAt(body: z.infer<typeof CreateRedemptionCodeSchema>): Dat
   return null;
 }
 
-function parseCommandEnvelope(body: unknown): z.infer<typeof CommandEnvelopeSchema> & { command: WorkspaceCommand } {
+function parseCommandEnvelope(body: unknown): z.infer<typeof CommandEnvelopeSchema> & { command: CanvasCommand } {
   const parsed = CommandEnvelopeSchema.parse(body ?? {});
   return {
     ...parsed,
-    command: WorkspaceCommandSchema.parse(parsed.command)
+    command: CanvasCommandSchema.parse(parsed.command)
   };
 }
 
-async function assertWorkspaceLease(
-  leaseStore: WorkspaceLeaseStore,
+async function assertCanvasLease(
+  leaseStore: CanvasLeaseStore,
   input: {
-    workspaceId: string;
+    canvasId: string;
     sessionId: string;
     leaseEpoch: number;
   }
 ): Promise<void> {
   const renewed = await leaseStore.renew({
-    workspaceId: input.workspaceId,
+    canvasId: input.canvasId,
     sessionId: input.sessionId,
     leaseEpoch: input.leaseEpoch,
-    ttlSeconds: workspaceLeaseTtlSeconds,
+    ttlSeconds: canvasLeaseTtlSeconds,
     now: new Date()
   });
   if (renewed.status === "stale") {
-    throw new MessageStreamingInterruptedError("Workspace lease is stale.");
+    throw new MessageStreamingInterruptedError("Canvas lease is stale.");
   }
 }
 
-function handleWorkspaceCommandError(error: unknown, reply: FastifyReply) {
-  if (error instanceof WorkspaceNotFoundError) {
-    return reply.code(404).send({ error: "Workspace not found" });
+function handleCanvasCommandError(error: unknown, reply: FastifyReply) {
+  if (error instanceof CanvasNotFoundError) {
+    return reply.code(404).send({ error: "Canvas not found" });
   }
   if (error instanceof CanvasCommandError || error instanceof MessageCommandError) {
     return reply.code(400).send({ error: error.message });
   }
-  if (error instanceof UnsupportedWorkspaceCommandError) {
+  if (error instanceof UnsupportedCanvasCommandError) {
     return reply.code(400).send({ error: error.message });
   }
   if (error instanceof MessageStreamingInterruptedError) {

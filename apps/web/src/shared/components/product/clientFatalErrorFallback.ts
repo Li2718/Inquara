@@ -10,14 +10,14 @@ export function getClientFatalErrorFallbackScript() {
   var copy = {
     en: {
       backToCanvas: "Back to canvas",
-      heading: "The workspace hit a snag.",
+      heading: "The canvas hit a snag.",
       holdOn: "Hold on",
       message: "The page could not finish loading. Reload the page, or return to the canvas from a fresh tab.",
       reload: "Reload"
     },
     "zh-CN": {
       backToCanvas: "回到画布",
-      heading: "工作区遇到问题。",
+      heading: "画布遇到问题。",
       holdOn: "请稍候",
       message: "页面未能完成加载。请刷新页面，或从新标签页返回画布。",
       reload: "刷新"

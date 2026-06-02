@@ -1,5 +1,5 @@
-import type { WorkspaceSnapshot } from "@inquara/domain";
-import type { WorkspaceLeaseState } from "../features/workspace-session/store";
+import type { CanvasSnapshot } from "@inquara/domain";
+import type { CanvasLeaseState } from "../features/canvas-session/store";
 
 export type DebugRootProps = {
   page: "global";
@@ -7,10 +7,10 @@ export type DebugRootProps = {
 
 export type CanvasDebugSnapshot = {
   page: "canvas";
-  workspaceId: string;
-  leaseState: WorkspaceLeaseState;
+  canvasId: string;
+  leaseState: CanvasLeaseState;
   pendingClientMutationCount: number;
-  snapshot: WorkspaceSnapshot | null;
+  snapshot: CanvasSnapshot | null;
 };
 
 export type DebugCanvasSourceProps = CanvasDebugSnapshot;

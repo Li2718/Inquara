@@ -1,66 +1,66 @@
-import type { CanvasEdge, CanvasNode, NodeMessage, WorkspaceEvent } from "@inquara/domain";
+import type { CanvasEdge, CanvasNode, NodeMessage, CanvasEvent } from "@inquara/domain";
 
 export type EventBaseInput = {
-  workspaceId: string;
+  canvasId: string;
   version: number;
   clientMutationId: string | null;
 };
 
-export function createNodeCreatedEvent(input: EventBaseInput & { node: CanvasNode }): WorkspaceEvent {
+export function createNodeCreatedEvent(input: EventBaseInput & { node: CanvasNode }): CanvasEvent {
   return {
-    ...baseEvent("workspace.node.created", input),
+    ...baseEvent("canvas.node.created", input),
     node: input.node
   };
 }
 
-export function createNodeUpdatedEvent(input: EventBaseInput & { node: CanvasNode }): WorkspaceEvent {
+export function createNodeUpdatedEvent(input: EventBaseInput & { node: CanvasNode }): CanvasEvent {
   return {
-    ...baseEvent("workspace.node.updated", input),
+    ...baseEvent("canvas.node.updated", input),
     node: input.node
   };
 }
 
-export function createEdgeCreatedEvent(input: EventBaseInput & { edge: CanvasEdge }): WorkspaceEvent {
+export function createEdgeCreatedEvent(input: EventBaseInput & { edge: CanvasEdge }): CanvasEvent {
   return {
-    ...baseEvent("workspace.edge.created", input),
+    ...baseEvent("canvas.edge.created", input),
     edge: input.edge
   };
 }
 
-export function createMessageCreatedEvent(input: EventBaseInput & { message: NodeMessage }): WorkspaceEvent {
+export function createMessageCreatedEvent(input: EventBaseInput & { message: NodeMessage }): CanvasEvent {
   return {
-    ...baseEvent("workspace.message.created", input),
+    ...baseEvent("canvas.message.created", input),
     message: input.message
   };
 }
 
-export function createMessageDeltaEvent(input: EventBaseInput & { messageId: string; delta: string }): WorkspaceEvent {
+export function createMessageDeltaEvent(input: EventBaseInput & { messageId: string; delta: string }): CanvasEvent {
   return {
-    ...baseEvent("workspace.message.delta", input),
+    ...baseEvent("canvas.message.delta", input),
     messageId: input.messageId,
     delta: input.delta
   };
 }
 
-export function createMessageUpdatedEvent(input: EventBaseInput & { message: NodeMessage }): WorkspaceEvent {
+export function createMessageUpdatedEvent(input: EventBaseInput & { message: NodeMessage }): CanvasEvent {
   return {
-    ...baseEvent("workspace.message.updated", input),
+    ...baseEvent("canvas.message.updated", input),
     message: input.message
   };
 }
 
-export function createMessageFailedEvent(input: EventBaseInput & { message: NodeMessage }): WorkspaceEvent {
+export function createMessageFailedEvent(input: EventBaseInput & { message: NodeMessage }): CanvasEvent {
   return {
-    ...baseEvent("workspace.message.failed", input),
+    ...baseEvent("canvas.message.failed", input),
     message: input.message
   };
 }
 
-function baseEvent<TType extends WorkspaceEvent["type"]>(type: TType, input: EventBaseInput) {
+function baseEvent<TType extends CanvasEvent["type"]>(type: TType, input: EventBaseInput) {
   return {
     id: `event-${crypto.randomUUID()}`,
     type,
-    workspaceId: input.workspaceId,
+    canvasId: input.canvasId,
     version: input.version,
     clientMutationId: input.clientMutationId,
     createdAt: new Date().toISOString()

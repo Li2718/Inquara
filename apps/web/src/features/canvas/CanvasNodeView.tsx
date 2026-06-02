@@ -5,7 +5,7 @@ import { Handle, Position, useStore, useUpdateNodeInternals, type NodeProps } fr
 import { CheckIcon, ConfirmDialog, IconButton, MoreVerticalIcon, PopupMenu, PopupMenuItem } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { NodeChatPanel } from "../node-chat/NodeChatPanel";
-import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
+import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import type { ChatFlowNode } from "./CanvasView";
 import { clampNodeSize, type NodeSize } from "./nodeResize";
 
@@ -18,7 +18,7 @@ function getSafeZoom(zoom: number) {
 export const CanvasNodeView = memo(function CanvasNodeView({ id, data }: NodeProps<ChatFlowNode>) {
   const { messages } = useLocale();
   const copy = messages.node;
-  const { commands, sendCommand, state } = useWorkspaceSession();
+  const { commands, sendCommand, state } = useCanvasSession();
   const updateNodeInternals = useUpdateNodeInternals();
   const zoom = useStore(state => state.transform[2]);
   const isBlocked = state.leaseState !== "active";

@@ -36,7 +36,7 @@ Test product rules where different inputs, permissions, states, or edge cases pr
 
 Examples:
 
-- Workspace ownership and access.
+- Canvas ownership and access.
 - Node visibility, deletion, restoration, and scroll state.
 - Branch creation from selected source text.
 - Password/session behavior that changes account access.
@@ -47,7 +47,7 @@ Test execution paths that coordinate multiple steps and can fail by being wired 
 
 Examples:
 
-- Workspace lease takeover, stale rejection, and streamed reply delivery.
+- Canvas lease takeover, stale rejection, and streamed reply delivery.
 - AI streaming, partial output persistence, and failure handling.
 - Reconnect or stale-event handling.
 - Provider request/response normalization.
@@ -60,7 +60,7 @@ Examples:
 
 - Ownership filters.
 - Soft deletion and recovery.
-- Workspace version updates.
+- Canvas version updates.
 - Database-backed command services.
 - Migration-backed schema boundaries.
 
@@ -139,7 +139,7 @@ Current examples:
 - `apps/api/src/test/app.test.ts`
 - `apps/api/src/test/canvas.test.ts`
 - `apps/api/src/test/messages.test.ts`
-- `apps/api/src/test/workspace-http.test.ts`
+- `apps/api/src/test/canvas-http.test.ts`
 
 Rules:
 
@@ -263,7 +263,7 @@ Test names should describe behavior or risk, not implementation steps.
 
 Prefer:
 
-- `rejects workspace access without a valid session`
+- `rejects canvas access without a valid session`
 - `persists partial assistant output when the provider fails`
 - `keeps the root node centered in the usable canvas area`
 

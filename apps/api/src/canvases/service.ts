@@ -1,5 +1,5 @@
 import { prisma } from "@inquara/db";
-import type { CanvasEdge, CanvasNode, NodeMessage, Workspace, WorkspaceSnapshot } from "@inquara/domain";
+import type { CanvasEdge, CanvasNode, NodeMessage, Canvas, CanvasSnapshot } from "@inquara/domain";
 import type { Prisma } from "@prisma/client";
 import { hashPassword, verifyPassword } from "../auth/password";
 import { createUserSession, type CreateSessionOptions } from "../auth/session";
@@ -108,23 +108,23 @@ export async function getUser(userId: string): Promise<UserDto | null> {
   return user ? toUserDto(user) : null;
 }
 
-export async function listWorkspaces(userId: string): Promise<Workspace[]> {
-  const workspaces = await prisma.workspace.findMany({
+export async function listCanvases(userId: string): Promise<Canvas[]> {
+  const canvases = await prisma.canvas.findMany({
     where: { ownerId: userId, archivedAt: null },
     orderBy: { updatedAt: "desc" }
   });
 
-  return workspaces.map(toWorkspace);
+  return canvases.map(toCanvas);
 }
 
-export async function createWorkspace(userId: string, title: string): Promise<Workspace> {
-  const workspace = await prisma.$transaction(async tx => {
-    const created = await tx.workspace.create({
+export async function createCanvas(userId: string, title: string): Promise<Canvas> {
+  const canvas = await prisma.$transaction(async tx => {
+    const created = await tx.canvas.create({
       data: { ownerId: userId, title }
     });
     const rootNode = await tx.canvasNode.create({
       data: {
-        workspaceId: created.id,
+        canvasId: created.id,
         title: "Main chat",
         x: 120,
         y: 120,
@@ -135,7 +135,7 @@ export async function createWorkspace(userId: string, title: string): Promise<Wo
     });
     await tx.nodeMessage.create({
       data: {
-        workspaceId: created.id,
+        canvasId: created.id,
         nodeId: rootNode.id,
         role: "assistant",
         content: rootAssistantText,
@@ -145,41 +145,41 @@ export async function createWorkspace(userId: string, title: string): Promise<Wo
     return created;
   });
 
-  return toWorkspace(workspace);
+  return toCanvas(canvas);
 }
 
-export async function renameWorkspace(userId: string, workspaceId: string, title: string): Promise<Workspace> {
-  const workspace = await prisma.workspace.findFirst({
-    where: { id: workspaceId, ownerId: userId, archivedAt: null }
+export async function renameCanvas(userId: string, canvasId: string, title: string): Promise<Canvas> {
+  const canvas = await prisma.canvas.findFirst({
+    where: { id: canvasId, ownerId: userId, archivedAt: null }
   });
-  if (!workspace) {
-    throw new WorkspaceNotFoundError(workspaceId);
+  if (!canvas) {
+    throw new CanvasNotFoundError(canvasId);
   }
 
-  const updated = await prisma.workspace.update({
-    where: { id: workspaceId },
+  const updated = await prisma.canvas.update({
+    where: { id: canvasId },
     data: { title }
   });
-  return toWorkspace(updated);
+  return toCanvas(updated);
 }
 
-export async function archiveWorkspace(userId: string, workspaceId: string): Promise<void> {
-  const workspace = await prisma.workspace.findFirst({
-    where: { id: workspaceId, ownerId: userId, archivedAt: null }
+export async function archiveCanvas(userId: string, canvasId: string): Promise<void> {
+  const canvas = await prisma.canvas.findFirst({
+    where: { id: canvasId, ownerId: userId, archivedAt: null }
   });
-  if (!workspace) {
-    throw new WorkspaceNotFoundError(workspaceId);
+  if (!canvas) {
+    throw new CanvasNotFoundError(canvasId);
   }
 
-  await prisma.workspace.update({
-    where: { id: workspaceId },
+  await prisma.canvas.update({
+    where: { id: canvasId },
     data: { archivedAt: new Date() }
   });
 }
 
-export async function getWorkspaceSnapshot(userId: string, workspaceId: string): Promise<WorkspaceSnapshot> {
-  const workspace = await prisma.workspace.findFirst({
-    where: { id: workspaceId, ownerId: userId, archivedAt: null },
+export async function getCanvasSnapshot(userId: string, canvasId: string): Promise<CanvasSnapshot> {
+  const canvas = await prisma.canvas.findFirst({
+    where: { id: canvasId, ownerId: userId, archivedAt: null },
     include: {
       nodes: { orderBy: { createdAt: "asc" } },
       edges: { orderBy: { createdAt: "asc" } },
@@ -187,22 +187,22 @@ export async function getWorkspaceSnapshot(userId: string, workspaceId: string):
     }
   });
 
-  if (!workspace) {
-    throw new WorkspaceNotFoundError(workspaceId);
+  if (!canvas) {
+    throw new CanvasNotFoundError(canvasId);
   }
 
   return {
-    workspace: toWorkspace(workspace),
-    nodes: workspace.nodes.map(toCanvasNode),
-    edges: workspace.edges.map(toCanvasEdge),
-    messages: workspace.messages.map(toNodeMessage)
+    canvas: toCanvas(canvas),
+    nodes: canvas.nodes.map(toCanvasNode),
+    edges: canvas.edges.map(toCanvasEdge),
+    messages: canvas.messages.map(toNodeMessage)
   };
 }
 
-export class WorkspaceNotFoundError extends Error {
-  constructor(workspaceId: string) {
-    super(`Workspace not found: ${workspaceId}`);
-    this.name = "WorkspaceNotFoundError";
+export class CanvasNotFoundError extends Error {
+  constructor(canvasId: string) {
+    super(`Canvas not found: ${canvasId}`);
+    this.name = "CanvasNotFoundError";
   }
 }
 
@@ -219,14 +219,14 @@ function toUserDto(user: { id: string; email: string; name: string | null; role:
   };
 }
 
-function toWorkspace(value: {
+function toCanvas(value: {
   id: string;
   ownerId: string;
   title: string;
   version: number;
   createdAt: Date;
   updatedAt: Date;
-}): Workspace {
+}): Canvas {
   return {
     id: value.id,
     ownerId: value.ownerId,
@@ -239,7 +239,7 @@ function toWorkspace(value: {
 
 function toCanvasNode(value: {
   id: string;
-  workspaceId: string;
+  canvasId: string;
   title: string;
   x: number;
   y: number;
@@ -262,7 +262,7 @@ function toCanvasNode(value: {
 }): CanvasNode {
   return {
     id: value.id,
-    workspaceId: value.workspaceId,
+    canvasId: value.canvasId,
     title: value.title,
     x: value.x,
     y: value.y,
@@ -302,7 +302,7 @@ function parseHiddenStateSnapshot(value: Prisma.JsonValue | null): CanvasNode["h
 
 function toCanvasEdge(value: {
   id: string;
-  workspaceId: string;
+  canvasId: string;
   sourceNodeId: string;
   targetNodeId: string;
   sourceMessageId: string | null;
@@ -311,7 +311,7 @@ function toCanvasEdge(value: {
 }): CanvasEdge {
   return {
     id: value.id,
-    workspaceId: value.workspaceId,
+    canvasId: value.canvasId,
     sourceNodeId: value.sourceNodeId,
     targetNodeId: value.targetNodeId,
     sourceMessageId: value.sourceMessageId,
@@ -322,7 +322,7 @@ function toCanvasEdge(value: {
 
 function toNodeMessage(value: {
   id: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   role: string;
   content: string;
@@ -334,7 +334,7 @@ function toNodeMessage(value: {
 }): NodeMessage {
   return {
     id: value.id,
-    workspaceId: value.workspaceId,
+    canvasId: value.canvasId,
     nodeId: value.nodeId,
     role: value.role as NodeMessage["role"],
     content: value.content,

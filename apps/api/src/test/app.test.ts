@@ -12,7 +12,7 @@ afterAll(async () => {
   await stopEphemeralTestDatabase();
 });
 
-describe("API auth and workspace snapshots", () => {
+describe("API auth and canvas snapshots", () => {
   it("returns a health check for local orchestration", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
 
@@ -26,7 +26,7 @@ describe("API auth and workspace snapshots", () => {
     await app.close();
   });
 
-  it("registers with a password, creates a workspace, and returns a snapshot with one chat canvas node", async () => {
+  it("registers with a password, creates a canvas, and returns a snapshot with one chat canvas node", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
 
     const loginResponse = await app.inject({
@@ -50,23 +50,23 @@ describe("API auth and workspace snapshots", () => {
 
     const createResponse = await app.inject({
       method: "POST",
-      url: "/workspaces",
+      url: "/canvases",
       cookies: { inquara_session: cookie?.value ?? "" },
       payload: { title: "My canvas" }
     });
     expect(createResponse.statusCode).toBe(200);
-    const workspace = createResponse.json<{ id: string; title: string }>();
-    expect(workspace.title).toBe("My canvas");
+    const canvas = createResponse.json<{ id: string; title: string }>();
+    expect(canvas.title).toBe("My canvas");
 
     const snapshotResponse = await app.inject({
       method: "GET",
-      url: `/workspaces/${workspace.id}/snapshot`,
+      url: `/canvases/${canvas.id}/snapshot`,
       cookies: { inquara_session: cookie?.value ?? "" }
     });
     expect(snapshotResponse.statusCode).toBe(200);
     const snapshot = snapshotResponse.json();
 
-    expect(snapshot.workspace.id).toBe(workspace.id);
+    expect(snapshot.canvas.id).toBe(canvas.id);
     expect(snapshot.nodes).toHaveLength(1);
     expect(snapshot.nodes[0].title).toBe("Main chat");
     expect(snapshot.nodes[0]).not.toHaveProperty("type");
@@ -291,12 +291,12 @@ describe("API auth and workspace snapshots", () => {
     await app.close();
   });
 
-  it("rejects workspace access without a valid session", async () => {
+  it("rejects canvas access without a valid session", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
 
     const response = await app.inject({
       method: "GET",
-      url: "/workspaces"
+      url: "/canvases"
     });
 
     expect(response.statusCode).toBe(401);

@@ -11,14 +11,14 @@ const destructiveCleanupFiles = [
   "apps/api/src/test/app.test.ts",
   "apps/api/src/test/canvas.test.ts",
   "apps/api/src/test/messages.test.ts",
-  "apps/api/src/test/workspace-http.test.ts",
+  "apps/api/src/test/canvas-http.test.ts",
   "apps/web/e2e/multi-window-sync.spec.ts"
 ];
 
 const directDevDatabaseUrlFiles = [
   "apps/api/src/debug/routes.test.ts",
   "apps/api/src/test/app.test.ts",
-  "apps/api/src/test/workspace-http.test.ts",
+  "apps/api/src/test/canvas-http.test.ts",
   "apps/web/playwright.config.ts"
 ];
 

@@ -1,12 +1,12 @@
-import type { WorkspaceCommand } from "@inquara/domain";
+import type { CanvasCommand } from "@inquara/domain";
 
-export function createCommands(workspaceId: string, defaults: { newChatTitle: string }) {
+export function createCommands(canvasId: string, defaults: { newChatTitle: string }) {
   return {
-    createNodeAtPosition(input: { title?: string; x: number; y: number }): WorkspaceCommand {
+    createNodeAtPosition(input: { title?: string; x: number; y: number }): CanvasCommand {
       return {
         type: "node.createAtPosition",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId: crypto.randomUUID(),
         title: input.title ?? defaults.newChatTitle,
         x: input.x,
@@ -21,100 +21,100 @@ export function createCommands(workspaceId: string, defaults: { newChatTitle: st
       sourceRangeEnd: number;
       x: number;
       y: number;
-    }): WorkspaceCommand {
+    }): CanvasCommand {
       return {
         type: "node.createFromSelection",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId: crypto.randomUUID(),
         edgeId: crypto.randomUUID(),
         ...input
       };
     },
-    updateNodePosition(nodeId: string, position: { x: number; y: number }): WorkspaceCommand {
+    updateNodePosition(nodeId: string, position: { x: number; y: number }): CanvasCommand {
       return {
         type: "node.updatePosition",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         x: position.x,
         y: position.y
       };
     },
-    organizeCanvasNodes(): WorkspaceCommand {
+    organizeCanvasNodes(): CanvasCommand {
       return {
         type: "node.organize",
         clientMutationId: crypto.randomUUID(),
-        workspaceId
+        canvasId
       };
     },
-    updateNodeSize(nodeId: string, size: { width: number; height: number }): WorkspaceCommand {
+    updateNodeSize(nodeId: string, size: { width: number; height: number }): CanvasCommand {
       return {
         type: "node.updateSize",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         width: size.width,
         height: size.height
       };
     },
-    updateNodeScroll(nodeId: string, scrollTop: number): WorkspaceCommand {
+    updateNodeScroll(nodeId: string, scrollTop: number): CanvasCommand {
       return {
         type: "node.updateScroll",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         scrollTop
       };
     },
-    renameNode(nodeId: string, title: string): WorkspaceCommand {
+    renameNode(nodeId: string, title: string): CanvasCommand {
       return {
         type: "node.rename",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         title
       };
     },
-    hideNodeSubtree(nodeId: string, scrollTop?: number): WorkspaceCommand {
+    hideNodeSubtree(nodeId: string, scrollTop?: number): CanvasCommand {
       return {
         type: "node.hideSubtree",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         ...(scrollTop === undefined ? {} : { scrollTop })
       };
     },
-    restoreNodeBranch(nodeId: string, position?: { x: number; y: number }): WorkspaceCommand {
+    restoreNodeBranch(nodeId: string, position?: { x: number; y: number }): CanvasCommand {
       return {
         type: "node.restoreBranch",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         ...(position ? { x: position.x, y: position.y } : {})
       };
     },
-    deleteNodeSubtree(nodeId: string): WorkspaceCommand {
+    deleteNodeSubtree(nodeId: string): CanvasCommand {
       return {
         type: "node.deleteSubtree",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId
       };
     },
-    restoreDeletedNodeSubtree(nodeId: string): WorkspaceCommand {
+    restoreDeletedNodeSubtree(nodeId: string): CanvasCommand {
       return {
         type: "node.restoreDeletedSubtree",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId
       };
     },
-    sendUserMessage(nodeId: string, content: string): WorkspaceCommand {
+    sendUserMessage(nodeId: string, content: string): CanvasCommand {
       return {
         type: "message.sendUserMessage",
         clientMutationId: crypto.randomUUID(),
-        workspaceId,
+        canvasId,
         nodeId,
         userMessageId: crypto.randomUUID(),
         assistantMessageId: crypto.randomUUID(),

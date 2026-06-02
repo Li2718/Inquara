@@ -13,7 +13,7 @@ describe("debug page store", () => {
     setDebugPageSnapshot(
       {
         page: "canvas",
-        workspaceId: "workspace-1",
+        canvasId: "canvas-1",
         leaseState: "active",
         pendingClientMutationCount: 0,
         snapshot: null
@@ -23,7 +23,7 @@ describe("debug page store", () => {
     setDebugPageSnapshot(
       {
         page: "canvas",
-        workspaceId: "workspace-1",
+        canvasId: "canvas-1",
         leaseState: "active",
         pendingClientMutationCount: 1,
         snapshot: null
@@ -31,11 +31,11 @@ describe("debug page store", () => {
       secondOwner
     );
 
-    clearDebugPageSnapshot("workspace-1", firstOwner);
+    clearDebugPageSnapshot("canvas-1", firstOwner);
 
     expect(readDebugPageSnapshotForTest()).toMatchObject({
       page: "canvas",
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       pendingClientMutationCount: 1
     });
   });

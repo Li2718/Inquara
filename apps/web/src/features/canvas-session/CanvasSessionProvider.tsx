@@ -1,20 +1,20 @@
 "use client";
 
-import type { WorkspaceCommand, WorkspaceSnapshot } from "@inquara/domain";
+import type { CanvasCommand, CanvasSnapshot } from "@inquara/domain";
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { apiJson, apiRequest } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { createCommands } from "../commands/createCommands";
-import { cancelPendingWorkspaceLeaseRelease, scheduleWorkspaceLeaseRelease } from "./leaseReleaseScheduler";
+import { cancelPendingCanvasLeaseRelease, scheduleCanvasLeaseRelease } from "./leaseReleaseScheduler";
 import { shouldEnterLeaseRecovery } from "./renewFailurePolicy";
-import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
+import { canvasSessionStore, type CanvasSessionState } from "./store";
 
-type WorkspaceSessionContextValue = {
-  state: WorkspaceSessionState;
+type CanvasSessionContextValue = {
+  state: CanvasSessionState;
   commands: ReturnType<typeof createCommands>;
   retryLease(): Promise<void>;
-  sendCommand(command: WorkspaceCommand): Promise<void>;
+  sendCommand(command: CanvasCommand): Promise<void>;
 };
 
 type LeaseAcquireResponse =
@@ -52,24 +52,24 @@ type LeaseStatusResponse =
       expiresAt: string | null;
     };
 
-const WorkspaceSessionContext = createContext<WorkspaceSessionContextValue | null>(null);
-const workspaceSnapshotCache = new Map<string, WorkspaceSnapshot>();
+const CanvasSessionContext = createContext<CanvasSessionContextValue | null>(null);
+const canvasSnapshotCache = new Map<string, CanvasSnapshot>();
 const renewIntervalMs = 5_000;
 const stalePollMinMs = 8_000;
 const stalePollJitterMs = 2_000;
 const leaseReleaseDelayMs = 250;
-const sessionStorageKeyPrefix = "inquara.workspace-session";
+const sessionStorageKeyPrefix = "inquara.canvas-session";
 
-export function WorkspaceSessionProvider({
-  workspaceId,
+export function CanvasSessionProvider({
+  canvasId,
   children
 }: {
-  workspaceId: string;
+  canvasId: string;
   children: ReactNode;
 }) {
   const navigation = usePageTransitionNavigation();
   const { messages } = useLocale();
-  const state = useWorkspaceSessionState();
+  const state = useCanvasSessionState();
   const sessionIdRef = useRef<string | null>(null);
   const renewTimerRef = useRef<number | null>(null);
   const consecutiveRenewFailuresRef = useRef(0);
@@ -79,43 +79,43 @@ export function WorkspaceSessionProvider({
   stateRef.current = state;
   const commands = useMemo(
     () =>
-      createCommands(workspaceId, {
+      createCommands(canvasId, {
         newChatTitle: messages.canvas.newChat
       }),
-    [messages.canvas.newChat, workspaceId]
+    [messages.canvas.newChat, canvasId]
   );
 
   useEffect(() => {
-    cancelPendingWorkspaceLeaseRelease(workspaceId);
-    sessionIdRef.current = getOrCreateSessionId(workspaceId);
+    cancelPendingCanvasLeaseRelease(canvasId);
+    sessionIdRef.current = getOrCreateSessionId(canvasId);
     releasedRef.current = false;
     consecutiveRenewFailuresRef.current = 0;
-    const cachedSnapshot = workspaceSnapshotCache.get(workspaceId);
+    const cachedSnapshot = canvasSnapshotCache.get(canvasId);
     if (cachedSnapshot) {
-      workspaceSessionStore.getState().setSnapshot(cachedSnapshot);
+      canvasSessionStore.getState().setSnapshot(cachedSnapshot);
     }
-    workspaceSessionStore.getState().setLease({
+    canvasSessionStore.getState().setLease({
       sessionId: sessionIdRef.current,
       leaseEpoch: null,
       displacedSeq: null,
       expiresAt: null
     });
-    workspaceSessionStore.getState().setLeaseState("acquiring");
-    workspaceSessionStore.getState().setErrorMessageKey(null);
+    canvasSessionStore.getState().setLeaseState("acquiring");
+    canvasSessionStore.getState().setErrorMessageKey(null);
 
-    void acquireAndLoadWorkspace({ mode: "initial" });
+    void acquireAndLoadCanvas({ mode: "initial" });
 
     return () => {
       clearRenewTimer();
       clearBlockedPollTimer();
       if (!releasedRef.current) {
         releasedRef.current = true;
-        scheduleWorkspaceLeaseRelease(workspaceId, releaseLease, leaseReleaseDelayMs);
+        scheduleCanvasLeaseRelease(canvasId, releaseLease, leaseReleaseDelayMs);
       }
     };
-  }, [navigation, workspaceId]);
+  }, [navigation, canvasId]);
 
-  const value = useMemo<WorkspaceSessionContextValue>(
+  const value = useMemo<CanvasSessionContextValue>(
     () => ({
       state,
       commands,
@@ -124,12 +124,12 @@ export function WorkspaceSessionProvider({
       },
       async sendCommand(command) {
         if (stateRef.current.leaseState !== "active") return;
-        workspaceSessionStore.getState().applyOptimisticCommand(command);
+        canvasSessionStore.getState().applyOptimisticCommand(command);
         try {
           if (command.type === "message.sendUserMessage") {
             await streamMessageCommand(command);
           } else {
-            const response = await apiJson<{ events: unknown[] }>(`/workspaces/${workspaceId}/commands`, {
+            const response = await apiJson<{ events: unknown[] }>(`/canvases/${canvasId}/commands`, {
               method: "POST",
               body: JSON.stringify({
                 sessionId: sessionIdRef.current,
@@ -137,12 +137,12 @@ export function WorkspaceSessionProvider({
                 command
               })
             });
-            const snapshot = workspaceSessionStore.getState().snapshot;
+            const snapshot = canvasSessionStore.getState().snapshot;
             if (snapshot) {
-              workspaceSnapshotCache.set(workspaceId, snapshot);
+              canvasSnapshotCache.set(canvasId, snapshot);
             }
             if (!response.events.length) {
-              workspaceSessionStore.getState().clearPending(command.clientMutationId);
+              canvasSessionStore.getState().clearPending(command.clientMutationId);
             }
           }
         } catch (error) {
@@ -150,57 +150,57 @@ export function WorkspaceSessionProvider({
             await enterBlockedState("activeElsewhereMessage");
             return;
           }
-          workspaceSessionStore.getState().setErrorMessageKey("syncFailedMessage");
-          workspaceSessionStore.getState().clearPending(command.clientMutationId);
+          canvasSessionStore.getState().setErrorMessageKey("syncFailedMessage");
+          canvasSessionStore.getState().clearPending(command.clientMutationId);
         }
       }
     }),
-    [commands, state, workspaceId]
+    [commands, state, canvasId]
   );
 
-  return <WorkspaceSessionContext.Provider value={value}>{children}</WorkspaceSessionContext.Provider>;
+  return <CanvasSessionContext.Provider value={value}>{children}</CanvasSessionContext.Provider>;
 
-  async function acquireAndLoadWorkspace({ mode }: { mode: "initial" | "retry" }): Promise<void> {
+  async function acquireAndLoadCanvas({ mode }: { mode: "initial" | "retry" }): Promise<void> {
     try {
       const sessionId = sessionIdRef.current;
-      if (!sessionId) throw new Error("Workspace session is unavailable.");
+      if (!sessionId) throw new Error("Canvas session is unavailable.");
 
-      const acquire = await apiJson<LeaseAcquireResponse>(`/workspaces/${workspaceId}/lease/acquire`, {
+      const acquire = await apiJson<LeaseAcquireResponse>(`/canvases/${canvasId}/lease/acquire`, {
         method: "POST",
         body: JSON.stringify({ sessionId })
       });
 
       if (acquire.status === "active") {
-        workspaceSessionStore.getState().setLease({
+        canvasSessionStore.getState().setLease({
           leaseEpoch: acquire.lease.leaseEpoch,
           displacedSeq: null,
           expiresAt: acquire.lease.expiresAt
         });
-        const snapshot = await apiJson<WorkspaceSnapshot>(`/workspaces/${workspaceId}/snapshot`);
-        workspaceSnapshotCache.set(workspaceId, snapshot);
-        workspaceSessionStore.getState().setSnapshot(snapshot);
-        workspaceSessionStore.getState().setLeaseState("active");
-        workspaceSessionStore.getState().setErrorMessageKey(null);
+        const snapshot = await apiJson<CanvasSnapshot>(`/canvases/${canvasId}/snapshot`);
+        canvasSnapshotCache.set(canvasId, snapshot);
+        canvasSessionStore.getState().setSnapshot(snapshot);
+        canvasSessionStore.getState().setLeaseState("active");
+        canvasSessionStore.getState().setErrorMessageKey(null);
         startRenewLoop();
         return;
       }
 
-      workspaceSessionStore.getState().setLease({
+      canvasSessionStore.getState().setLease({
         displacedSeq: acquire.displacedSeq,
         expiresAt: acquire.expiresAt
       });
-      workspaceSessionStore.getState().setLeaseState("blocked-stale");
+      canvasSessionStore.getState().setLeaseState("blocked-stale");
       startBlockedPollLoop();
     } catch {
       if (mode === "initial") {
-        workspaceSessionStore.getState().setLeaseState("blocked-stale");
-        workspaceSessionStore.getState().setErrorMessageKey("acquireFailedMessage");
-        workspaceSessionStore.getState().setSnapshot(null);
+        canvasSessionStore.getState().setLeaseState("blocked-stale");
+        canvasSessionStore.getState().setErrorMessageKey("acquireFailedMessage");
+        canvasSessionStore.getState().setSnapshot(null);
         void navigation.replace("/");
         return;
       }
 
-      workspaceSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
+      canvasSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
     }
   }
 
@@ -210,7 +210,7 @@ export function WorkspaceSessionProvider({
     if (stateRef.current.leaseState === "recovering") {
       await pollLeaseAvailability();
     } else {
-      await acquireAndLoadWorkspace({ mode: "retry" });
+      await acquireAndLoadCanvas({ mode: "retry" });
     }
     if (stateRef.current.leaseState === "blocked-stale" || stateRef.current.leaseState === "recovering") {
       startBlockedPollLoop();
@@ -238,7 +238,7 @@ export function WorkspaceSessionProvider({
 
     let response: Response;
     try {
-      response = await apiRequest(`/workspaces/${workspaceId}/lease/renew`, {
+      response = await apiRequest(`/canvases/${canvasId}/lease/renew`, {
         method: "POST",
         body: JSON.stringify({ sessionId, leaseEpoch })
       });
@@ -260,28 +260,28 @@ export function WorkspaceSessionProvider({
 
     consecutiveRenewFailuresRef.current = 0;
     const renewed = (await response.json()) as { status: "active"; lease: { leaseEpoch: number; expiresAt: string } };
-    workspaceSessionStore.getState().setLease({
+    canvasSessionStore.getState().setLease({
       leaseEpoch: renewed.lease.leaseEpoch,
       expiresAt: renewed.lease.expiresAt
     });
-    workspaceSessionStore.getState().setLeaseState("active");
-    workspaceSessionStore.getState().setErrorMessageKey(null);
+    canvasSessionStore.getState().setLeaseState("active");
+    canvasSessionStore.getState().setErrorMessageKey(null);
   }
 
   function handleRenewFailure(): void {
     consecutiveRenewFailuresRef.current += 1;
-    workspaceSessionStore.getState().setErrorMessageKey("unstableNetworkMessage");
+    canvasSessionStore.getState().setErrorMessageKey("unstableNetworkMessage");
     if (!shouldEnterLeaseRecovery(consecutiveRenewFailuresRef.current)) return;
 
-    workspaceSessionStore.getState().setLeaseState("recovering");
+    canvasSessionStore.getState().setLeaseState("recovering");
   }
 
   async function enterBlockedState(messageKey: "activeElsewhereMessage"): Promise<void> {
     clearRenewTimer();
     consecutiveRenewFailuresRef.current = 0;
-    workspaceSessionStore.getState().setLeaseState("blocked-stale");
-    workspaceSessionStore.getState().setErrorMessageKey(messageKey);
-    workspaceSessionStore.getState().setLease({
+    canvasSessionStore.getState().setLeaseState("blocked-stale");
+    canvasSessionStore.getState().setErrorMessageKey(messageKey);
+    canvasSessionStore.getState().setLease({
       leaseEpoch: null,
       expiresAt: null
     });
@@ -312,38 +312,38 @@ export function WorkspaceSessionProvider({
 
     try {
       const status = await apiJson<LeaseStatusResponse>(
-        `/workspaces/${workspaceId}/lease/status?sessionId=${encodeURIComponent(sessionId)}`
+        `/canvases/${canvasId}/lease/status?sessionId=${encodeURIComponent(sessionId)}`
       );
 
       if (status.status === "active") {
-        workspaceSessionStore.getState().setLease({
+        canvasSessionStore.getState().setLease({
           leaseEpoch: status.lease.leaseEpoch,
           displacedSeq: null,
           expiresAt: status.lease.expiresAt
         });
-        workspaceSessionStore.getState().setLeaseState("active");
-        workspaceSessionStore.getState().setErrorMessageKey(null);
+        canvasSessionStore.getState().setLeaseState("active");
+        canvasSessionStore.getState().setErrorMessageKey(null);
         startRenewLoop();
         return;
       }
 
       if (status.status === "available") {
-        workspaceSessionStore.getState().setLeaseState("recovering");
+        canvasSessionStore.getState().setLeaseState("recovering");
         clearBlockedPollTimer();
-        await acquireAndLoadWorkspace({ mode: "retry" });
+        await acquireAndLoadCanvas({ mode: "retry" });
         return;
       }
 
-      workspaceSessionStore.getState().setLease({
+      canvasSessionStore.getState().setLease({
         displacedSeq: status.displacedSeq,
         expiresAt: status.expiresAt
       });
       if (stateRef.current.leaseState === "recovering") {
-        workspaceSessionStore.getState().setLeaseState("blocked-stale");
-        workspaceSessionStore.getState().setErrorMessageKey(null);
+        canvasSessionStore.getState().setLeaseState("blocked-stale");
+        canvasSessionStore.getState().setErrorMessageKey(null);
       }
     } catch {
-      workspaceSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
+      canvasSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
     }
   }
 
@@ -351,7 +351,7 @@ export function WorkspaceSessionProvider({
     const sessionId = sessionIdRef.current;
     if (!sessionId) return;
     try {
-      await apiRequest(`/workspaces/${workspaceId}/lease/release`, {
+      await apiRequest(`/canvases/${canvasId}/lease/release`, {
         method: "POST",
         body: JSON.stringify({ sessionId })
       });
@@ -360,8 +360,8 @@ export function WorkspaceSessionProvider({
     }
   }
 
-  async function streamMessageCommand(command: Extract<WorkspaceCommand, { type: "message.sendUserMessage" }>): Promise<void> {
-    const response = await apiRequest(`/workspaces/${workspaceId}/messages/stream`, {
+  async function streamMessageCommand(command: Extract<CanvasCommand, { type: "message.sendUserMessage" }>): Promise<void> {
+    const response = await apiRequest(`/canvases/${canvasId}/messages/stream`, {
       method: "POST",
       body: JSON.stringify({
         sessionId: sessionIdRef.current,
@@ -375,7 +375,7 @@ export function WorkspaceSessionProvider({
       return;
     }
     if (!response.ok || !response.body) {
-      workspaceSessionStore.getState().setErrorMessageKey("streamFailedMessage");
+      canvasSessionStore.getState().setErrorMessageKey("streamFailedMessage");
       throw new Error("Failed to stream the assistant reply.");
     }
 
@@ -393,12 +393,12 @@ export function WorkspaceSessionProvider({
         const trimmed = line.trim();
         if (!trimmed) continue;
         const payload = JSON.parse(trimmed) as
-          | { type: "event"; event: Parameters<WorkspaceSessionState["applyEvent"]>[0] }
+          | { type: "event"; event: Parameters<CanvasSessionState["applyEvent"]>[0] }
           | { type: "error"; error: string };
         if (payload.type === "event") {
-          workspaceSessionStore.getState().applyEvent(payload.event);
-          const snapshot = workspaceSessionStore.getState().snapshot;
-          if (snapshot) workspaceSnapshotCache.set(workspaceId, snapshot);
+          canvasSessionStore.getState().applyEvent(payload.event);
+          const snapshot = canvasSessionStore.getState().snapshot;
+          if (snapshot) canvasSnapshotCache.set(canvasId, snapshot);
         } else if (payload.error.includes("stale")) {
           await enterBlockedState("activeElsewhereMessage");
           return;
@@ -412,24 +412,24 @@ export function WorkspaceSessionProvider({
   }
 }
 
-export function useWorkspaceSession() {
-  const value = useContext(WorkspaceSessionContext);
+export function useCanvasSession() {
+  const value = useContext(CanvasSessionContext);
   if (!value) {
-    throw new Error("useWorkspaceSession must be used inside WorkspaceSessionProvider.");
+    throw new Error("useCanvasSession must be used inside CanvasSessionProvider.");
   }
   return value;
 }
 
-function useWorkspaceSessionState() {
+function useCanvasSessionState() {
   return useSyncExternalStore(
-    workspaceSessionStore.subscribe,
-    workspaceSessionStore.getState,
-    workspaceSessionStore.getState
+    canvasSessionStore.subscribe,
+    canvasSessionStore.getState,
+    canvasSessionStore.getState
   );
 }
 
-function getOrCreateSessionId(workspaceId: string): string {
-  const storageKey = `${sessionStorageKeyPrefix}:${workspaceId}`;
+function getOrCreateSessionId(canvasId: string): string {
+  const storageKey = `${sessionStorageKeyPrefix}:${canvasId}`;
   const existing = window.sessionStorage.getItem(storageKey);
   if (existing) return existing;
   const created = crypto.randomUUID();

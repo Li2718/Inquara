@@ -4,7 +4,7 @@ import type { CanvasDebugSnapshot } from "./debugTypes";
 
 type CanvasDebugPanelProps = CanvasDebugSnapshot;
 
-export function CanvasDebugPanel({ workspaceId, leaseState, pendingClientMutationCount, snapshot }: CanvasDebugPanelProps) {
+export function CanvasDebugPanel({ canvasId, leaseState, pendingClientMutationCount, snapshot }: CanvasDebugPanelProps) {
   const nodes = snapshot?.nodes ?? [];
   const visibleNodes = nodes.filter(node => !node.hiddenAt && !node.deletedAt);
   const hiddenNodes = nodes.filter(node => node.hiddenAt && !node.deletedAt);
@@ -14,7 +14,7 @@ export function CanvasDebugPanel({ workspaceId, leaseState, pendingClientMutatio
   return (
     <dl className="debug-panel-list" aria-label="Canvas session debug">
       <DebugRow label="Page" value="canvas" />
-      <DebugRow label="Workspace" value={workspaceId} />
+      <DebugRow label="Canvas" value={canvasId} />
       <DebugRow label="Lease" value={leaseState} />
       <DebugRow label="Nodes" value={String(nodes.length)} />
       <DebugRow label="Visible nodes" value={String(visibleNodes.length)} />

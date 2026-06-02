@@ -39,23 +39,23 @@ describe("admin users", () => {
       data: { createdAt: new Date("2026-05-20T10:00:00.000Z") }
     });
 
-    const workspace = await prisma.workspace.create({
+    const canvas = await prisma.canvas.create({
       data: { ownerId: activeUser.id, title: "Research", archivedAt: null }
     });
-    await prisma.workspace.create({
+    await prisma.canvas.create({
       data: { ownerId: activeUser.id, title: "Archived", archivedAt: new Date("2026-05-29T00:00:00.000Z") }
     });
     const firstNode = await prisma.canvasNode.create({
-      data: { workspaceId: workspace.id, title: "Main chat", x: 0, y: 0, width: 420, height: 520 }
+      data: { canvasId: canvas.id, title: "Main chat", x: 0, y: 0, width: 420, height: 520 }
     });
     await prisma.canvasNode.create({
-      data: { workspaceId: workspace.id, title: "Deleted chat", x: 0, y: 0, width: 420, height: 520, deletedAt: new Date("2026-05-30T00:00:00.000Z") }
+      data: { canvasId: canvas.id, title: "Deleted chat", x: 0, y: 0, width: 420, height: 520, deletedAt: new Date("2026-05-30T00:00:00.000Z") }
     });
 
     await prisma.nodeMessage.createMany({
       data: [
         {
-          workspaceId: workspace.id,
+          canvasId: canvas.id,
           nodeId: firstNode.id,
           role: "user",
           content: "First question",
@@ -63,7 +63,7 @@ describe("admin users", () => {
           createdAt: new Date("2026-05-30T08:00:00.000Z")
         },
         {
-          workspaceId: workspace.id,
+          canvasId: canvas.id,
           nodeId: firstNode.id,
           role: "assistant",
           content: "Answer",
@@ -71,7 +71,7 @@ describe("admin users", () => {
           createdAt: new Date("2026-05-30T08:01:00.000Z")
         },
         {
-          workspaceId: workspace.id,
+          canvasId: canvas.id,
           nodeId: firstNode.id,
           role: "user",
           content: "Second question",

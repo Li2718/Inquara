@@ -3,9 +3,9 @@
 import React from "react";
 import { Button } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
-import type { WorkspaceSessionMessageKey } from "./store";
+import type { CanvasSessionMessageKey } from "./store";
 
-export function WorkspaceLeaseBlocker({
+export function CanvasLeaseBlocker({
   isVisible,
   isRecovering,
   messageKey,
@@ -13,7 +13,7 @@ export function WorkspaceLeaseBlocker({
 }: {
   isVisible: boolean;
   isRecovering: boolean;
-  messageKey: WorkspaceSessionMessageKey | null;
+  messageKey: CanvasSessionMessageKey | null;
   onRetry(): void;
 }) {
   const { messages } = useLocale();
@@ -22,20 +22,20 @@ export function WorkspaceLeaseBlocker({
 
   return (
     <div
-      className={["workspace-lease-blocker", shouldBlockWorkspaceInteraction({ isRecovering }) ? null : "workspace-lease-blocker-banner"]
+      className={["canvas-lease-blocker", shouldBlockCanvasInteraction({ isRecovering }) ? null : "canvas-lease-blocker-banner"]
         .filter(Boolean)
         .join(" ")}
       role="status"
       aria-live="polite"
     >
-      <div className="workspace-lease-blocker-card">
-        <p className="workspace-lease-blocker-eyebrow">{isRecovering ? copy.recoveringEyebrow : copy.blockedEyebrow}</p>
+      <div className="canvas-lease-blocker-card">
+        <p className="canvas-lease-blocker-eyebrow">{isRecovering ? copy.recoveringEyebrow : copy.blockedEyebrow}</p>
         <h2>{isRecovering ? copy.recoveringTitle : copy.blockedTitle}</h2>
         <p>{messageKey ? copy[messageKey] : copy.defaultMessage}</p>
         {shouldShowLeaseAction() ? (
-          <div className="workspace-lease-blocker-actions">
+          <div className="canvas-lease-blocker-actions">
             <Button type="button" onClick={onRetry}>
-              {copy[getWorkspaceLeaseActionLabelKey({ isRecovering })]}
+              {copy[getCanvasLeaseActionLabelKey({ isRecovering })]}
             </Button>
           </div>
         ) : null}
@@ -48,10 +48,10 @@ export function shouldShowLeaseAction(): boolean {
   return true;
 }
 
-export function getWorkspaceLeaseActionLabelKey({ isRecovering }: { isRecovering: boolean }): "reconnect" | "takeOver" {
+export function getCanvasLeaseActionLabelKey({ isRecovering }: { isRecovering: boolean }): "reconnect" | "takeOver" {
   return isRecovering ? "reconnect" : "takeOver";
 }
 
-export function shouldBlockWorkspaceInteraction({ isRecovering }: { isRecovering: boolean }): boolean {
+export function shouldBlockCanvasInteraction({ isRecovering }: { isRecovering: boolean }): boolean {
   return !isRecovering;
 }

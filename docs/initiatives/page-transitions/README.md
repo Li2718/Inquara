@@ -48,7 +48,7 @@ Explicitly out of scope for this slice:
 ## Known Risks
 
 1. The old `RouteTransitionShell` direction forced App Router subtree remounts by pathname keying and previously triggered `/admin` client fatal errors during React DOM commit work. This initiative must not reintroduce that pattern.
-2. Same-route parameter navigation such as `/workspaces/a` to `/workspaces/b` can briefly show stale workspace data if the route changes before the new snapshot is ready.
+2. Same-route parameter navigation such as `/canvases/a` to `/canvases/b` can briefly show stale canvas data if the route changes before the new snapshot is ready.
 3. Browser history back/forward transitions are harder to coordinate than app-owned navigation entrypoints because Next.js owns the route update timing.
 4. View Transitions support is browser dependent, so fallback behavior must remain correct and automatic.
 
@@ -57,10 +57,10 @@ Explicitly out of scope for this slice:
 Current internal navigation entrypoints found during implementation planning:
 
 - `apps/web/src/shared/components/chrome/AppTopBar.tsx`
-- `apps/web/src/features/workspaces/WorkspaceSidebar.tsx`
-- `apps/web/src/features/workspaces/WorkspaceListPage.tsx`
-- `apps/web/src/features/canvas/CanvasWorkspace.tsx`
-- `apps/web/src/features/workspace-session/WorkspaceSessionProvider.tsx`
+- `apps/web/src/features/canvases/CanvasSidebar.tsx`
+- `apps/web/src/features/canvases/CanvasListPage.tsx`
+- `apps/web/src/features/canvas/CanvasSurface.tsx`
+- `apps/web/src/features/canvas-session/CanvasSessionProvider.tsx`
 - `apps/web/src/features/admin/RedemptionCodesAdminPage.tsx`
 - `apps/web/src/app/not-found.tsx`
 
@@ -94,7 +94,7 @@ This keeps motion global and coordinated while leaving App Router ownership of t
 1. Put the shared navigation module under the shared chrome layer because it is global app navigation behavior used across product and admin surfaces.
 2. Convert existing internal `Link` entrypoints to `PageTransitionLink`.
 3. Convert existing internal `router.push` and `router.replace` entrypoints to `usePageTransitionNavigation`.
-4. Keep workspace-to-workspace switching on the same shared page transition layer, while still guarding against stale workspace snapshots during route turnover.
+4. Keep canvas-to-canvas switching on the same shared page transition layer, while still guarding against stale canvas snapshots during route turnover.
 5. Keep browser history support best-effort only for this slice. Stability is more important than forcing history transitions through a risky hack.
 
 ## Completed Work
@@ -108,7 +108,7 @@ This keeps motion global and coordinated while leaving App Router ownership of t
 - Migrated current internal product and admin navigation entrypoints onto the shared transition layer.
 - Added focused tests for supported navigation, fallback behavior, and debug-store stability.
 - Manually verified:
-  - workspace to `/admin/codes`
+  - canvas to `/admin/codes`
   - `/admin/codes` back to canvas
   - browser history back from admin to canvas
   - no `/admin` client fatal error regression during these transitions

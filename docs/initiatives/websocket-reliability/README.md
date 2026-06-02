@@ -7,23 +7,23 @@
 > - `docs/architecture.md`
 > - `docs/ui-system.md`
 > - `apps/web/src/shared/components/README.md`
-> archive_when: WebSocket transport has been removed from the product path, the single-active-workspace lease model is fully documented in current docs, and the HTTP mutation and streaming behavior has replaced the old realtime path.
+> archive_when: WebSocket transport has been removed from the product path, the single-active-canvas lease model is fully documented in current docs, and the HTTP mutation and streaming behavior has replaced the old realtime path.
 
 ## Purpose
 
-Replace the old project-wide WebSocket synchronization path with a simpler, more reliable product model: HTTP mutations, HTTP assistant streaming, and a single active editing client per workspace enforced by leases.
+Replace the old project-wide WebSocket synchronization path with a simpler, more reliable product model: HTTP mutations, HTTP assistant streaming, and a single active editing client per canvas enforced by leases.
 
 ## Scope
 
 This initiative now covers:
 
 - removal of product WebSocket transport
-- lease acquisition, renewal, release, and recovery for each workspace
+- lease acquisition, renewal, release, and recovery for each canvas
 - single-active-client takeover semantics
 - deterministic waiter priority after takeover
 - local-first canvas operations over HTTP
 - assistant streaming over HTTP
-- stale-blocking workspace UX
+- stale-blocking canvas UX
 - shared client session state for active, recovering, and blocked-stale behavior
 
 This initiative does not yet cover:
@@ -31,17 +31,17 @@ This initiative does not yet cover:
 - admin pages
 - authentication pages
 - non-canvas HTTP CRUD flows
-- workspace sidebar create, rename, and delete flows
+- canvas sidebar create, rename, and delete flows
 
 ## Hard Product Principles
 
 1. All canvas operations must provide immediate local feedback first, then synchronize to the server afterward.
 2. If synchronization fails, treat it as a communication-path failure rather than a small inline error.
-3. When the client can no longer trust synchronization, the UI must enter a blocking stale-workspace state.
-4. The blocking stale-workspace state must disable further workspace interaction and tell the user to wait for recovery.
+3. When the client can no longer trust synchronization, the UI must enter a blocking stale-canvas state.
+4. The blocking stale-canvas state must disable further canvas interaction and tell the user to wait for recovery.
 5. After connectivity or lease ownership is restored, the client must reset from server truth before re-enabling interaction.
-6. Shared canvases do not require multi-client concurrent editing. Each workspace allows exactly one active editor lease at a time.
-7. A newer client may automatically take over the active editor lease for the same workspace.
+6. Shared canvases do not require multi-client concurrent editing. Each canvas allows exactly one active editor lease at a time.
+7. A newer client may automatically take over the active editor lease for the same canvas.
 8. When the active editor leaves, waiting clients must reacquire the lease using a deterministic priority order based on displacement order.
 
 ## Problem Statement
@@ -52,7 +52,7 @@ The current WebSocket interaction model is too fragile and too complex for the a
 
 In progress.
 
-The repository now has an isolated worktree and branch for this topic so design and implementation can proceed without disturbing the main workspace.
+The repository now has an isolated worktree and branch for this topic so design and implementation can proceed without disturbing the main canvas.
 
 ## Completed Work
 
@@ -71,10 +71,10 @@ The repository now has an isolated worktree and branch for this topic so design 
 
 ## Deferred Or Out Of Scope
 
-- Workspace sidebar CRUD and other HTTP-first flows
+- Canvas sidebar CRUD and other HTTP-first flows
 - Broader offline mode or queued background replay beyond the blocking recovery model
 - Multi-user collaboration semantics
-- Background synchronization for inactive or blocked workspace clients
+- Background synchronization for inactive or blocked canvas clients
 
 ## Next Step
 

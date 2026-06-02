@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { applyWorkspaceEvent } from "./reducer";
-import type { WorkspaceEvent } from "./events";
-import type { WorkspaceSnapshot } from "./schemas";
+import { applyCanvasEvent } from "./reducer";
+import type { CanvasEvent } from "./events";
+import type { CanvasSnapshot } from "./schemas";
 
 function makeNode(
-  overrides: Partial<WorkspaceSnapshot["nodes"][number]> = {}
-): WorkspaceSnapshot["nodes"][number] {
+  overrides: Partial<CanvasSnapshot["nodes"][number]> = {}
+): CanvasSnapshot["nodes"][number] {
   return {
     id: "node-1",
-    workspaceId: "workspace-1",
+    canvasId: "canvas-1",
     title: "Main chat",
     x: 120,
     y: 120,
@@ -32,9 +32,9 @@ function makeNode(
   };
 }
 
-const baseSnapshot: WorkspaceSnapshot = {
-  workspace: {
-    id: "workspace-1",
+const baseSnapshot: CanvasSnapshot = {
+  canvas: {
+    id: "canvas-1",
     ownerId: "user-1",
     title: "Canvas",
     version: 1,
@@ -46,7 +46,7 @@ const baseSnapshot: WorkspaceSnapshot = {
   messages: [
     {
       id: "message-1",
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       nodeId: "node-1",
       role: "assistant",
       content: "",
@@ -59,31 +59,31 @@ const baseSnapshot: WorkspaceSnapshot = {
   ]
 };
 
-describe("applyWorkspaceEvent", () => {
-  it("adds a created node and advances the workspace version", () => {
-    const event: WorkspaceEvent = {
+describe("applyCanvasEvent", () => {
+  it("adds a created node and advances the canvas version", () => {
+    const event: CanvasEvent = {
       id: "event-1",
-      type: "workspace.node.created",
-      workspaceId: "workspace-1",
+      type: "canvas.node.created",
+      canvasId: "canvas-1",
       version: 2,
       clientMutationId: "mutation-1",
       createdAt: "2026-05-24T00:00:02.000Z",
       node: makeNode()
     };
 
-    const next = applyWorkspaceEvent(baseSnapshot, event);
+    const next = applyCanvasEvent(baseSnapshot, event);
 
-    expect(next.workspace.version).toBe(2);
-    expect(next.workspace.updatedAt).toBe(event.createdAt);
+    expect(next.canvas.version).toBe(2);
+    expect(next.canvas.updatedAt).toBe(event.createdAt);
     expect(next.nodes).toHaveLength(1);
     expect(next.nodes[0]?.title).toBe("Main chat");
   });
 
   it("appends streamed message deltas to the matching message", () => {
-    const event: WorkspaceEvent = {
+    const event: CanvasEvent = {
       id: "event-2",
-      type: "workspace.message.delta",
-      workspaceId: "workspace-1",
+      type: "canvas.message.delta",
+      canvasId: "canvas-1",
       version: 2,
       clientMutationId: null,
       createdAt: "2026-05-24T00:00:03.000Z",
@@ -91,32 +91,32 @@ describe("applyWorkspaceEvent", () => {
       delta: "Hello"
     };
 
-    const next = applyWorkspaceEvent(baseSnapshot, event);
+    const next = applyCanvasEvent(baseSnapshot, event);
 
-    expect(next.workspace.version).toBe(2);
+    expect(next.canvas.version).toBe(2);
     expect(next.messages.find(message => message.id === "message-1")?.content).toBe("Hello");
   });
 
-  it("applies related events that share the current workspace version", () => {
-    const nodeEvent: WorkspaceEvent = {
+  it("applies related events that share the current canvas version", () => {
+    const nodeEvent: CanvasEvent = {
       id: "event-node",
-      type: "workspace.node.created",
-      workspaceId: "workspace-1",
+      type: "canvas.node.created",
+      canvasId: "canvas-1",
       version: 2,
       clientMutationId: "mutation-branch",
       createdAt: "2026-05-24T00:00:02.000Z",
       node: makeNode({ title: "Follow-up" })
     };
-    const edgeEvent: WorkspaceEvent = {
+    const edgeEvent: CanvasEvent = {
       id: "event-edge",
-      type: "workspace.edge.created",
-      workspaceId: "workspace-1",
+      type: "canvas.edge.created",
+      canvasId: "canvas-1",
       version: 2,
       clientMutationId: "mutation-branch",
       createdAt: "2026-05-24T00:00:02.000Z",
       edge: {
         id: "edge-1",
-        workspaceId: "workspace-1",
+        canvasId: "canvas-1",
         sourceNodeId: "source-node",
         targetNodeId: "node-1",
         sourceMessageId: null,
@@ -125,14 +125,14 @@ describe("applyWorkspaceEvent", () => {
       }
     };
 
-    const afterNode = applyWorkspaceEvent(baseSnapshot, nodeEvent);
-    const afterEdge = applyWorkspaceEvent(afterNode, edgeEvent);
+    const afterNode = applyCanvasEvent(baseSnapshot, nodeEvent);
+    const afterEdge = applyCanvasEvent(afterNode, edgeEvent);
 
     expect(afterEdge.nodes).toHaveLength(1);
     expect(afterEdge.edges).toHaveLength(1);
   });
 
-  it("applies related node updates that share the current workspace version", () => {
+  it("applies related node updates that share the current canvas version", () => {
     const parentNode = makeNode({
       id: "node-1",
       title: "Parent",
@@ -153,14 +153,14 @@ describe("applyWorkspaceEvent", () => {
       createdAt: "2026-05-24T00:00:03.000Z",
       updatedAt: "2026-05-24T00:00:04.000Z"
     });
-    const snapshot: WorkspaceSnapshot = {
+    const snapshot: CanvasSnapshot = {
       ...baseSnapshot,
       nodes: [parentNode, childNode]
     };
-    const firstUpdate: WorkspaceEvent = {
+    const firstUpdate: CanvasEvent = {
       id: "event-node-1",
-      type: "workspace.node.updated",
-      workspaceId: "workspace-1",
+      type: "canvas.node.updated",
+      canvasId: "canvas-1",
       version: 2,
       clientMutationId: "mutation-restore",
       createdAt: "2026-05-24T00:00:05.000Z",
@@ -171,10 +171,10 @@ describe("applyWorkspaceEvent", () => {
         version: 2
       }
     };
-    const secondUpdate: WorkspaceEvent = {
+    const secondUpdate: CanvasEvent = {
       id: "event-node-2",
-      type: "workspace.node.updated",
-      workspaceId: "workspace-1",
+      type: "canvas.node.updated",
+      canvasId: "canvas-1",
       version: 2,
       clientMutationId: "mutation-restore",
       createdAt: "2026-05-24T00:00:05.000Z",
@@ -186,18 +186,18 @@ describe("applyWorkspaceEvent", () => {
       }
     };
 
-    const afterFirst = applyWorkspaceEvent(snapshot, firstUpdate);
-    const afterSecond = applyWorkspaceEvent(afterFirst, secondUpdate);
+    const afterFirst = applyCanvasEvent(snapshot, firstUpdate);
+    const afterSecond = applyCanvasEvent(afterFirst, secondUpdate);
 
     expect(afterSecond.nodes.find(node => node.id === "node-1")?.hiddenAt).toBeNull();
     expect(afterSecond.nodes.find(node => node.id === "node-2")?.hiddenAt).toBeNull();
   });
 
   it("ignores events that are not newer than the current snapshot", () => {
-    const event: WorkspaceEvent = {
+    const event: CanvasEvent = {
       id: "event-3",
-      type: "workspace.message.delta",
-      workspaceId: "workspace-1",
+      type: "canvas.message.delta",
+      canvasId: "canvas-1",
       version: 1,
       clientMutationId: null,
       createdAt: "2026-05-24T00:00:03.000Z",
@@ -205,7 +205,7 @@ describe("applyWorkspaceEvent", () => {
       delta: "Ignored"
     };
 
-    const next = applyWorkspaceEvent(baseSnapshot, event);
+    const next = applyCanvasEvent(baseSnapshot, event);
 
     expect(next).toBe(baseSnapshot);
   });

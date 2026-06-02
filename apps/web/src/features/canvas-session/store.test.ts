@@ -1,10 +1,10 @@
-import type { WorkspaceEvent, WorkspaceSnapshot } from "@inquara/domain";
+import type { CanvasEvent, CanvasSnapshot } from "@inquara/domain";
 import { describe, expect, it } from "vitest";
-import { createWorkspaceSessionStore } from "./store";
+import { createCanvasSessionStore } from "./store";
 
 const node = {
   id: "node-1",
-  workspaceId: "workspace-1",
+  canvasId: "canvas-1",
   title: "Main chat",
   x: 0,
   y: 0,
@@ -24,11 +24,11 @@ const node = {
   version: 0,
   createdAt: "2026-05-24T00:00:00.000Z",
   updatedAt: "2026-05-24T00:00:00.000Z"
-} satisfies WorkspaceSnapshot["nodes"][number];
+} satisfies CanvasSnapshot["nodes"][number];
 
-const snapshot: WorkspaceSnapshot = {
-  workspace: {
-    id: "workspace-1",
+const snapshot: CanvasSnapshot = {
+  canvas: {
+    id: "canvas-1",
     ownerId: "user-1",
     title: "Canvas",
     version: 0,
@@ -40,17 +40,17 @@ const snapshot: WorkspaceSnapshot = {
   messages: []
 };
 
-describe("workspace session store", () => {
+describe("canvas session store", () => {
   it("applies events and clears acknowledged client mutations", () => {
-    const store = createWorkspaceSessionStore();
+    const store = createCanvasSessionStore();
     store.getState().setSnapshot(snapshot);
     store.getState().setLeaseState("active");
     store.getState().markPending("mutation-1");
 
-    const event: WorkspaceEvent = {
+    const event: CanvasEvent = {
       id: "event-1",
-      type: "workspace.node.updated",
-      workspaceId: "workspace-1",
+      type: "canvas.node.updated",
+      canvasId: "canvas-1",
       version: 1,
       clientMutationId: "mutation-1",
       createdAt: "2026-05-24T00:01:00.000Z",
@@ -70,13 +70,13 @@ describe("workspace session store", () => {
   });
 
   it("applies optimistic node movement before the server event arrives", () => {
-    const store = createWorkspaceSessionStore();
+    const store = createCanvasSessionStore();
     store.getState().setSnapshot(snapshot);
 
     store.getState().applyOptimisticCommand({
       type: "node.updatePosition",
       clientMutationId: "mutation-optimistic-position",
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       nodeId: "node-1",
       x: 180,
       y: 220
@@ -88,7 +88,7 @@ describe("workspace session store", () => {
   });
 
   it("applies optimistic canvas organization before the server events arrive", () => {
-    const store = createWorkspaceSessionStore();
+    const store = createCanvasSessionStore();
     const child = {
       ...node,
       id: "node-2",
@@ -106,7 +106,7 @@ describe("workspace session store", () => {
     store.getState().applyOptimisticCommand({
       type: "node.organize",
       clientMutationId: "mutation-organize",
-      workspaceId: "workspace-1"
+      canvasId: "canvas-1"
     });
 
     const nodes = store.getState().snapshot?.nodes ?? [];

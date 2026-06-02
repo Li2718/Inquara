@@ -30,18 +30,18 @@ export function setDebugPageSnapshot(nextSnapshot: CanvasDebugSnapshot, owner: D
 }
 
 export function clearDebugPageSnapshot(
-  workspaceId: string,
+  canvasId: string,
   owner: DebugPageOwner,
   options: ClearDebugPageSnapshotOptions = {}
 ) {
   if (options.defer) {
     queueMicrotask(() => {
-      clearDebugPageSnapshot(workspaceId, owner);
+      clearDebugPageSnapshot(canvasId, owner);
     });
     return;
   }
 
-  if (state.snapshot.page === "canvas" && state.snapshot.workspaceId === workspaceId && state.owner === owner) {
+  if (state.snapshot.page === "canvas" && state.snapshot.canvasId === canvasId && state.owner === owner) {
     state = {
       owner: null,
       snapshot: { page: "global" }

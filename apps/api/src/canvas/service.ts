@@ -1,5 +1,5 @@
 import { prisma, type PrismaClient } from "@inquara/db";
-import { calculateOrganizedNodePositions, type CanvasEdge, type CanvasNode, type WorkspaceEvent } from "@inquara/domain";
+import { calculateOrganizedNodePositions, type CanvasEdge, type CanvasNode, type CanvasEvent } from "@inquara/domain";
 import type { Prisma } from "@prisma/client";
 import { createEdgeCreatedEvent, createNodeCreatedEvent, createNodeUpdatedEvent } from "../events/factory";
 import { buildHiddenSubtreeSnapshot, resolveRestoredSubtreePositions } from "./hiddenLayout";
@@ -9,7 +9,7 @@ type Tx = Prisma.TransactionClient;
 export type CreateNodeAtPositionCommand = {
   type: "node.createAtPosition";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   title?: string;
   x: number;
@@ -19,7 +19,7 @@ export type CreateNodeAtPositionCommand = {
 export type CreateNodeFromSelectionCommand = {
   type: "node.createFromSelection";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   edgeId: string;
   sourceNodeId: string;
@@ -34,7 +34,7 @@ export type CreateNodeFromSelectionCommand = {
 export type UpdateNodePositionCommand = {
   type: "node.updatePosition";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   x: number;
   y: number;
@@ -43,13 +43,13 @@ export type UpdateNodePositionCommand = {
 export type OrganizeCanvasNodesCommand = {
   type: "node.organize";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
 };
 
 export type UpdateNodeSizeCommand = {
   type: "node.updateSize";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   width: number;
   height: number;
@@ -58,7 +58,7 @@ export type UpdateNodeSizeCommand = {
 export type UpdateNodeScrollCommand = {
   type: "node.updateScroll";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   scrollTop: number;
 };
@@ -66,7 +66,7 @@ export type UpdateNodeScrollCommand = {
 export type RenameNodeCommand = {
   type: "node.rename";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   title: string;
 };
@@ -74,7 +74,7 @@ export type RenameNodeCommand = {
 export type HideNodeSubtreeCommand = {
   type: "node.hideSubtree";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   scrollTop?: number;
 };
@@ -82,7 +82,7 @@ export type HideNodeSubtreeCommand = {
 export type RestoreNodeBranchCommand = {
   type: "node.restoreBranch";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   x?: number;
   y?: number;
@@ -91,14 +91,14 @@ export type RestoreNodeBranchCommand = {
 export type DeleteNodeSubtreeCommand = {
   type: "node.deleteSubtree";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
 };
 
 export type RestoreDeletedNodeSubtreeCommand = {
   type: "node.restoreDeletedSubtree";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
 };
 
@@ -106,13 +106,13 @@ export async function createNodeAtPosition(
   userId: string,
   command: CreateNodeAtPositionCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
     const node = await tx.canvasNode.create({
       data: {
         id: command.nodeId,
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         title: command.title || "New chat",
         x: command.x,
         y: command.y,
@@ -124,8 +124,8 @@ export async function createNodeAtPosition(
 
     return [
       createNodeCreatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(node)
       })
@@ -137,14 +137,14 @@ export async function createNodeFromSelection(
   userId: string,
   command: CreateNodeFromSelectionCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
     const sourceNode = await tx.canvasNode.findFirst({
-      where: { id: command.sourceNodeId, workspaceId: command.workspaceId }
+      where: { id: command.sourceNodeId, canvasId: command.canvasId }
     });
     const sourceMessage = await tx.nodeMessage.findFirst({
-      where: { id: command.sourceMessageId, workspaceId: command.workspaceId, nodeId: command.sourceNodeId }
+      where: { id: command.sourceMessageId, canvasId: command.canvasId, nodeId: command.sourceNodeId }
     });
     if (!sourceNode || !sourceMessage) {
       throw new CanvasCommandError("Source node or message was not found.");
@@ -153,7 +153,7 @@ export async function createNodeFromSelection(
     const child = await tx.canvasNode.create({
       data: {
         id: command.nodeId,
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         title: "Follow-up",
         x: command.x,
         y: command.y,
@@ -172,7 +172,7 @@ export async function createNodeFromSelection(
     const edge = await tx.canvasEdge.create({
       data: {
         id: command.edgeId,
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         sourceNodeId: sourceNode.id,
         targetNodeId: child.id,
         sourceMessageId: sourceMessage.id,
@@ -182,14 +182,14 @@ export async function createNodeFromSelection(
 
     return [
       createNodeCreatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(child)
       }),
       createEdgeCreatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         edge: toCanvasEdge(edge)
       })
@@ -201,11 +201,11 @@ export async function updateNodePosition(
   userId: string,
   command: UpdateNodePositionCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
     const existing = await tx.canvasNode.findFirst({
-      where: { id: command.nodeId, workspaceId: command.workspaceId }
+      where: { id: command.nodeId, canvasId: command.canvasId }
     });
     if (!existing) {
       throw new CanvasCommandError("Node was not found.");
@@ -218,8 +218,8 @@ export async function updateNodePosition(
 
     return [
       createNodeUpdatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(node)
       })
@@ -231,11 +231,11 @@ export async function organizeCanvasNodes(
   userId: string,
   command: OrganizeCanvasNodesCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
     const nodes = await tx.canvasNode.findMany({
-      where: { workspaceId: command.workspaceId, deletedAt: null },
+      where: { canvasId: command.canvasId, deletedAt: null },
       orderBy: { createdAt: "asc" }
     });
     const nodeDtos = nodes.map(toCanvasNode);
@@ -258,8 +258,8 @@ export async function organizeCanvasNodes(
 
     return updatedNodes.map(node =>
       createNodeUpdatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node
       })
@@ -271,7 +271,7 @@ export async function updateNodeSize(
   userId: string,
   command: UpdateNodeSizeCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return updateSingleNode(userId, command, { width: command.width, height: command.height }, client);
 }
 
@@ -279,11 +279,11 @@ export async function updateNodeScroll(
   userId: string,
   command: UpdateNodeScrollCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return updateSingleNode(userId, command, { scrollTop: command.scrollTop }, client);
 }
 
-export async function renameNode(userId: string, command: RenameNodeCommand, client: PrismaClient = prisma): Promise<WorkspaceEvent[]> {
+export async function renameNode(userId: string, command: RenameNodeCommand, client: PrismaClient = prisma): Promise<CanvasEvent[]> {
   return updateSingleNode(userId, command, { title: command.title.trim() }, client);
 }
 
@@ -291,10 +291,10 @@ export async function hideNodeSubtree(
   userId: string,
   command: HideNodeSubtreeCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
-    const nodes = await tx.canvasNode.findMany({ where: { workspaceId: command.workspaceId, deletedAt: null } });
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
+    const nodes = await tx.canvasNode.findMany({ where: { canvasId: command.canvasId, deletedAt: null } });
     const subtreeIds = collectSubtreeIds(nodes, command.nodeId);
     if (subtreeIds.length === 0) throw new CanvasCommandError("Node was not found.");
 
@@ -319,8 +319,8 @@ export async function hideNodeSubtree(
     });
     return updated.map(node =>
       createNodeUpdatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(node)
       })
@@ -332,15 +332,15 @@ export async function restoreNodeBranch(
   userId: string,
   command: RestoreNodeBranchCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
     const node = await tx.canvasNode.findFirst({
-      where: { id: command.nodeId, workspaceId: command.workspaceId, deletedAt: null }
+      where: { id: command.nodeId, canvasId: command.canvasId, deletedAt: null }
     });
     if (!node) throw new CanvasCommandError("Node was not found.");
 
-    const nodes = await tx.canvasNode.findMany({ where: { workspaceId: command.workspaceId, deletedAt: null } });
+    const nodes = await tx.canvasNode.findMany({ where: { canvasId: command.canvasId, deletedAt: null } });
     const subtreeIds = collectSubtreeIds(nodes, command.nodeId);
     const snapshot = parseHiddenStateSnapshot(node.hiddenStateSnapshot) ?? {};
     const positions = resolveRestoredSubtreePositions(
@@ -369,8 +369,8 @@ export async function restoreNodeBranch(
     });
     return updated.map(updatedNode =>
       createNodeUpdatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(updatedNode)
       })
@@ -382,7 +382,7 @@ export async function deleteNodeSubtree(
   userId: string,
   command: DeleteNodeSubtreeCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return markDeletedState(userId, command, new Date(), client);
 }
 
@@ -390,20 +390,20 @@ export async function restoreDeletedNodeSubtree(
   userId: string,
   command: RestoreDeletedNodeSubtreeCommand,
   client: PrismaClient = prisma
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return markDeletedState(userId, command, null, client);
 }
 
 async function updateSingleNode(
   userId: string,
-  command: { clientMutationId: string; workspaceId: string; nodeId: string },
+  command: { clientMutationId: string; canvasId: string; nodeId: string },
   data: Prisma.CanvasNodeUpdateInput,
   client: PrismaClient
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
     const existing = await tx.canvasNode.findFirst({
-      where: { id: command.nodeId, workspaceId: command.workspaceId, deletedAt: null }
+      where: { id: command.nodeId, canvasId: command.canvasId, deletedAt: null }
     });
     if (!existing) throw new CanvasCommandError("Node was not found.");
 
@@ -414,8 +414,8 @@ async function updateSingleNode(
 
     return [
       createNodeUpdatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(node)
       })
@@ -428,10 +428,10 @@ async function markDeletedState(
   command: DeleteNodeSubtreeCommand | RestoreDeletedNodeSubtreeCommand,
   deletedAt: Date | null,
   client: PrismaClient
-): Promise<WorkspaceEvent[]> {
+): Promise<CanvasEvent[]> {
   return client.$transaction(async tx => {
-    const workspace = await incrementOwnedWorkspaceVersion(tx, userId, command.workspaceId);
-    const nodes = await tx.canvasNode.findMany({ where: { workspaceId: command.workspaceId } });
+    const canvas = await incrementOwnedCanvasVersion(tx, userId, command.canvasId);
+    const nodes = await tx.canvasNode.findMany({ where: { canvasId: command.canvasId } });
     const subtreeIds = collectSubtreeIds(nodes, command.nodeId);
     if (subtreeIds.length === 0) throw new CanvasCommandError("Node was not found.");
 
@@ -445,8 +445,8 @@ async function markDeletedState(
     });
     return updated.map(node =>
       createNodeUpdatedEvent({
-        workspaceId: command.workspaceId,
-        version: workspace.version,
+        canvasId: command.canvasId,
+        version: canvas.version,
         clientMutationId: command.clientMutationId,
         node: toCanvasNode(node)
       })
@@ -461,23 +461,23 @@ export class CanvasCommandError extends Error {
   }
 }
 
-async function incrementOwnedWorkspaceVersion(tx: Tx, userId: string, workspaceId: string) {
-  const workspace = await tx.workspace.findFirst({
-    where: { id: workspaceId, ownerId: userId, archivedAt: null }
+async function incrementOwnedCanvasVersion(tx: Tx, userId: string, canvasId: string) {
+  const canvas = await tx.canvas.findFirst({
+    where: { id: canvasId, ownerId: userId, archivedAt: null }
   });
-  if (!workspace) {
-    throw new CanvasCommandError("Workspace was not found.");
+  if (!canvas) {
+    throw new CanvasCommandError("Canvas was not found.");
   }
 
-  return tx.workspace.update({
-    where: { id: workspaceId },
+  return tx.canvas.update({
+    where: { id: canvasId },
     data: { version: { increment: 1 } }
   });
 }
 
 function toCanvasNode(value: {
   id: string;
-  workspaceId: string;
+  canvasId: string;
   title: string;
   x: number;
   y: number;
@@ -500,7 +500,7 @@ function toCanvasNode(value: {
 }): CanvasNode {
   return {
     id: value.id,
-    workspaceId: value.workspaceId,
+    canvasId: value.canvasId,
     title: value.title,
     x: value.x,
     y: value.y,
@@ -557,7 +557,7 @@ function parseHiddenStateSnapshot(value: Prisma.JsonValue | null): CanvasNode["h
 
 function toCanvasEdge(value: {
   id: string;
-  workspaceId: string;
+  canvasId: string;
   sourceNodeId: string;
   targetNodeId: string;
   sourceMessageId: string | null;
@@ -566,7 +566,7 @@ function toCanvasEdge(value: {
 }): CanvasEdge {
   return {
     id: value.id,
-    workspaceId: value.workspaceId,
+    canvasId: value.canvasId,
     sourceNodeId: value.sourceNodeId,
     targetNodeId: value.targetNodeId,
     sourceMessageId: value.sourceMessageId,
