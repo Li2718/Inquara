@@ -27,6 +27,7 @@ test("new workspace window takes over and blocks the previous client", async ({ 
   await expect(second.getByPlaceholder("Ask in this node")).toBeEnabled();
 
   await expect(page.getByRole("heading", { name: "This workspace is active in another client" })).toBeVisible();
+  await expect(page.getByTestId("canvas-node")).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
 
   await second.getByPlaceholder("Ask in this node").fill("Give me one concrete example.");

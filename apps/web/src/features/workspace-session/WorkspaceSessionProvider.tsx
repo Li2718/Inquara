@@ -7,11 +7,13 @@ import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { createCommands } from "../commands/createCommands";
 import { cancelPendingWorkspaceLeaseRelease, scheduleWorkspaceLeaseRelease } from "./leaseReleaseScheduler";
+import { shouldEnterLeaseRecovery } from "./renewFailurePolicy";
 import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
 
 type WorkspaceSessionContextValue = {
   state: WorkspaceSessionState;
   commands: ReturnType<typeof createCommands>;
+  retryLease(): Promise<void>;
   sendCommand(command: WorkspaceCommand): Promise<void>;
 };
 
@@ -70,6 +72,7 @@ export function WorkspaceSessionProvider({
   const state = useWorkspaceSessionState();
   const sessionIdRef = useRef<string | null>(null);
   const renewTimerRef = useRef<number | null>(null);
+  const consecutiveRenewFailuresRef = useRef(0);
   const blockedPollTimerRef = useRef<number | null>(null);
   const releasedRef = useRef(false);
   const stateRef = useRef(state);
@@ -86,6 +89,7 @@ export function WorkspaceSessionProvider({
     cancelPendingWorkspaceLeaseRelease(workspaceId);
     sessionIdRef.current = getOrCreateSessionId(workspaceId);
     releasedRef.current = false;
+    consecutiveRenewFailuresRef.current = 0;
     const cachedSnapshot = workspaceSnapshotCache.get(workspaceId);
     if (cachedSnapshot) {
       workspaceSessionStore.getState().setSnapshot(cachedSnapshot);
@@ -99,7 +103,7 @@ export function WorkspaceSessionProvider({
     workspaceSessionStore.getState().setLeaseState("acquiring");
     workspaceSessionStore.getState().setErrorMessageKey(null);
 
-    void acquireAndLoadWorkspace();
+    void acquireAndLoadWorkspace({ mode: "initial" });
 
     return () => {
       clearRenewTimer();
@@ -115,6 +119,9 @@ export function WorkspaceSessionProvider({
     () => ({
       state,
       commands,
+      async retryLease() {
+        await retryLeaseNow();
+      },
       async sendCommand(command) {
         if (stateRef.current.leaseState !== "active") return;
         workspaceSessionStore.getState().applyOptimisticCommand(command);
@@ -153,7 +160,7 @@ export function WorkspaceSessionProvider({
 
   return <WorkspaceSessionContext.Provider value={value}>{children}</WorkspaceSessionContext.Provider>;
 
-  async function acquireAndLoadWorkspace(): Promise<void> {
+  async function acquireAndLoadWorkspace({ mode }: { mode: "initial" | "retry" }): Promise<void> {
     try {
       const sessionId = sessionIdRef.current;
       if (!sessionId) throw new Error("Workspace session is unavailable.");
@@ -173,6 +180,7 @@ export function WorkspaceSessionProvider({
         workspaceSnapshotCache.set(workspaceId, snapshot);
         workspaceSessionStore.getState().setSnapshot(snapshot);
         workspaceSessionStore.getState().setLeaseState("active");
+        workspaceSessionStore.getState().setErrorMessageKey(null);
         startRenewLoop();
         return;
       }
@@ -184,10 +192,28 @@ export function WorkspaceSessionProvider({
       workspaceSessionStore.getState().setLeaseState("blocked-stale");
       startBlockedPollLoop();
     } catch {
-      workspaceSessionStore.getState().setLeaseState("blocked-stale");
-      workspaceSessionStore.getState().setErrorMessageKey("acquireFailedMessage");
-      workspaceSessionStore.getState().setSnapshot(null);
-      void navigation.replace("/");
+      if (mode === "initial") {
+        workspaceSessionStore.getState().setLeaseState("blocked-stale");
+        workspaceSessionStore.getState().setErrorMessageKey("acquireFailedMessage");
+        workspaceSessionStore.getState().setSnapshot(null);
+        void navigation.replace("/");
+        return;
+      }
+
+      workspaceSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
+    }
+  }
+
+  async function retryLeaseNow(): Promise<void> {
+    consecutiveRenewFailuresRef.current = 0;
+    clearBlockedPollTimer();
+    if (stateRef.current.leaseState === "recovering") {
+      await pollLeaseAvailability();
+    } else {
+      await acquireAndLoadWorkspace({ mode: "retry" });
+    }
+    if (stateRef.current.leaseState === "blocked-stale" || stateRef.current.leaseState === "recovering") {
+      startBlockedPollLoop();
     }
   }
 
@@ -210,22 +236,29 @@ export function WorkspaceSessionProvider({
     const leaseEpoch = stateRef.current.lease.leaseEpoch;
     if (!sessionId || !leaseEpoch) return;
 
-    const response = await apiRequest(`/workspaces/${workspaceId}/lease/renew`, {
-      method: "POST",
-      body: JSON.stringify({ sessionId, leaseEpoch })
-    });
+    let response: Response;
+    try {
+      response = await apiRequest(`/workspaces/${workspaceId}/lease/renew`, {
+        method: "POST",
+        body: JSON.stringify({ sessionId, leaseEpoch })
+      });
+    } catch {
+      handleRenewFailure();
+      return;
+    }
 
     if (response.status === 409) {
+      consecutiveRenewFailuresRef.current = 0;
       await enterBlockedState("activeElsewhereMessage");
       return;
     }
 
     if (!response.ok) {
-      workspaceSessionStore.getState().setLeaseState("recovering");
-      workspaceSessionStore.getState().setErrorMessageKey("unstableNetworkMessage");
+      handleRenewFailure();
       return;
     }
 
+    consecutiveRenewFailuresRef.current = 0;
     const renewed = (await response.json()) as { status: "active"; lease: { leaseEpoch: number; expiresAt: string } };
     workspaceSessionStore.getState().setLease({
       leaseEpoch: renewed.lease.leaseEpoch,
@@ -235,8 +268,17 @@ export function WorkspaceSessionProvider({
     workspaceSessionStore.getState().setErrorMessageKey(null);
   }
 
+  function handleRenewFailure(): void {
+    consecutiveRenewFailuresRef.current += 1;
+    workspaceSessionStore.getState().setErrorMessageKey("unstableNetworkMessage");
+    if (!shouldEnterLeaseRecovery(consecutiveRenewFailuresRef.current)) return;
+
+    workspaceSessionStore.getState().setLeaseState("recovering");
+  }
+
   async function enterBlockedState(messageKey: "activeElsewhereMessage"): Promise<void> {
     clearRenewTimer();
+    consecutiveRenewFailuresRef.current = 0;
     workspaceSessionStore.getState().setLeaseState("blocked-stale");
     workspaceSessionStore.getState().setErrorMessageKey(messageKey);
     workspaceSessionStore.getState().setLease({
@@ -288,7 +330,7 @@ export function WorkspaceSessionProvider({
       if (status.status === "available") {
         workspaceSessionStore.getState().setLeaseState("recovering");
         clearBlockedPollTimer();
-        await acquireAndLoadWorkspace();
+        await acquireAndLoadWorkspace({ mode: "retry" });
         return;
       }
 
@@ -296,6 +338,10 @@ export function WorkspaceSessionProvider({
         displacedSeq: status.displacedSeq,
         expiresAt: status.expiresAt
       });
+      if (stateRef.current.leaseState === "recovering") {
+        workspaceSessionStore.getState().setLeaseState("blocked-stale");
+        workspaceSessionStore.getState().setErrorMessageKey(null);
+      }
     } catch {
       workspaceSessionStore.getState().setErrorMessageKey("recoverFailedMessage");
     }

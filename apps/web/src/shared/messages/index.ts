@@ -111,16 +111,17 @@ export const messages = {
     lease: {
       activeElsewhereMessage: "This workspace is active in another client.",
       acquireFailedMessage: "Failed to acquire the workspace.",
-      blockedEyebrow: "Workspace blocked",
+      blockedEyebrow: "Editing active elsewhere",
       blockedTitle: "This workspace is active in another client",
-      defaultMessage: "The content shown here may be out of date. Editing stays disabled until this client reconnects and becomes active again.",
+      defaultMessage: "Only one client can edit a workspace at a time. Taking over editing will stop editing in the other client.",
+      reconnect: "Reconnect",
       recoverFailedMessage: "Failed to recover the workspace.",
-      recoveringEyebrow: "Recovering workspace",
-      recoveringTitle: "Waiting to restore editing",
+      recoveringEyebrow: "Restoring connection",
+      recoveringTitle: "Network connection is unstable",
       syncFailedMessage: "Workspace sync failed.",
       streamFailedMessage: "Failed to stream the assistant reply.",
-      unstableNetworkMessage: "Network connection is unstable.",
-      takeOver: "Take over here"
+      unstableNetworkMessage: "Editing pauses until the connection recovers. Unsynced changes may not apply.",
+      takeOver: "Take over editing"
     },
     error: {
       backToCanvas: "Back to canvas",
@@ -327,16 +328,17 @@ export const messages = {
     lease: {
       activeElsewhereMessage: "此工作区正在另一个客户端中使用。",
       acquireFailedMessage: "无法获取工作区编辑权。",
-      blockedEyebrow: "工作区已阻止",
+      blockedEyebrow: "编辑权在其他客户端",
       blockedTitle: "此工作区正在另一个客户端中使用",
-      defaultMessage: "这里显示的内容可能已过期。在此客户端重新连接并重新变为活动状态前，编辑会保持禁用。",
+      defaultMessage: "同一工作区一次只能由一个客户端编辑。接管编辑后，其他客户端会停止编辑。",
+      reconnect: "重新连接",
       recoverFailedMessage: "无法恢复工作区。",
-      recoveringEyebrow: "正在恢复工作区",
-      recoveringTitle: "等待恢复编辑",
+      recoveringEyebrow: "正在恢复连接",
+      recoveringTitle: "网络连接不稳定",
       syncFailedMessage: "工作区同步失败。",
       streamFailedMessage: "助手回复流式传输失败。",
-      unstableNetworkMessage: "网络连接不稳定。",
-      takeOver: "在此接管"
+      unstableNetworkMessage: "恢复完成前，编辑会暂停；未同步的修改可能无效。",
+      takeOver: "接管编辑"
     },
     error: {
       backToCanvas: "回到画布",

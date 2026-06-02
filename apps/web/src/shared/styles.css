@@ -1847,8 +1847,8 @@ h2 {
   position: relative;
 }
 
-.canvas-stage:has(.workspace-lease-blocker) .canvas-view {
-  filter: saturate(0.72) blur(1.2px);
+.canvas-stage:has(.workspace-lease-blocker:not(.workspace-lease-blocker-banner)) .canvas-view {
+  filter: saturate(0.82);
   transform: scale(0.995);
   transition:
     filter 140ms ease,
@@ -1960,9 +1960,19 @@ h2 {
   place-items: center;
   padding: 28px;
   background:
-    radial-gradient(circle at top, rgb(255 255 255 / 76%), rgb(245 248 251 / 92%)),
-    linear-gradient(180deg, rgb(246 250 252 / 72%), rgb(233 239 244 / 94%));
-  backdrop-filter: blur(10px);
+    radial-gradient(circle at top, rgb(255 255 255 / 54%), rgb(245 248 251 / 72%)),
+    linear-gradient(180deg, rgb(246 250 252 / 48%), rgb(233 239 244 / 72%));
+  backdrop-filter: blur(3px);
+}
+
+.workspace-lease-blocker-banner {
+  inset: 18px 18px auto auto;
+  place-items: start end;
+  width: min(420px, calc(100% - 36px));
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
 }
 
 .workspace-lease-blocker-card {
@@ -1972,6 +1982,14 @@ h2 {
   border-radius: 28px;
   background: rgb(255 255 255 / 92%);
   box-shadow: 0 28px 80px rgb(36 74 92 / 18%);
+}
+
+.workspace-lease-blocker-banner .workspace-lease-blocker-card {
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgb(36 74 92 / 16%);
+  pointer-events: auto;
 }
 
 .workspace-lease-blocker-eyebrow {
@@ -1990,11 +2008,21 @@ h2 {
   line-height: 1.08;
 }
 
+.workspace-lease-blocker-banner .workspace-lease-blocker-card h2 {
+  font-size: 20px;
+  line-height: 1.16;
+}
+
 .workspace-lease-blocker-card p:last-of-type {
   margin: 0;
   color: rgb(72 94 104);
   font-size: 15px;
   line-height: 1.7;
+}
+
+.workspace-lease-blocker-banner .workspace-lease-blocker-card p:last-of-type {
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .workspace-lease-blocker-actions {

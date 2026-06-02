@@ -90,7 +90,7 @@ function CanvasWorkspaceContent({
 }) {
   const { messages } = useLocale();
   const navigation = usePageTransitionNavigation();
-  const { state } = useWorkspaceSession();
+  const { retryLease, state } = useWorkspaceSession();
 
   useEffect(() => {
     if (!pendingWorkspaceId) return;
@@ -125,7 +125,9 @@ function CanvasWorkspaceContent({
           isVisible={state.leaseState === "blocked-stale" || state.leaseState === "recovering"}
           isRecovering={state.leaseState === "recovering"}
           messageKey={state.errorMessageKey}
-          onRetry={() => window.location.reload()}
+          onRetry={() => {
+            void retryLease();
+          }}
         />
       </section>
       <DebugCanvasSource

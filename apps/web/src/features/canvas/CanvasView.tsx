@@ -82,6 +82,7 @@ function CanvasFlow({
   const copy = messages.canvas;
   const { state, commands, sendCommand } = useWorkspaceSession();
   const isBlocked = state.leaseState !== "active";
+  const isViewportBlocked = state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
   const { screenToFlowPosition } = useReactFlow();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
@@ -361,7 +362,7 @@ function CanvasFlow({
           nodesConnectable={false}
           elementsSelectable={false}
           nodesDraggable={!isBlocked}
-          panOnDrag={!isBlocked}
+          panOnDrag={!isViewportBlocked}
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={28} size={1} />
