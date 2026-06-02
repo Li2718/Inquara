@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiJson } from "../../shared/api";
-import { AppTopBar, PageTransitionLink } from "../../shared/components/chrome";
+import { AdminShell } from "../../shared/components/admin";
 import { Button, CheckIcon, ChevronDownIcon, ConfirmDialog, CopyIcon, EditIcon, IconButton, InlineIconButton, LoadingState, SkeletonBlock, Toast, TrashIcon } from "../../shared/components/ui";
 import { formatDateTime } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
@@ -417,28 +417,6 @@ function formatCodeStatus(status: CodeStatus, copy: AppMessages["adminCodes"]): 
     case "used":
       return copy.statusUsed;
   }
-}
-
-function AdminShell({ children }: { children: ReactNode }) {
-  const { messages } = useLocale();
-  const copy = messages.adminCodes;
-
-  return (
-    <main className="admin-page">
-      <AppTopBar />
-      <div className="admin-shell">
-        <aside className="admin-sidebar" aria-label={copy.settings}>
-          <p className="admin-sidebar-title">{copy.settings}</p>
-          <nav className="admin-nav">
-            <PageTransitionLink className="admin-nav-link" href="/admin/codes" aria-current="page">
-              {copy.navCodes}
-            </PageTransitionLink>
-          </nav>
-        </aside>
-        <div className="admin-content">{children}</div>
-      </div>
-    </main>
-  );
 }
 
 function formatFirstRedemptionUser(code: RedemptionCode, copy: AppMessages["adminCodes"]): string {

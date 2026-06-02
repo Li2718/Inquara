@@ -3,6 +3,7 @@ import { WorkspaceCommandSchema, type WorkspaceCommand } from "@inquara/domain";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { createAIProvider } from "../ai/factory";
+import { listAdminUsers } from "../admin-users/service";
 import {
   listActiveUserSessions,
   revokeAllUserSessions,
@@ -175,6 +176,12 @@ export async function registerRoutes(
     const user = await getUser(userId);
     if (!user) return reply.code(401).send({ error: "Unauthorized" });
     return user;
+  });
+
+  app.get("/admin/users", async (request, reply) => {
+    const admin = await requireAdmin(request, reply);
+    if (!admin) return;
+    return listAdminUsers();
   });
 
   app.get("/admin/codes", async (request, reply) => {
