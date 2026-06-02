@@ -62,11 +62,15 @@ export function ResetViewIcon({ className = "canvas-reset-view-icon", ...props }
 export function OrganizeLayoutIcon({ className = "canvas-organize-layout-icon", ...props }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
-      <circle cx="6.8" cy="12" r="2.1" />
-      <circle cx="17.2" cy="7" r="2.1" />
-      <circle cx="17.2" cy="17" r="2.1" />
-      <path d="M8.9 12h2.2c1.7 0 2.5-.9 3.3-2.4" />
-      <path d="M8.9 12h2.2c1.7 0 2.5.9 3.3 2.4" />
+      <path d="M9.4 12H12" />
+      <path d="M12 5.4v13.2" />
+      <path d="M12 5.4h2.8" />
+      <path d="M12 12h2.8" />
+      <path d="M12 18.6h2.8" />
+      <rect x="4.4" y="9.4" width="5" height="5" rx="1.1" />
+      <rect x="14.8" y="3.2" width="4.4" height="4.4" rx="1" />
+      <rect x="14.8" y="9.8" width="4.4" height="4.4" rx="1" />
+      <rect x="14.8" y="16.4" width="4.4" height="4.4" rx="1" />
     </svg>
   );
 }
