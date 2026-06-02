@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { useCanvasPlacementViewportGetter } from "../canvas/CanvasViewportContext";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
-import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
+import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { findFollowupNodePosition } from "./branchPlacement";
 import { MessageMarkdown } from "./MessageMarkdown";
 import { getMiddleDragScrollVelocity, hasScrollableOverflow, isScrolledNearBottom, stickToBottom } from "./scrollStickiness";
@@ -23,7 +23,7 @@ type SelectionState = {
 
 export function MessageList({ node }: { node: CanvasNode }) {
   const { messages: appMessages } = useLocale();
-  const { state, commands, sendCommand } = useWorkspaceSession();
+  const { state, commands, sendCommand } = useCanvasSession();
   const { getPlacementViewport } = useCanvasPlacementViewportGetter();
   const isBlocked = state.leaseState !== "active";
   const [selection, setSelection] = useState<SelectionState | null>(null);

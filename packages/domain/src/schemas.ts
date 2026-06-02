@@ -3,7 +3,7 @@ import { z } from "zod";
 export const IdSchema = z.string().min(1);
 export const IsoDateSchema = z.string().min(1);
 
-export const WorkspaceSchema = z.object({
+export const CanvasSchema = z.object({
   id: IdSchema,
   ownerId: IdSchema,
   title: z.string().min(1),
@@ -14,7 +14,7 @@ export const WorkspaceSchema = z.object({
 
 export const CanvasNodeSchema = z.object({
   id: IdSchema,
-  workspaceId: IdSchema,
+  canvasId: IdSchema,
   title: z.string().min(1),
   x: z.number(),
   y: z.number(),
@@ -43,7 +43,7 @@ export const CanvasNodeSchema = z.object({
 
 export const CanvasEdgeSchema = z.object({
   id: IdSchema,
-  workspaceId: IdSchema,
+  canvasId: IdSchema,
   sourceNodeId: IdSchema,
   targetNodeId: IdSchema,
   sourceMessageId: IdSchema.nullable(),
@@ -53,7 +53,7 @@ export const CanvasEdgeSchema = z.object({
 
 export const NodeMessageSchema = z.object({
   id: IdSchema,
-  workspaceId: IdSchema,
+  canvasId: IdSchema,
   nodeId: IdSchema,
   role: z.enum(["user", "assistant", "system"]),
   content: z.string(),
@@ -64,15 +64,15 @@ export const NodeMessageSchema = z.object({
   updatedAt: IsoDateSchema
 });
 
-export const WorkspaceSnapshotSchema = z.object({
-  workspace: WorkspaceSchema,
+export const CanvasSnapshotSchema = z.object({
+  canvas: CanvasSchema,
   nodes: z.array(CanvasNodeSchema),
   edges: z.array(CanvasEdgeSchema),
   messages: z.array(NodeMessageSchema)
 });
 
-export type Workspace = z.infer<typeof WorkspaceSchema>;
+export type Canvas = z.infer<typeof CanvasSchema>;
 export type CanvasNode = z.infer<typeof CanvasNodeSchema>;
 export type CanvasEdge = z.infer<typeof CanvasEdgeSchema>;
 export type NodeMessage = z.infer<typeof NodeMessageSchema>;
-export type WorkspaceSnapshot = z.infer<typeof WorkspaceSnapshotSchema>;
+export type CanvasSnapshot = z.infer<typeof CanvasSnapshotSchema>;

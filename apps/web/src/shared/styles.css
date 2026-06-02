@@ -389,7 +389,7 @@ h2 {
 }
 
 .login-panel,
-.workspace-panel {
+.canvas-panel {
   border: 1px solid var(--line);
   border-radius: 28px;
   background: rgb(255 255 255 / 74%);
@@ -1223,18 +1223,18 @@ h2 {
   line-height: 1.35;
 }
 
-.workspace-panel {
+.canvas-panel {
   min-height: calc(100svh - (var(--app-shell-padding) * 2));
   padding: 24px;
 }
 
-.workspace-loading-panel {
+.canvas-loading-panel {
   min-height: calc(100svh - (var(--app-shell-padding) * 2));
   display: grid;
   place-items: center;
 }
 
-.workspace-loading-panel .ui-loading-state-page {
+.canvas-loading-panel .ui-loading-state-page {
   min-height: auto;
 }
 
@@ -1837,7 +1837,7 @@ h2 {
   position: relative;
 }
 
-.canvas-stage:has(.workspace-lease-blocker:not(.workspace-lease-blocker-banner)) .canvas-view {
+.canvas-stage:has(.canvas-lease-blocker:not(.canvas-lease-blocker-banner)) .canvas-view {
   filter: saturate(0.82);
   transform: scale(0.995);
   transition:
@@ -1852,31 +1852,31 @@ h2 {
     filter 90ms ease;
 }
 
-.canvas-view[data-workspace-transition="leaving"] .react-flow__node,
-.canvas-view[data-workspace-transition="leaving"] .react-flow__edge {
+.canvas-view[data-canvas-transition="leaving"] .react-flow__node,
+.canvas-view[data-canvas-transition="leaving"] .react-flow__edge {
   opacity: 0;
   filter: blur(1px);
 }
 
-.canvas-view[data-workspace-transition="entering"] .react-flow__node,
-.canvas-view[data-workspace-transition="entering"] .react-flow__edge {
+.canvas-view[data-canvas-transition="entering"] .react-flow__node,
+.canvas-view[data-canvas-transition="entering"] .react-flow__edge {
   animation: canvas-content-enter 110ms ease-out both;
 }
 
-.canvas-view[data-workspace-transition="idle"] .canvas-node.canvas-node-appearing {
+.canvas-view[data-canvas-transition="idle"] .canvas-node.canvas-node-appearing {
   animation: canvas-node-appear 200ms ease-out both;
 }
 
-.canvas-view[data-workspace-transition="idle"] .react-flow__edge.canvas-edge-appearing .react-flow__edge-path {
+.canvas-view[data-canvas-transition="idle"] .react-flow__edge.canvas-edge-appearing .react-flow__edge-path {
   animation: canvas-edge-path-appear 200ms ease-out both;
 }
 
-.canvas-view[data-workspace-transition="idle"] .canvas-node.canvas-node-exiting {
+.canvas-view[data-canvas-transition="idle"] .canvas-node.canvas-node-exiting {
   pointer-events: none;
   animation: canvas-node-exit 150ms ease-in both;
 }
 
-.canvas-view[data-workspace-transition="idle"] .react-flow__edge.canvas-edge-exiting .react-flow__edge-path {
+.canvas-view[data-canvas-transition="idle"] .react-flow__edge.canvas-edge-exiting .react-flow__edge-path {
   animation: canvas-edge-path-exit 150ms ease-in both;
 }
 
@@ -1942,7 +1942,7 @@ h2 {
   color: var(--muted);
 }
 
-.workspace-lease-blocker {
+.canvas-lease-blocker {
   position: absolute;
   inset: 0;
   z-index: 25;
@@ -1955,7 +1955,7 @@ h2 {
   backdrop-filter: blur(3px);
 }
 
-.workspace-lease-blocker-banner {
+.canvas-lease-blocker-banner {
   inset: 18px 18px auto auto;
   place-items: start end;
   width: min(420px, calc(100% - 36px));
@@ -1965,7 +1965,7 @@ h2 {
   pointer-events: none;
 }
 
-.workspace-lease-blocker-card {
+.canvas-lease-blocker-card {
   width: min(560px, 100%);
   padding: 28px 30px;
   border: 1px solid rgb(138 159 171 / 22%);
@@ -1974,7 +1974,7 @@ h2 {
   box-shadow: 0 28px 80px rgb(36 74 92 / 18%);
 }
 
-.workspace-lease-blocker-banner .workspace-lease-blocker-card {
+.canvas-lease-blocker-banner .canvas-lease-blocker-card {
   width: 100%;
   padding: 16px 18px;
   border-radius: 18px;
@@ -1982,7 +1982,7 @@ h2 {
   pointer-events: auto;
 }
 
-.workspace-lease-blocker-eyebrow {
+.canvas-lease-blocker-eyebrow {
   margin: 0 0 10px;
   color: rgb(90 116 129 / 86%);
   font-size: 11px;
@@ -1991,31 +1991,31 @@ h2 {
   text-transform: uppercase;
 }
 
-.workspace-lease-blocker-card h2 {
+.canvas-lease-blocker-card h2 {
   margin: 0 0 10px;
   color: rgb(25 46 55);
   font-size: clamp(28px, 3vw, 34px);
   line-height: 1.08;
 }
 
-.workspace-lease-blocker-banner .workspace-lease-blocker-card h2 {
+.canvas-lease-blocker-banner .canvas-lease-blocker-card h2 {
   font-size: 20px;
   line-height: 1.16;
 }
 
-.workspace-lease-blocker-card p:last-of-type {
+.canvas-lease-blocker-card p:last-of-type {
   margin: 0;
   color: rgb(72 94 104);
   font-size: 15px;
   line-height: 1.7;
 }
 
-.workspace-lease-blocker-banner .workspace-lease-blocker-card p:last-of-type {
+.canvas-lease-blocker-banner .canvas-lease-blocker-card p:last-of-type {
   font-size: 13px;
   line-height: 1.55;
 }
 
-.workspace-lease-blocker-actions {
+.canvas-lease-blocker-actions {
   display: flex;
   justify-content: flex-start;
   margin-top: 22px;
@@ -2074,7 +2074,7 @@ h2 {
   stroke-width: 1.9;
 }
 
-.workspace-sidebar {
+.canvas-sidebar {
   position: absolute;
   top: 66px;
   left: 16px;
@@ -2097,7 +2097,7 @@ h2 {
     box-shadow 180ms ease-out;
 }
 
-.workspace-sidebar[data-open="false"] {
+.canvas-sidebar[data-open="false"] {
   width: 38px;
   height: 38px;
   border-radius: 20px;
@@ -2105,12 +2105,12 @@ h2 {
   box-shadow: 0 12px 30px rgb(44 92 101 / 13%);
 }
 
-.workspace-sidebar[data-open="true"] {
+.canvas-sidebar[data-open="true"] {
   width: min(320px, calc(100vw - 32px));
   height: calc(100svh - 82px);
 }
 
-.workspace-sidebar-content {
+.canvas-sidebar-content {
   height: 100%;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -2119,7 +2119,7 @@ h2 {
   transition: opacity 120ms ease 180ms;
 }
 
-.workspace-sidebar[data-open="false"] .workspace-sidebar-content {
+.canvas-sidebar[data-open="false"] .canvas-sidebar-content {
   pointer-events: none;
   visibility: hidden;
   opacity: 0;
@@ -2128,11 +2128,11 @@ h2 {
     opacity 80ms ease;
 }
 
-.workspace-sidebar[data-open="true"] .workspace-sidebar-content {
+.canvas-sidebar[data-open="true"] .canvas-sidebar-content {
   visibility: visible;
 }
 
-.workspace-sidebar-header {
+.canvas-sidebar-header {
   position: relative;
   display: flex;
   align-items: center;
@@ -2142,13 +2142,13 @@ h2 {
   padding: 0;
 }
 
-.workspace-sidebar-header h2 {
+.canvas-sidebar-header h2 {
   margin: 3px 0 0;
   font-size: 18px;
   line-height: 48px;
 }
 
-.workspace-sidebar-morph-button {
+.canvas-sidebar-morph-button {
   position: absolute;
   top: 0;
   left: 0;
@@ -2167,24 +2167,24 @@ h2 {
     color 160ms ease;
 }
 
-.workspace-sidebar-morph-button:hover {
+.canvas-sidebar-morph-button:hover {
   background: transparent;
   color: var(--muted);
   box-shadow: none;
   transform: none;
 }
 
-.workspace-sidebar-morph-button[aria-expanded="true"] {
+.canvas-sidebar-morph-button[aria-expanded="true"] {
   pointer-events: none;
   opacity: 0;
   transform: scale(0.72);
 }
 
-.workspace-sidebar-morph-button[aria-expanded="true"]:hover {
+.canvas-sidebar-morph-button[aria-expanded="true"]:hover {
   transform: scale(0.72);
 }
 
-.workspace-sidebar-open-icon {
+.canvas-sidebar-open-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -2196,7 +2196,7 @@ h2 {
   transform: translate(-50%, -50%);
 }
 
-.workspace-sidebar-open-icon span:first-child {
+.canvas-sidebar-open-icon span:first-child {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -2205,7 +2205,7 @@ h2 {
   background: currentColor;
 }
 
-.workspace-sidebar-open-icon span:last-child {
+.canvas-sidebar-open-icon span:last-child {
   position: absolute;
   top: 3.4px;
   left: 8px;
@@ -2216,7 +2216,7 @@ h2 {
   box-shadow: 0 4px 0 currentColor;
 }
 
-.workspace-sidebar-title-button {
+.canvas-sidebar-title-button {
   min-width: 0;
   display: grid;
   justify-items: start;
@@ -2230,14 +2230,14 @@ h2 {
   text-align: left;
 }
 
-.workspace-sidebar-title-button:hover {
+.canvas-sidebar-title-button:hover {
   background: transparent;
   color: inherit;
   box-shadow: none;
   transform: none;
 }
 
-.workspace-sidebar-create-button {
+.canvas-sidebar-create-button {
   position: absolute;
   top: 50%;
   right: 48px;
@@ -2253,7 +2253,7 @@ h2 {
   transform: translateY(-50%);
 }
 
-.workspace-sidebar-create-button .ui-plus-icon {
+.canvas-sidebar-create-button .ui-plus-icon {
   width: 15px;
   height: 15px;
   fill: none;
@@ -2262,14 +2262,14 @@ h2 {
   stroke-width: 2.1px;
 }
 
-.workspace-sidebar-create-button:hover {
+.canvas-sidebar-create-button:hover {
   background: rgb(255 255 255 / 70%);
   color: var(--accent-dark);
   box-shadow: none;
   transform: translateY(-50%);
 }
 
-.workspace-sidebar-collapse-button {
+.canvas-sidebar-collapse-button {
   position: absolute;
   top: 50%;
   right: 10px;
@@ -2284,14 +2284,14 @@ h2 {
   transform: translateY(calc(-50% + 1.5px));
 }
 
-.workspace-sidebar-collapse-button:hover {
+.canvas-sidebar-collapse-button:hover {
   background: transparent;
   color: var(--muted);
   box-shadow: none;
   transform: translateY(calc(-50% + 1.5px));
 }
 
-.workspace-sidebar-collapse-icon {
+.canvas-sidebar-collapse-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -2302,7 +2302,7 @@ h2 {
   transform: translate(-50%, -50%);
 }
 
-.workspace-sidebar-collapse-icon::before {
+.canvas-sidebar-collapse-icon::before {
   content: "";
   position: absolute;
   top: 0;
@@ -2312,7 +2312,7 @@ h2 {
   background: currentColor;
 }
 
-.workspace-sidebar-collapse-icon::after {
+.canvas-sidebar-collapse-icon::after {
   content: "";
   position: absolute;
   top: 3.2px;
@@ -2324,7 +2324,7 @@ h2 {
   transform: rotate(45deg);
 }
 
-.workspace-sidebar-list {
+.canvas-sidebar-list {
   min-height: 0;
   display: grid;
   align-content: start;
@@ -2333,16 +2333,16 @@ h2 {
   padding-top: 2px;
 }
 
-.workspace-sidebar-loading {
+.canvas-sidebar-loading {
   display: grid;
   gap: 10px;
 }
 
-.workspace-sidebar-item-shell {
+.canvas-sidebar-item-shell {
   position: relative;
 }
 
-.workspace-sidebar-item {
+.canvas-sidebar-item {
   display: grid;
   gap: 5px;
   min-height: 66px;
@@ -2356,14 +2356,14 @@ h2 {
     transform 150ms ease;
 }
 
-.workspace-sidebar-item:hover,
-.workspace-sidebar-item[data-active="true"] {
+.canvas-sidebar-item:hover,
+.canvas-sidebar-item[data-active="true"] {
   border-color: var(--line);
   background: rgb(255 255 255 / 84%);
   transform: translateY(-1px);
 }
 
-.workspace-sidebar-item-menu-trigger {
+.canvas-sidebar-item-menu-trigger {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -2379,14 +2379,14 @@ h2 {
   line-height: 1;
 }
 
-.workspace-sidebar-item-menu-trigger:hover {
+.canvas-sidebar-item-menu-trigger:hover {
   background: transparent;
   color: var(--muted);
   box-shadow: none;
   transform: none;
 }
 
-.workspace-sidebar-item-menu {
+.canvas-sidebar-item-menu {
   position: absolute;
   top: 38px;
   right: 8px;
@@ -2394,7 +2394,7 @@ h2 {
   min-width: 116px;
 }
 
-.workspace-sidebar-rename-form {
+.canvas-sidebar-rename-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
@@ -2403,10 +2403,10 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgb(255 255 255 / 84%);
-  animation: workspace-rename-enter 120ms ease-out both;
+  animation: canvas-rename-enter 120ms ease-out both;
 }
 
-@keyframes workspace-rename-enter {
+@keyframes canvas-rename-enter {
   from {
     opacity: 0;
     transform: translateY(3px);
@@ -2418,19 +2418,19 @@ h2 {
   }
 }
 
-.workspace-sidebar-rename-form input {
+.canvas-sidebar-rename-form input {
   min-height: 40px;
   border-radius: 12px;
 }
 
-.workspace-sidebar-rename-form button {
+.canvas-sidebar-rename-form button {
   min-height: 40px;
   padding: 0 12px;
   box-shadow: none;
   font-size: 13px;
 }
 
-.workspace-sidebar-item strong {
+.canvas-sidebar-item strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2438,8 +2438,8 @@ h2 {
   font-size: 14px;
 }
 
-.workspace-sidebar-item span,
-.workspace-sidebar-note {
+.canvas-sidebar-item span,
+.canvas-sidebar-note {
   color: var(--muted);
   font-size: 12px;
 }
@@ -3400,7 +3400,7 @@ h2 {
   }
 
   .login-panel,
-  .workspace-panel {
+  .canvas-panel {
     min-height: auto;
     padding: 20px;
   }
@@ -3466,7 +3466,7 @@ h2 {
     right: 10px;
   }
 
-  .workspace-sidebar {
+  .canvas-sidebar {
     position: absolute;
     top: 60px;
     left: 10px;
@@ -3476,12 +3476,12 @@ h2 {
     margin: 0;
   }
 
-  .workspace-sidebar[data-open="false"] {
+  .canvas-sidebar[data-open="false"] {
     width: 38px;
     height: 38px;
   }
 
-  .workspace-sidebar[data-open="true"] {
+  .canvas-sidebar[data-open="true"] {
     width: min(320px, calc(100vw - 20px));
     height: calc(100svh - 70px);
   }

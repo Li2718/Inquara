@@ -1,6 +1,6 @@
 "use client";
 
-import type { Workspace } from "@inquara/domain";
+import type { Canvas } from "@inquara/domain";
 import { useEffect, useState } from "react";
 import { LoginPage } from "../auth/LoginPage";
 import { apiJson } from "../../shared/api";
@@ -8,7 +8,7 @@ import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { LoadingState } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 
-export function WorkspaceListPage() {
+export function CanvasListPage() {
   const { messages } = useLocale();
   const navigation = usePageTransitionNavigation();
   const [isLoading, setIsLoading] = useState(true);
@@ -23,15 +23,15 @@ export function WorkspaceListPage() {
     setIsLoading(true);
     setError("");
     try {
-      const items = await apiJson<Workspace[]>("/workspaces");
-      const workspace =
+      const items = await apiJson<Canvas[]>("/canvases");
+      const canvas =
         items[0] ??
-        (await apiJson<Workspace>("/workspaces", {
+        (await apiJson<Canvas>("/canvases", {
           method: "POST",
-          body: JSON.stringify({ title: messages.workspaceList.researchCanvas })
+          body: JSON.stringify({ title: messages.canvasList.researchCanvas })
         }));
       setNeedsLogin(false);
-      await navigation.replace(`/workspaces/${workspace.id}`);
+      await navigation.replace(`/canvases/${canvas.id}`);
     } catch {
       setNeedsLogin(true);
     } finally {
@@ -42,8 +42,8 @@ export function WorkspaceListPage() {
   if (isLoading) {
     return (
       <main className="app-shell">
-        <section className="workspace-panel workspace-loading-panel">
-          <LoadingState variant="page" aria-label={messages.workspaceList.openingCanvas} />
+        <section className="canvas-panel canvas-loading-panel">
+          <LoadingState variant="page" aria-label={messages.canvasList.openingCanvas} />
         </section>
       </main>
     );
@@ -55,8 +55,8 @@ export function WorkspaceListPage() {
 
   return (
     <main className="app-shell">
-      <section className="workspace-panel workspace-loading-panel">
-        <LoadingState variant="page" aria-label={messages.workspaceList.openingCanvas} />
+      <section className="canvas-panel canvas-loading-panel">
+        <LoadingState variant="page" aria-label={messages.canvasList.openingCanvas} />
         {error ? <p className="error-text">{error}</p> : null}
       </section>
     </main>

@@ -5,7 +5,7 @@ import Fastify from "fastify";
 import { ZodError } from "zod";
 import { registerDebugRoutes } from "./debug/routes";
 import { registerRoutes } from "./http/routes";
-import { createWorkspaceLeaseStore } from "./leases/service";
+import { createCanvasLeaseStore } from "./leases/service";
 
 export type BuildAppOptions = {
   env?: Partial<AppConfig> & Record<string, string | undefined>;
@@ -27,7 +27,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
   });
   await app.register(cookie);
-  await registerRoutes(app, config, createWorkspaceLeaseStore(config));
+  await registerRoutes(app, config, createCanvasLeaseStore(config));
   if (options.env?.NODE_ENV !== "production" && process.env.NODE_ENV !== "production") {
     await registerDebugRoutes(app);
   }

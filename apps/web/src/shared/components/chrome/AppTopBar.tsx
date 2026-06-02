@@ -1,6 +1,6 @@
 "use client";
 
-import type { Workspace } from "@inquara/domain";
+import type { Canvas } from "@inquara/domain";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -64,14 +64,14 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
     if (isOpeningCanvas) return;
     setIsOpeningCanvas(true);
     try {
-      const items = await apiJson<Workspace[]>("/workspaces");
-      const workspace =
+      const items = await apiJson<Canvas[]>("/canvases");
+      const canvas =
         items[0] ??
-        (await apiJson<Workspace>("/workspaces", {
+        (await apiJson<Canvas>("/canvases", {
           method: "POST",
-          body: JSON.stringify({ title: messages.workspaceList.researchCanvas })
+          body: JSON.stringify({ title: messages.canvasList.researchCanvas })
         }));
-      await navigation.push(`/workspaces/${workspace.id}`);
+      await navigation.push(`/canvases/${canvas.id}`);
     } finally {
       setIsOpeningCanvas(false);
     }
@@ -84,7 +84,7 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
   }, [currentUser]);
   const isAdmin = currentUser?.role === "admin";
   const isAdminRoute = pathname.startsWith("/admin");
-  const isCanvasRoute = pathname.startsWith("/workspaces/");
+  const isCanvasRoute = pathname.startsWith("/canvases/");
 
   async function handleBrandClick() {
     if (isCanvasRoute) {

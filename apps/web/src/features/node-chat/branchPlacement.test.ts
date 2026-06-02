@@ -5,7 +5,7 @@ import { findFollowupNodePosition } from "./branchPlacement";
 function node(overrides: Partial<CanvasNode> = {}): CanvasNode {
   return {
     id: "node-1",
-    workspaceId: "workspace-1",
+    canvasId: "canvas-1",
     title: "Node",
     x: 100,
     y: 120,

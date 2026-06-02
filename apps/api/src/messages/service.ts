@@ -1,5 +1,5 @@
 import { prisma, type PrismaClient } from "@inquara/db";
-import type { NodeMessage, WorkspaceEvent } from "@inquara/domain";
+import type { NodeMessage, CanvasEvent } from "@inquara/domain";
 import type { Prisma } from "@prisma/client";
 import type { AIProvider, ChatContextMessage } from "../ai/provider";
 import {
@@ -14,7 +14,7 @@ type Tx = Prisma.TransactionClient;
 export type SendUserMessageCommand = {
   type: "message.sendUserMessage";
   clientMutationId: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   userMessageId: string;
   assistantMessageId: string;
@@ -25,18 +25,18 @@ export async function sendUserMessage(
   userId: string,
   command: SendUserMessageCommand,
   provider: AIProvider,
-  broadcast: (event: WorkspaceEvent) => void,
+  broadcast: (event: CanvasEvent) => void,
   client: PrismaClient = prisma,
   assertCanContinue?: () => Promise<void>
 ): Promise<void> {
   const created = await client.$transaction(async tx => {
-    await requireOwnedNode(tx, userId, command.workspaceId, command.nodeId);
+    await requireOwnedNode(tx, userId, command.canvasId, command.nodeId);
 
-    const userVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
+    const userVersion = await incrementCanvasVersion(tx, command.canvasId);
     const userMessage = await tx.nodeMessage.create({
       data: {
         id: command.userMessageId,
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         nodeId: command.nodeId,
         role: "user",
         content: command.content,
@@ -44,11 +44,11 @@ export async function sendUserMessage(
       }
     });
 
-    const assistantVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
+    const assistantVersion = await incrementCanvasVersion(tx, command.canvasId);
     const assistantMessage = await tx.nodeMessage.create({
       data: {
         id: command.assistantMessageId,
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         nodeId: command.nodeId,
         role: "assistant",
         content: "",
@@ -66,7 +66,7 @@ export async function sendUserMessage(
 
   broadcast(
     createMessageCreatedEvent({
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       version: created.userVersion,
       clientMutationId: command.clientMutationId,
       message: created.userMessage
@@ -74,7 +74,7 @@ export async function sendUserMessage(
   );
   broadcast(
     createMessageCreatedEvent({
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       version: created.assistantVersion,
       clientMutationId: command.clientMutationId,
       message: created.assistantMessage
@@ -82,12 +82,12 @@ export async function sendUserMessage(
   );
 
   try {
-    const context = await loadContext(command.workspaceId, command.nodeId, client);
+    const context = await loadContext(command.canvasId, command.nodeId, client);
     const result = await provider.streamReply(context, {
       onDelta: async delta => {
         await assertCanContinue?.();
         const version = await client.$transaction(async tx => {
-          const nextVersion = await incrementWorkspaceVersion(tx, command.workspaceId);
+          const nextVersion = await incrementCanvasVersion(tx, command.canvasId);
           const currentMessage = await tx.nodeMessage.findUnique({
             where: { id: created.assistantMessage.id },
             select: { content: true }
@@ -102,7 +102,7 @@ export async function sendUserMessage(
         });
         broadcast(
           createMessageDeltaEvent({
-            workspaceId: command.workspaceId,
+            canvasId: command.canvasId,
             version,
             clientMutationId: command.clientMutationId,
             messageId: created.assistantMessage.id,
@@ -114,7 +114,7 @@ export async function sendUserMessage(
 
     await assertCanContinue?.();
     const finalMessage = await client.$transaction(async tx => {
-      const version = await incrementWorkspaceVersion(tx, command.workspaceId);
+      const version = await incrementCanvasVersion(tx, command.canvasId);
       const message = await tx.nodeMessage.update({
         where: { id: created.assistantMessage.id },
         data: {
@@ -129,7 +129,7 @@ export async function sendUserMessage(
 
     broadcast(
       createMessageUpdatedEvent({
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         version: finalMessage.version,
         clientMutationId: command.clientMutationId,
         message: finalMessage.message
@@ -137,7 +137,7 @@ export async function sendUserMessage(
     );
   } catch (error) {
     const failedMessage = await client.$transaction(async tx => {
-      const version = await incrementWorkspaceVersion(tx, command.workspaceId);
+      const version = await incrementCanvasVersion(tx, command.canvasId);
       const message = await tx.nodeMessage.update({
         where: { id: created.assistantMessage.id },
         data: {
@@ -150,7 +150,7 @@ export async function sendUserMessage(
 
     broadcast(
       createMessageFailedEvent({
-        workspaceId: command.workspaceId,
+        canvasId: command.canvasId,
         version: failedMessage.version,
         clientMutationId: command.clientMutationId,
         message: failedMessage.message
@@ -159,12 +159,12 @@ export async function sendUserMessage(
   }
 }
 
-async function requireOwnedNode(tx: Tx, userId: string, workspaceId: string, nodeId: string): Promise<void> {
+async function requireOwnedNode(tx: Tx, userId: string, canvasId: string, nodeId: string): Promise<void> {
   const node = await tx.canvasNode.findFirst({
     where: {
       id: nodeId,
-      workspaceId,
-      workspace: { ownerId: userId, archivedAt: null }
+      canvasId,
+      canvas: { ownerId: userId, archivedAt: null }
     }
   });
   if (!node) {
@@ -172,17 +172,17 @@ async function requireOwnedNode(tx: Tx, userId: string, workspaceId: string, nod
   }
 }
 
-async function loadContext(workspaceId: string, nodeId: string, client: PrismaClient): Promise<ChatContextMessage[]> {
+async function loadContext(canvasId: string, nodeId: string, client: PrismaClient): Promise<ChatContextMessage[]> {
   const [node, messages] = await Promise.all([
     client.canvasNode.findFirst({
-      where: { id: nodeId, workspaceId },
+      where: { id: nodeId, canvasId },
       include: {
         sourceNode: true,
         sourceMessage: true
       }
     }),
     client.nodeMessage.findMany({
-      where: { workspaceId, nodeId },
+      where: { canvasId, nodeId },
       orderBy: { createdAt: "asc" }
     })
   ]);
@@ -192,7 +192,7 @@ async function loadContext(workspaceId: string, nodeId: string, client: PrismaCl
     return currentMessages;
   }
 
-  const sourceMessages = await loadSourceConversationChain(workspaceId, node.sourceNodeId, client);
+  const sourceMessages = await loadSourceConversationChain(canvasId, node.sourceNodeId, client);
 
   return [
     {
@@ -210,7 +210,7 @@ async function loadContext(workspaceId: string, nodeId: string, client: PrismaCl
 }
 
 async function loadSourceConversationChain(
-  workspaceId: string,
+  canvasId: string,
   nodeId: string,
   client: PrismaClient,
   visited = new Set<string>()
@@ -220,14 +220,14 @@ async function loadSourceConversationChain(
 
   const [node, messages] = await Promise.all([
     client.canvasNode.findFirst({
-      where: { id: nodeId, workspaceId },
+      where: { id: nodeId, canvasId },
       include: {
         sourceNode: true,
         sourceMessage: true
       }
     }),
     client.nodeMessage.findMany({
-      where: { workspaceId, nodeId },
+      where: { canvasId, nodeId },
       orderBy: { createdAt: "asc" }
     })
   ]);
@@ -235,7 +235,7 @@ async function loadSourceConversationChain(
   if (!node) return [];
 
   const upstreamMessages = node.sourceNodeId
-    ? await loadSourceConversationChain(workspaceId, node.sourceNodeId, client, visited)
+    ? await loadSourceConversationChain(canvasId, node.sourceNodeId, client, visited)
     : [];
   const branchContext =
     node.sourceNode && node.sourceMessage && node.sourceQuote
@@ -264,17 +264,17 @@ function toContextMessages(messages: Array<{ role: string; content: string }>): 
     }));
 }
 
-async function incrementWorkspaceVersion(client: Tx | PrismaClient, workspaceId: string): Promise<number> {
-  const workspace = await client.workspace.update({
-    where: { id: workspaceId },
+async function incrementCanvasVersion(client: Tx | PrismaClient, canvasId: string): Promise<number> {
+  const canvas = await client.canvas.update({
+    where: { id: canvasId },
     data: { version: { increment: 1 } }
   });
-  return workspace.version;
+  return canvas.version;
 }
 
 function toNodeMessage(value: {
   id: string;
-  workspaceId: string;
+  canvasId: string;
   nodeId: string;
   role: string;
   content: string;
@@ -286,7 +286,7 @@ function toNodeMessage(value: {
 }): NodeMessage {
   return {
     id: value.id,
-    workspaceId: value.workspaceId,
+    canvasId: value.canvasId,
     nodeId: value.nodeId,
     role: value.role as NodeMessage["role"],
     content: value.content,
@@ -306,7 +306,7 @@ export class MessageCommandError extends Error {
 }
 
 export class MessageStreamingInterruptedError extends Error {
-  constructor(message = "Workspace lease is stale.") {
+  constructor(message = "Canvas lease is stale.") {
     super(message);
     this.name = "MessageStreamingInterruptedError";
   }

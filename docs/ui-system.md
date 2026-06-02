@@ -14,7 +14,7 @@ It exists to solve two problems:
 
 This document serves the current product stage:
 
-- Build a personal AI thinking workspace that feels light, focused, and usable.
+- Build a personal AI thinking canvas that feels light, focused, and usable.
 - Keep the infinite canvas, chat nodes, sidebar, menus, dialogs, and account surfaces consistent.
 - Preserve clear extension points for future admin and debug surfaces.
 - Avoid turning the UI system into a speculative brand manual or a large design-system project before the product needs it.
@@ -47,14 +47,14 @@ Inquara is not a marketing site, a traditional dashboard, or a generic chat app.
 The current product character should be:
 
 - Fresh: light, calm, and approachable without looking childish.
-- Focused: the canvas should remain the primary workspace.
+- Focused: the canvas should remain the primary canvas.
 - Readable: chat content and selected source text should stay comfortable at different canvas zoom levels.
 - Spatial: relationships between nodes should be legible without overwhelming the canvas.
 - Maintainable: repeated interactions such as menus, dialogs, icon buttons, empty states, and sidebars should not be reimplemented per feature.
 
 ### 2.2 Design Principles
 
-1. **Workspace first**
+1. **Canvas first**
    - Decorative UI must not compete with the canvas, chat nodes, and node relationships.
 2. **Components before page exceptions**
    - Define and reuse shared components before adding page-specific style variants.
@@ -104,7 +104,7 @@ Style answers:
 Current project conventions:
 
 - UI rules are stable and durable.
-- Current design style is a light, fresh product workspace.
+- Current design style is a light, fresh product canvas.
 - Display-mode changes must not change page information architecture unless explicitly designed.
 
 ## 4. Display Model
@@ -142,7 +142,7 @@ The frontend must distinguish `surface` from `appearance`.
 Current and planned surfaces:
 
 - `product`
-  - The normal authenticated Inquara workspace experience.
+  - The normal authenticated Inquara canvas experience.
 - `admin`
   - Future administrator surfaces. Admin accounts already exist in the account model, but admin UI should not be invented until needed.
 - `debug`
@@ -164,7 +164,7 @@ Route ownership should express surface ownership before page semantics where pra
 
 Current rules:
 
-- Product pages live under normal app routes such as `apps/web/src/app/workspaces/**`.
+- Product pages live under normal app routes such as `apps/web/src/app/canvases/**`.
 - Future admin pages must live under an explicit admin route group or `app/admin/**`.
 - Debug UI is mounted globally through `apps/web/src/debug/DebugRoot.tsx`, not rendered directly by product pages.
 - Debug API routes must use `/debug/*` paths only and must not be registered in production.
@@ -355,7 +355,7 @@ Current style target:
 - Fresh.
 - Quiet.
 - Slightly tactile.
-- More like a focused thinking workspace than a dense enterprise console.
+- More like a focused thinking canvas than a dense enterprise console.
 
 Visual direction:
 
@@ -394,7 +394,7 @@ Use these fixed layers:
   - Examples: product shell, top controls, global sidebar primitives.
 - `shared/components/product/`
   - Product-surface reusable components that are not generic enough for `ui/`.
-  - Examples: workspace navigation pieces, account menu compositions.
+  - Examples: canvas navigation pieces, account menu compositions.
 - `shared/components/domain/`
   - Domain-composed components built from lower shared layers.
   - Examples: reusable canvas or node-related compositions that are still not feature-private.
@@ -413,8 +413,8 @@ Non-shared components do not enter the shared layer.
 
 - Page-only components go under a same-name private directory beside the page file.
   - Example:
-    - `apps/web/src/app/workspaces/[workspaceId]/page.tsx`
-    - `apps/web/src/app/workspaces/[workspaceId]/page/LocalPanel.tsx`
+    - `apps/web/src/app/canvases/[canvasId]/page.tsx`
+    - `apps/web/src/app/canvases/[canvasId]/page/LocalPanel.tsx`
 - Component-only subcomponents go under a same-name private directory beside the parent component.
   - Example:
     - `apps/web/src/shared/components/chrome/ProductSidebar.tsx`
@@ -475,7 +475,7 @@ Expected components over time:
 - `ProductSidebar`
 - `TopControls`
 - `UserMenu`
-- `WorkspaceList`
+- `CanvasList`
 - `CanvasControlButton`
 - `EmptyState`
 - `Banner`
@@ -490,7 +490,7 @@ Examples over time:
 
 - `CanvasNodeShell`
 - `NodeContextMenu`
-- `WorkspaceTrashPanel`
+- `CanvasTrashPanel`
 - `BranchSourceQuote`
 - `FollowupSourceHighlight`
 
@@ -617,13 +617,13 @@ Keep icon stroke, size rhythm, and optical weight consistent within the same sur
 
 ## 12. Page And Feature Skeleton Rules
 
-### 12.1 Main Product Workspace
+### 12.1 Main Product Canvas
 
-The workspace page should preserve this priority:
+The canvas page should preserve this priority:
 
 1. Canvas.
 2. Chat nodes and relationships.
-3. Sidebar workspace navigation.
+3. Sidebar canvas navigation.
 4. Top-right account and product controls.
 5. Debug UI, only through the global debug system in development.
 
@@ -636,7 +636,7 @@ The sidebar is product chrome, not a page-specific widget.
 Rules:
 
 - It should remain visually clean.
-- It should handle workspace navigation and workspace-level actions.
+- It should handle canvas navigation and canvas-level actions.
 - It should not absorb unrelated user/account/debug controls if those belong in top controls or the global debug system.
 
 ### 12.3 Canvas Controls

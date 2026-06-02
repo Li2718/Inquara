@@ -33,7 +33,7 @@ export async function resetTestDatabase(): Promise<void> {
   await prisma.canvasEdge.deleteMany();
   await prisma.nodeMessage.deleteMany();
   await prisma.canvasNode.deleteMany();
-  await prisma.workspace.deleteMany();
+  await prisma.canvas.deleteMany();
   await prisma.user.deleteMany();
 }
 

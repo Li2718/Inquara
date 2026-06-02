@@ -3,7 +3,7 @@ import { IdSchema } from "./schemas";
 
 const BaseCommandSchema = z.object({
   clientMutationId: z.string().min(1),
-  workspaceId: IdSchema
+  canvasId: IdSchema
 });
 
 export const CreateNodeAtPositionCommandSchema = BaseCommandSchema.extend({
@@ -88,7 +88,7 @@ export const SendUserMessageCommandSchema = BaseCommandSchema.extend({
   content: z.string().min(1).max(20000)
 });
 
-export const WorkspaceCommandSchema = z.discriminatedUnion("type", [
+export const CanvasCommandSchema = z.discriminatedUnion("type", [
   CreateNodeAtPositionCommandSchema,
   CreateNodeFromSelectionCommandSchema,
   UpdateNodePositionCommandSchema,
@@ -103,4 +103,4 @@ export const WorkspaceCommandSchema = z.discriminatedUnion("type", [
   SendUserMessageCommandSchema
 ]);
 
-export type WorkspaceCommand = z.infer<typeof WorkspaceCommandSchema>;
+export type CanvasCommand = z.infer<typeof CanvasCommandSchema>;

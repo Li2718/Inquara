@@ -79,7 +79,7 @@ describe("client fatal error fallback", () => {
 
     harness.listeners.get("error")?.[0]?.();
 
-    expect(harness.body.innerHTML).toContain("The workspace hit a snag.");
+    expect(harness.body.innerHTML).toContain("The canvas hit a snag.");
   });
 
   it("handles unhandled promise rejections without rewriting an existing fallback", () => {

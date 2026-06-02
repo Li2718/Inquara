@@ -9,13 +9,13 @@ export function getClientFatalErrorFallbackScript() {
   var MANUAL_LOCALE_SOURCE = "manual";
   var copy = {
     en: {
-      heading: "The workspace hit a snag.",
+      heading: "The canvas hit a snag.",
       holdOn: "Hold on",
       message: "The page could not finish loading. Please reload the page.",
       reload: "Reload"
     },
     "zh-CN": {
-      heading: "工作区遇到问题。",
+      heading: "画布遇到问题。",
       holdOn: "请稍候",
       message: "页面未能完成加载。请刷新页面。",
       reload: "刷新"

@@ -8,17 +8,17 @@ const CANVAS_ITEM_APPEAR_CLASS_LIFETIME_MS = CANVAS_ITEM_APPEAR_MS + 80;
 type CanvasVisibilityMotionInput = {
   edgeIds: string[];
   nodeIds: string[];
-  workspaceId: string | null;
+  canvasId: string | null;
 };
 
 type VisibleItemSnapshot = {
   edges: Set<string>;
   isInitialized: boolean;
   nodes: Set<string>;
-  workspaceId: string | null;
+  canvasId: string | null;
 };
 
-export function useCanvasVisibilityMotion({ edgeIds, nodeIds, workspaceId }: CanvasVisibilityMotionInput) {
+export function useCanvasVisibilityMotion({ edgeIds, nodeIds, canvasId }: CanvasVisibilityMotionInput) {
   const [appearingNodeIds, setAppearingNodeIds] = useState<Set<string>>(() => new Set());
   const [appearingEdgeIds, setAppearingEdgeIds] = useState<Set<string>>(() => new Set());
   const firstFrameAppearingRef = useRef<{ edges: Set<string>; nodes: Set<string> }>({
@@ -29,22 +29,22 @@ export function useCanvasVisibilityMotion({ edgeIds, nodeIds, workspaceId }: Can
     edges: new Set(),
     isInitialized: false,
     nodes: new Set(),
-    workspaceId: null
+    canvasId: null
   });
   const nodeIdKey = useMemo(() => nodeIds.join("|"), [nodeIds]);
   const edgeIdKey = useMemo(() => edgeIds.join("|"), [edgeIds]);
 
   const firstFrameNodeIds = useMemo(() => {
     const previous = previousVisibleItemsRef.current;
-    if (!workspaceId || previous.workspaceId !== workspaceId || !previous.isInitialized) return new Set<string>();
+    if (!canvasId || previous.canvasId !== canvasId || !previous.isInitialized) return new Set<string>();
     return new Set(nodeIds.filter(id => !previous.nodes.has(id)));
-  }, [nodeIds, workspaceId]);
+  }, [nodeIds, canvasId]);
 
   const firstFrameEdgeIds = useMemo(() => {
     const previous = previousVisibleItemsRef.current;
-    if (!workspaceId || previous.workspaceId !== workspaceId || !previous.isInitialized) return new Set<string>();
+    if (!canvasId || previous.canvasId !== canvasId || !previous.isInitialized) return new Set<string>();
     return new Set(edgeIds.filter(id => !previous.edges.has(id)));
-  }, [edgeIds, workspaceId]);
+  }, [edgeIds, canvasId]);
 
   useLayoutEffect(() => {
     const nextNodeIds = new Set(nodeIdKey ? nodeIdKey.split("|") : []);
@@ -56,12 +56,12 @@ export function useCanvasVisibilityMotion({ edgeIds, nodeIds, workspaceId }: Can
       nodes: firstFrameNodeIds
     };
 
-    if (!workspaceId || previous.workspaceId !== workspaceId || !previous.isInitialized) {
+    if (!canvasId || previous.canvasId !== canvasId || !previous.isInitialized) {
       previousVisibleItemsRef.current = {
         edges: nextEdgeIds,
         isInitialized: true,
         nodes: nextNodeIds,
-        workspaceId
+        canvasId
       };
       setAppearingNodeIds(new Set());
       setAppearingEdgeIds(new Set());
@@ -74,7 +74,7 @@ export function useCanvasVisibilityMotion({ edgeIds, nodeIds, workspaceId }: Can
       edges: nextEdgeIds,
       isInitialized: true,
       nodes: nextNodeIds,
-      workspaceId
+      canvasId
     };
 
     if (newNodeIds.length === 0 && newEdgeIds.length === 0) return;
@@ -98,7 +98,7 @@ export function useCanvasVisibilityMotion({ edgeIds, nodeIds, workspaceId }: Can
       });
     }, CANVAS_ITEM_APPEAR_CLASS_LIFETIME_MS);
     return () => window.clearTimeout(timeout);
-  }, [edgeIdKey, firstFrameEdgeIds, firstFrameNodeIds, nodeIdKey, workspaceId]);
+  }, [edgeIdKey, firstFrameEdgeIds, firstFrameNodeIds, nodeIdKey, canvasId]);
 
   return useMemo(
     () => ({

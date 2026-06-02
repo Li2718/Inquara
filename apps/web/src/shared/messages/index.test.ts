@@ -27,7 +27,7 @@ describe("shared messages", () => {
 
   it("returns localized Chinese product copy", () => {
     expect(getMessages("zh-CN").auth.loginAction).toBe("登录");
-    expect(getMessages("zh-CN").workspaceSidebar.canvases).toBe("画布");
+    expect(getMessages("zh-CN").canvasSidebar.canvases).toBe("画布");
     expect(getMessages("zh-CN").canvas.askFollowUp).toBe("继续追问");
   });
 
@@ -44,9 +44,9 @@ describe("shared messages", () => {
   });
 
   it("explains active elsewhere as a single-editor rule instead of stale visible content", () => {
-    expect(getMessages("zh-CN").lease.defaultMessage).toBe("同一工作区一次只能由一个客户端编辑。接管编辑后，其他客户端会停止编辑。");
+    expect(getMessages("zh-CN").lease.defaultMessage).toBe("同一画布一次只能由一个客户端编辑。接管编辑后，其他客户端会停止编辑。");
     expect(getMessages("en").lease.defaultMessage).toBe(
-      "Only one client can edit a workspace at a time. Taking over editing will stop editing in the other client."
+      "Only one client can edit a canvas at a time. Taking over editing will stop editing in the other client."
     );
   });
 });

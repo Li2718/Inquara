@@ -16,7 +16,7 @@ import {
 import { resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
-let workspaceId = "";
+let canvasId = "";
 let rootNodeId = "";
 let sourceMessageId = "";
 
@@ -28,14 +28,14 @@ beforeEach(async () => {
   });
   userId = user.id;
 
-  const workspace = await prisma.workspace.create({
+  const canvas = await prisma.canvas.create({
     data: { ownerId: user.id, title: "Canvas" }
   });
-  workspaceId = workspace.id;
+  canvasId = canvas.id;
 
   const rootNode = await prisma.canvasNode.create({
     data: {
-      workspaceId,
+      canvasId,
       title: "Main chat",
       x: 100,
       y: 100,
@@ -48,7 +48,7 @@ beforeEach(async () => {
 
   const sourceMessage = await prisma.nodeMessage.create({
     data: {
-      workspaceId,
+      canvasId,
       nodeId: rootNode.id,
       role: "assistant",
       content: "Attention decides which context matters.",
@@ -67,17 +67,17 @@ describe("canvas command services", () => {
     const events = await createNodeAtPosition(userId, {
       type: "node.createAtPosition",
       clientMutationId: "mutation-create",
-      workspaceId,
+      canvasId,
       nodeId: "node-created-1",
       title: "New chat",
       x: 260,
       y: 180
     });
 
-    const nodeCreated = events.find(event => event.type === "workspace.node.created");
+    const nodeCreated = events.find(event => event.type === "canvas.node.created");
     expect(nodeCreated?.clientMutationId).toBe("mutation-create");
     expect(nodeCreated?.version).toBe(1);
-    if (nodeCreated?.type !== "workspace.node.created") throw new Error("Expected node created event");
+    if (nodeCreated?.type !== "canvas.node.created") throw new Error("Expected node created event");
     expect(nodeCreated.node.title).toBe("New chat");
     expect(nodeCreated.node.x).toBe(260);
     expect(nodeCreated.node).not.toHaveProperty("type");
@@ -87,7 +87,7 @@ describe("canvas command services", () => {
     const events = await createNodeFromSelection(userId, {
       type: "node.createFromSelection",
       clientMutationId: "mutation-branch",
-      workspaceId,
+      canvasId,
       nodeId: "node-followup-1",
       edgeId: "edge-followup-1",
       sourceNodeId: rootNodeId,
@@ -99,12 +99,12 @@ describe("canvas command services", () => {
       y: 100
     });
 
-    expect(events.map(event => event.type)).toEqual(["workspace.node.created", "workspace.edge.created"]);
+    expect(events.map(event => event.type)).toEqual(["canvas.node.created", "canvas.edge.created"]);
     const childNode = await prisma.canvasNode.findFirstOrThrow({
-      where: { workspaceId, sourceMessageId }
+      where: { canvasId, sourceMessageId }
     });
     const edge = await prisma.canvasEdge.findFirstOrThrow({
-      where: { workspaceId, targetNodeId: childNode.id }
+      where: { canvasId, targetNodeId: childNode.id }
     });
 
     expect(childNode.parentNodeId).toBe(rootNodeId);
@@ -116,19 +116,19 @@ describe("canvas command services", () => {
     expect(edge.label).toBe("which context matters");
   });
 
-  it("updates node position and increments workspace version", async () => {
+  it("updates node position and increments canvas version", async () => {
     const events = await updateNodePosition(userId, {
       type: "node.updatePosition",
       clientMutationId: "mutation-position",
-      workspaceId,
+      canvasId,
       nodeId: rootNodeId,
       x: 300,
       y: 340
     });
 
     const event = events[0];
-    expect(event?.type).toBe("workspace.node.updated");
-    if (event?.type !== "workspace.node.updated") throw new Error("Expected node updated event");
+    expect(event?.type).toBe("canvas.node.updated");
+    if (event?.type !== "canvas.node.updated") throw new Error("Expected node updated event");
     expect(event.node.x).toBe(300);
     expect(event.node.y).toBe(340);
     expect(event.version).toBe(1);
@@ -138,15 +138,15 @@ describe("canvas command services", () => {
     const events = await updateNodeSize(userId, {
       type: "node.updateSize",
       clientMutationId: "mutation-size",
-      workspaceId,
+      canvasId,
       nodeId: rootNodeId,
       width: 540,
       height: 680
     });
 
     const event = events[0];
-    expect(event?.type).toBe("workspace.node.updated");
-    if (event?.type !== "workspace.node.updated") throw new Error("Expected node updated event");
+    expect(event?.type).toBe("canvas.node.updated");
+    if (event?.type !== "canvas.node.updated") throw new Error("Expected node updated event");
     expect(event.node.width).toBe(540);
     expect(event.node.height).toBe(680);
     expect(event.version).toBe(1);
@@ -156,14 +156,14 @@ describe("canvas command services", () => {
     const events = await renameNode(userId, {
       type: "node.rename",
       clientMutationId: "mutation-rename",
-      workspaceId,
+      canvasId,
       nodeId: rootNodeId,
       title: "Better title"
     });
 
     const event = events[0];
-    expect(event?.type).toBe("workspace.node.updated");
-    if (event?.type !== "workspace.node.updated") throw new Error("Expected node updated event");
+    expect(event?.type).toBe("canvas.node.updated");
+    if (event?.type !== "canvas.node.updated") throw new Error("Expected node updated event");
     expect(event.node.title).toBe("Better title");
     expect(event.version).toBe(1);
   });
@@ -172,7 +172,7 @@ describe("canvas command services", () => {
     await createNodeFromSelection(userId, {
       type: "node.createFromSelection",
       clientMutationId: "mutation-branch",
-      workspaceId,
+      canvasId,
       nodeId: "node-followup-2",
       edgeId: "edge-followup-2",
       sourceNodeId: rootNodeId,
@@ -183,11 +183,11 @@ describe("canvas command services", () => {
       x: 560,
       y: 100
     });
-    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { workspaceId, parentNodeId: rootNodeId } });
+    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { canvasId, parentNodeId: rootNodeId } });
     await updateNodeScroll(userId, {
       type: "node.updateScroll",
       clientMutationId: "mutation-scroll",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id,
       scrollTop: 144
     });
@@ -195,7 +195,7 @@ describe("canvas command services", () => {
     const hiddenEvents = await hideNodeSubtree(userId, {
       type: "node.hideSubtree",
       clientMutationId: "mutation-hide",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id,
       scrollTop: 233
     });
@@ -211,7 +211,7 @@ describe("canvas command services", () => {
     const restoredEvents = await restoreNodeBranch(userId, {
       type: "node.restoreBranch",
       clientMutationId: "mutation-restore",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id
     });
 
@@ -225,7 +225,7 @@ describe("canvas command services", () => {
     await createNodeFromSelection(userId, {
       type: "node.createFromSelection",
       clientMutationId: "mutation-branch",
-      workspaceId,
+      canvasId,
       nodeId: "node-followup-3",
       edgeId: "edge-followup-3",
       sourceNodeId: rootNodeId,
@@ -236,7 +236,7 @@ describe("canvas command services", () => {
       x: 560,
       y: 100
     });
-    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { workspaceId, parentNodeId: rootNodeId } });
+    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { canvasId, parentNodeId: rootNodeId } });
     await prisma.canvasNode.update({
       where: { id: childNode.id },
       data: {
@@ -253,7 +253,7 @@ describe("canvas command services", () => {
     await restoreNodeBranch(userId, {
       type: "node.restoreBranch",
       clientMutationId: "mutation-restore-root",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id
     });
 
@@ -266,7 +266,7 @@ describe("canvas command services", () => {
     await createNodeFromSelection(userId, {
       type: "node.createFromSelection",
       clientMutationId: "mutation-branch",
-      workspaceId,
+      canvasId,
       nodeId: "node-followup-4",
       edgeId: "edge-followup-4",
       sourceNodeId: rootNodeId,
@@ -277,18 +277,18 @@ describe("canvas command services", () => {
       x: 560,
       y: 100
     });
-    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { workspaceId, parentNodeId: rootNodeId } });
+    const childNode = await prisma.canvasNode.findFirstOrThrow({ where: { canvasId, parentNodeId: rootNodeId } });
     await hideNodeSubtree(userId, {
       type: "node.hideSubtree",
       clientMutationId: "mutation-hide",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id
     });
 
     await restoreNodeBranch(userId, {
       type: "node.restoreBranch",
       clientMutationId: "mutation-restore-position",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id,
       x: 860,
       y: 240
@@ -303,7 +303,7 @@ describe("canvas command services", () => {
   it("restores nested hidden descendants from parent-relative offsets", async () => {
     const childNode = await prisma.canvasNode.create({
       data: {
-        workspaceId,
+        canvasId,
         title: "Branch",
         x: 560,
         y: 100,
@@ -317,7 +317,7 @@ describe("canvas command services", () => {
     });
     const grandchildNode = await prisma.canvasNode.create({
       data: {
-        workspaceId,
+        canvasId,
         title: "Nested branch",
         x: 1_040,
         y: 180,
@@ -332,14 +332,14 @@ describe("canvas command services", () => {
     await hideNodeSubtree(userId, {
       type: "node.hideSubtree",
       clientMutationId: "mutation-hide-nested",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id
     });
 
     await updateNodePosition(userId, {
       type: "node.updatePosition",
       clientMutationId: "mutation-move-root",
-      workspaceId,
+      canvasId,
       nodeId: rootNodeId,
       x: 320,
       y: 412
@@ -348,7 +348,7 @@ describe("canvas command services", () => {
     await restoreNodeBranch(userId, {
       type: "node.restoreBranch",
       clientMutationId: "mutation-restore-nested",
-      workspaceId,
+      canvasId,
       nodeId: childNode.id
     });
 
@@ -365,7 +365,7 @@ describe("canvas command services", () => {
   it("organizes only visible nodes and keeps hidden nodes untouched", async () => {
     const visibleChild = await prisma.canvasNode.create({
       data: {
-        workspaceId,
+        canvasId,
         title: "Visible branch",
         x: 900,
         y: 40,
@@ -379,7 +379,7 @@ describe("canvas command services", () => {
     });
     const hiddenChild = await prisma.canvasNode.create({
       data: {
-        workspaceId,
+        canvasId,
         title: "Hidden branch",
         x: 900,
         y: 700,
@@ -396,10 +396,10 @@ describe("canvas command services", () => {
     const events = await organizeCanvasNodes(userId, {
       type: "node.organize",
       clientMutationId: "mutation-organize",
-      workspaceId
+      canvasId
     });
 
-    expect(events.map(event => event.type)).toEqual(["workspace.node.updated", "workspace.node.updated"]);
+    expect(events.map(event => event.type)).toEqual(["canvas.node.updated", "canvas.node.updated"]);
 
     const refreshedRoot = await prisma.canvasNode.findUniqueOrThrow({ where: { id: rootNodeId } });
     const refreshedVisibleChild = await prisma.canvasNode.findUniqueOrThrow({ where: { id: visibleChild.id } });
@@ -418,19 +418,19 @@ describe("canvas command services", () => {
     const createEvents = await createNodeAtPosition(userId, {
       type: "node.createAtPosition",
       clientMutationId: "mutation-create-delete",
-      workspaceId,
+      canvasId,
       nodeId: "node-disposable-1",
       title: "Disposable",
       x: 300,
       y: 300
     });
     const created = createEvents[0];
-    if (created?.type !== "workspace.node.created") throw new Error("Expected node created event");
+    if (created?.type !== "canvas.node.created") throw new Error("Expected node created event");
 
     await deleteNodeSubtree(userId, {
       type: "node.deleteSubtree",
       clientMutationId: "mutation-delete",
-      workspaceId,
+      canvasId,
       nodeId: created.node.id
     });
     expect((await prisma.canvasNode.findUniqueOrThrow({ where: { id: created.node.id } })).deletedAt).toBeTruthy();
@@ -438,7 +438,7 @@ describe("canvas command services", () => {
     await restoreDeletedNodeSubtree(userId, {
       type: "node.restoreDeletedSubtree",
       clientMutationId: "mutation-restore-delete",
-      workspaceId,
+      canvasId,
       nodeId: created.node.id
     });
     const restored = await prisma.canvasNode.findUniqueOrThrow({ where: { id: created.node.id } });

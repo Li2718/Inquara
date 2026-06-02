@@ -1,25 +1,25 @@
 import {
-  applyWorkspaceEvent,
+  applyCanvasEvent,
   calculateOrganizedNodePositions,
   type CanvasEdge,
   type CanvasNode,
   type NodeMessage,
-  type WorkspaceCommand,
-  type WorkspaceEvent,
-  type WorkspaceSnapshot
+  type CanvasCommand,
+  type CanvasEvent,
+  type CanvasSnapshot
 } from "@inquara/domain";
 import { createStore } from "zustand/vanilla";
 
-export type WorkspaceLeaseState = "idle" | "acquiring" | "active" | "recovering" | "blocked-stale";
+export type CanvasLeaseState = "idle" | "acquiring" | "active" | "recovering" | "blocked-stale";
 
-export type WorkspaceLeaseMeta = {
+export type CanvasLeaseMeta = {
   sessionId: string | null;
   leaseEpoch: number | null;
   displacedSeq: number | null;
   expiresAt: string | null;
 };
 
-export type WorkspaceSessionMessageKey =
+export type CanvasSessionMessageKey =
   | "activeElsewhereMessage"
   | "acquireFailedMessage"
   | "recoverFailedMessage"
@@ -27,32 +27,32 @@ export type WorkspaceSessionMessageKey =
   | "syncFailedMessage"
   | "unstableNetworkMessage";
 
-export type WorkspaceSessionState = {
-  snapshot: WorkspaceSnapshot | null;
-  leaseState: WorkspaceLeaseState;
-  lease: WorkspaceLeaseMeta;
+export type CanvasSessionState = {
+  snapshot: CanvasSnapshot | null;
+  leaseState: CanvasLeaseState;
+  lease: CanvasLeaseMeta;
   pendingClientMutationIds: string[];
-  errorMessageKey: WorkspaceSessionMessageKey | null;
-  setSnapshot(snapshot: WorkspaceSnapshot | null): void;
-  setLeaseState(state: WorkspaceLeaseState): void;
-  setLease(meta: Partial<WorkspaceLeaseMeta>): void;
-  setErrorMessageKey(messageKey: WorkspaceSessionMessageKey | null): void;
+  errorMessageKey: CanvasSessionMessageKey | null;
+  setSnapshot(snapshot: CanvasSnapshot | null): void;
+  setLeaseState(state: CanvasLeaseState): void;
+  setLease(meta: Partial<CanvasLeaseMeta>): void;
+  setErrorMessageKey(messageKey: CanvasSessionMessageKey | null): void;
   markPending(clientMutationId: string): void;
   clearPending(clientMutationId: string): void;
-  applyEvent(event: WorkspaceEvent): void;
-  applyOptimisticCommand(command: WorkspaceCommand): void;
+  applyEvent(event: CanvasEvent): void;
+  applyOptimisticCommand(command: CanvasCommand): void;
   reset(): void;
 };
 
-const emptyLease: WorkspaceLeaseMeta = {
+const emptyLease: CanvasLeaseMeta = {
   sessionId: null,
   leaseEpoch: null,
   displacedSeq: null,
   expiresAt: null
 };
 
-export function createWorkspaceSessionStore() {
-  return createStore<WorkspaceSessionState>((set, get) => ({
+export function createCanvasSessionStore() {
+  return createStore<CanvasSessionState>((set, get) => ({
     snapshot: null,
     leaseState: "idle",
     lease: emptyLease,
@@ -91,7 +91,7 @@ export function createWorkspaceSessionStore() {
       const snapshot = get().snapshot;
       if (!snapshot) return;
       set(state => ({
-        snapshot: applyWorkspaceEvent(snapshot, event),
+        snapshot: applyCanvasEvent(snapshot, event),
         pendingClientMutationIds: event.clientMutationId
           ? state.pendingClientMutationIds.filter(id => id !== event.clientMutationId)
           : state.pendingClientMutationIds
@@ -120,14 +120,14 @@ export function createWorkspaceSessionStore() {
   }));
 }
 
-export const workspaceSessionStore = createWorkspaceSessionStore();
+export const canvasSessionStore = createCanvasSessionStore();
 
-function applyOptimisticCommand(snapshot: WorkspaceSnapshot, command: WorkspaceCommand): WorkspaceSnapshot {
+function applyOptimisticCommand(snapshot: CanvasSnapshot, command: CanvasCommand): CanvasSnapshot {
   if (command.type === "node.createAtPosition") {
     const now = new Date().toISOString();
     const node: CanvasNode = {
       id: command.nodeId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       title: command.title ?? "New chat",
       x: command.x,
       y: command.y,
@@ -254,7 +254,7 @@ function applyOptimisticCommand(snapshot: WorkspaceSnapshot, command: WorkspaceC
     const now = new Date().toISOString();
     const userMessage: NodeMessage = {
       id: command.userMessageId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       nodeId: command.nodeId,
       role: "user",
       content: command.content,
@@ -266,7 +266,7 @@ function applyOptimisticCommand(snapshot: WorkspaceSnapshot, command: WorkspaceC
     };
     const assistantMessage: NodeMessage = {
       id: command.assistantMessageId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       nodeId: command.nodeId,
       role: "assistant",
       content: "",
@@ -286,7 +286,7 @@ function applyOptimisticCommand(snapshot: WorkspaceSnapshot, command: WorkspaceC
     const now = new Date().toISOString();
     const node: CanvasNode = {
       id: command.nodeId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       title: "Follow-up",
       x: command.x,
       y: command.y,
@@ -309,7 +309,7 @@ function applyOptimisticCommand(snapshot: WorkspaceSnapshot, command: WorkspaceC
     };
     const edge: CanvasEdge = {
       id: command.edgeId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       sourceNodeId: command.sourceNodeId,
       targetNodeId: command.nodeId,
       sourceMessageId: command.sourceMessageId,

@@ -4,7 +4,7 @@ import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus
 
 const baseNode: CanvasNode = {
   id: "node-1",
-  workspaceId: "workspace-1",
+  canvasId: "canvas-1",
   title: "Main chat",
   x: 120,
   y: 140,

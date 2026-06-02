@@ -3,12 +3,12 @@
 import { FormEvent, useState } from "react";
 import { Button } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
-import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
+import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 
 export function MessageComposer({ nodeId }: { nodeId: string }) {
   const { messages } = useLocale();
   const copy = messages.chat;
-  const { commands, sendCommand, state } = useWorkspaceSession();
+  const { commands, sendCommand, state } = useCanvasSession();
   const [content, setContent] = useState("");
   const isBlocked = state.leaseState !== "active";
 

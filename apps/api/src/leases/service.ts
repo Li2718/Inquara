@@ -2,14 +2,14 @@ import type { AppConfig } from "@inquara/config";
 import { createClient, type RedisClientType } from "redis";
 
 export type LeaseRecord = {
-  workspaceId: string;
+  canvasId: string;
   holderSessionId: string;
   leaseEpoch: number;
   expiresAt: string;
 };
 
 export type AcquireLeaseInput = {
-  workspaceId: string;
+  canvasId: string;
   sessionId: string;
   ttlSeconds: number;
   now: Date;
@@ -28,7 +28,7 @@ export type AcquireLeaseResult =
     };
 
 export type RenewLeaseInput = {
-  workspaceId: string;
+  canvasId: string;
   sessionId: string;
   leaseEpoch: number;
   ttlSeconds: number;
@@ -45,12 +45,12 @@ export type RenewLeaseResult =
     };
 
 export type ReleaseLeaseInput = {
-  workspaceId: string;
+  canvasId: string;
   sessionId: string;
 };
 
 export type LeaseStatusInput = {
-  workspaceId: string;
+  canvasId: string;
   sessionId: string;
   now: Date;
 };
@@ -74,7 +74,7 @@ export type LeaseStatusResult =
       expiresAt: null;
     };
 
-export type WorkspaceLeaseStore = {
+export type CanvasLeaseStore = {
   acquire(input: AcquireLeaseInput): Promise<AcquireLeaseResult>;
   renew(input: RenewLeaseInput): Promise<RenewLeaseResult>;
   release(input: ReleaseLeaseInput): Promise<void>;
@@ -86,7 +86,7 @@ type WaiterRecord = {
   lastSeenAt: string;
 };
 
-type WorkspaceState = {
+type CanvasState = {
   lease: LeaseRecord | null;
   waiters: Map<string, WaiterRecord>;
   displacedCounter: number;
@@ -94,38 +94,38 @@ type WorkspaceState = {
 };
 
 const DEFAULT_WAITER_TTL_SECONDS = 45;
-const REDIS_KEY_PREFIX = "inquara:workspace-lease";
+const REDIS_KEY_PREFIX = "inquara:canvas-lease";
 
-export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
-  private readonly state = new Map<string, WorkspaceState>();
+export class InMemoryCanvasLeaseStore implements CanvasLeaseStore {
+  private readonly state = new Map<string, CanvasState>();
 
   constructor(private readonly waiterTtlSeconds = DEFAULT_WAITER_TTL_SECONDS) {}
 
   async acquire(input: AcquireLeaseInput): Promise<AcquireLeaseResult> {
-    const workspace = this.getWorkspaceState(input.workspaceId);
-    this.expireState(workspace, input.now);
+    const canvas = this.getCanvasState(input.canvasId);
+    this.expireState(canvas, input.now);
 
-    if (workspace.lease?.holderSessionId === input.sessionId) {
-      workspace.waiters.delete(input.sessionId);
-      workspace.lease = this.bumpExpiry(workspace.lease, input.ttlSeconds, input.now);
-      return { status: "active", lease: workspace.lease };
+    if (canvas.lease?.holderSessionId === input.sessionId) {
+      canvas.waiters.delete(input.sessionId);
+      canvas.lease = this.bumpExpiry(canvas.lease, input.ttlSeconds, input.now);
+      return { status: "active", lease: canvas.lease };
     }
 
-    if (!workspace.lease) {
-      const lease = this.createLease(input.workspaceId, input.sessionId, workspace, input.ttlSeconds, input.now);
-      workspace.waiters.delete(input.sessionId);
-      workspace.lease = lease;
+    if (!canvas.lease) {
+      const lease = this.createLease(input.canvasId, input.sessionId, canvas, input.ttlSeconds, input.now);
+      canvas.waiters.delete(input.sessionId);
+      canvas.lease = lease;
       return {
         status: "active",
         lease
       };
     }
 
-    this.ensureWaiter(workspace, workspace.lease.holderSessionId, input.now);
+    this.ensureWaiter(canvas, canvas.lease.holderSessionId, input.now);
 
-    const lease = this.createLease(input.workspaceId, input.sessionId, workspace, input.ttlSeconds, input.now);
-    workspace.waiters.delete(input.sessionId);
-    workspace.lease = lease;
+    const lease = this.createLease(input.canvasId, input.sessionId, canvas, input.ttlSeconds, input.now);
+    canvas.waiters.delete(input.sessionId);
+    canvas.lease = lease;
     return {
       status: "active",
       lease
@@ -133,48 +133,48 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
   }
 
   async renew(input: RenewLeaseInput): Promise<RenewLeaseResult> {
-    const workspace = this.getWorkspaceState(input.workspaceId);
-    this.expireState(workspace, input.now);
+    const canvas = this.getCanvasState(input.canvasId);
+    this.expireState(canvas, input.now);
 
-    const lease = workspace.lease;
+    const lease = canvas.lease;
     if (!lease) return { status: "stale" };
     if (lease.holderSessionId !== input.sessionId || lease.leaseEpoch !== input.leaseEpoch) {
       return { status: "stale" };
     }
 
-    workspace.waiters.delete(input.sessionId);
-    workspace.lease = this.bumpExpiry(lease, input.ttlSeconds, input.now);
+    canvas.waiters.delete(input.sessionId);
+    canvas.lease = this.bumpExpiry(lease, input.ttlSeconds, input.now);
     return {
       status: "active",
-      lease: workspace.lease
+      lease: canvas.lease
     };
   }
 
   async release(input: ReleaseLeaseInput): Promise<void> {
-    const workspace = this.getWorkspaceState(input.workspaceId);
-    if (workspace.lease?.holderSessionId === input.sessionId) {
-      workspace.lease = null;
+    const canvas = this.getCanvasState(input.canvasId);
+    if (canvas.lease?.holderSessionId === input.sessionId) {
+      canvas.lease = null;
     }
   }
 
   async getStatus(input: LeaseStatusInput): Promise<LeaseStatusResult> {
-    const workspace = this.getWorkspaceState(input.workspaceId);
-    this.expireState(workspace, input.now);
+    const canvas = this.getCanvasState(input.canvasId);
+    this.expireState(canvas, input.now);
 
-    if (workspace.lease?.holderSessionId === input.sessionId) {
+    if (canvas.lease?.holderSessionId === input.sessionId) {
       return {
         status: "active",
-        lease: workspace.lease,
+        lease: canvas.lease,
         displacedSeq: null
       };
     }
 
-    const waiter = workspace.waiters.get(input.sessionId);
-    const highestPriorityWaiter = this.getHighestPriorityWaiter(workspace);
+    const waiter = canvas.waiters.get(input.sessionId);
+    const highestPriorityWaiter = this.getHighestPriorityWaiter(canvas);
 
-    if (!workspace.lease && (!highestPriorityWaiter || highestPriorityWaiter.sessionId === input.sessionId)) {
+    if (!canvas.lease && (!highestPriorityWaiter || highestPriorityWaiter.sessionId === input.sessionId)) {
       if (waiter) {
-        workspace.waiters.set(input.sessionId, {
+        canvas.waiters.set(input.sessionId, {
           ...waiter,
           lastSeenAt: input.now.toISOString()
         });
@@ -188,7 +188,7 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
     }
 
     if (waiter) {
-      workspace.waiters.set(input.sessionId, {
+      canvas.waiters.set(input.sessionId, {
         ...waiter,
         lastSeenAt: input.now.toISOString()
       });
@@ -196,64 +196,64 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
 
     return {
       status: "blocked",
-      currentHolderSessionId: workspace.lease?.holderSessionId ?? null,
+      currentHolderSessionId: canvas.lease?.holderSessionId ?? null,
       displacedSeq: waiter?.displacedSeq ?? null,
-      expiresAt: workspace.lease?.expiresAt ?? null
+      expiresAt: canvas.lease?.expiresAt ?? null
     };
   }
 
-  private getWorkspaceState(workspaceId: string): WorkspaceState {
-    const existing = this.state.get(workspaceId);
+  private getCanvasState(canvasId: string): CanvasState {
+    const existing = this.state.get(canvasId);
     if (existing) return existing;
-    const created: WorkspaceState = {
+    const created: CanvasState = {
       lease: null,
       waiters: new Map(),
       displacedCounter: 0,
       lastLeaseEpoch: 0
     };
-    this.state.set(workspaceId, created);
+    this.state.set(canvasId, created);
     return created;
   }
 
-  private expireState(workspace: WorkspaceState, now: Date): void {
-    if (workspace.lease && new Date(workspace.lease.expiresAt).getTime() <= now.getTime()) {
-      workspace.lease = null;
+  private expireState(canvas: CanvasState, now: Date): void {
+    if (canvas.lease && new Date(canvas.lease.expiresAt).getTime() <= now.getTime()) {
+      canvas.lease = null;
     }
 
-    for (const [sessionId, waiter] of workspace.waiters.entries()) {
+    for (const [sessionId, waiter] of canvas.waiters.entries()) {
       if (new Date(waiter.lastSeenAt).getTime() + this.waiterTtlSeconds * 1000 <= now.getTime()) {
-        workspace.waiters.delete(sessionId);
+        canvas.waiters.delete(sessionId);
       }
     }
   }
 
-  private ensureWaiter(workspace: WorkspaceState, sessionId: string, now: Date): void {
-    const existing = workspace.waiters.get(sessionId);
+  private ensureWaiter(canvas: CanvasState, sessionId: string, now: Date): void {
+    const existing = canvas.waiters.get(sessionId);
     if (existing) {
-      workspace.waiters.set(sessionId, {
+      canvas.waiters.set(sessionId, {
         ...existing,
         lastSeenAt: now.toISOString()
       });
       return;
     }
-    workspace.displacedCounter += 1;
-    workspace.waiters.set(sessionId, {
-      displacedSeq: workspace.displacedCounter,
+    canvas.displacedCounter += 1;
+    canvas.waiters.set(sessionId, {
+      displacedSeq: canvas.displacedCounter,
       lastSeenAt: now.toISOString()
     });
   }
 
   private createLease(
-    workspaceId: string,
+    canvasId: string,
     sessionId: string,
-    workspace: WorkspaceState,
+    canvas: CanvasState,
     ttlSeconds: number,
     now: Date
   ): LeaseRecord {
-    const leaseEpoch = workspace.lastLeaseEpoch + 1;
-    workspace.lastLeaseEpoch = leaseEpoch;
+    const leaseEpoch = canvas.lastLeaseEpoch + 1;
+    canvas.lastLeaseEpoch = leaseEpoch;
     return {
-      workspaceId,
+      canvasId,
       holderSessionId: sessionId,
       leaseEpoch,
       expiresAt: new Date(now.getTime() + ttlSeconds * 1000).toISOString()
@@ -267,9 +267,9 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
     };
   }
 
-  private getHighestPriorityWaiter(workspace: WorkspaceState): { sessionId: string; displacedSeq: number } | null {
+  private getHighestPriorityWaiter(canvas: CanvasState): { sessionId: string; displacedSeq: number } | null {
     let next: { sessionId: string; displacedSeq: number } | null = null;
-    for (const [sessionId, waiter] of workspace.waiters.entries()) {
+    for (const [sessionId, waiter] of canvas.waiters.entries()) {
       if (!next || waiter.displacedSeq < next.displacedSeq) {
         next = {
           sessionId,
@@ -281,7 +281,7 @@ export class InMemoryWorkspaceLeaseStore implements WorkspaceLeaseStore {
   }
 }
 
-export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
+export class RedisCanvasLeaseStore implements CanvasLeaseStore {
   private client: RedisClientType | null = null;
   private connectPromise: Promise<void> | null = null;
 
@@ -291,8 +291,8 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
   ) {}
 
   async acquire(input: AcquireLeaseInput): Promise<AcquireLeaseResult> {
-    return this.mutateWorkspace<AcquireLeaseResult>(input.workspaceId, input.now, workspace => {
-      const state = deserializeWorkspaceState(workspace);
+    return this.mutateCanvas<AcquireLeaseResult>(input.canvasId, input.now, canvas => {
+      const state = deserializeCanvasState(canvas);
       expireStateData(state, input.now, this.waiterTtlSeconds);
 
       if (state.lease?.holderSessionId === input.sessionId) {
@@ -305,7 +305,7 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
       }
 
       if (!state.lease) {
-        const lease = createLease(input.workspaceId, input.sessionId, state, input.ttlSeconds, input.now);
+        const lease = createLease(input.canvasId, input.sessionId, state, input.ttlSeconds, input.now);
         state.waiters.delete(input.sessionId);
         state.lease = lease;
         return {
@@ -315,7 +315,7 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
       }
 
       ensureWaiter(state, state.lease.holderSessionId, input.now);
-      const lease = createLease(input.workspaceId, input.sessionId, state, input.ttlSeconds, input.now);
+      const lease = createLease(input.canvasId, input.sessionId, state, input.ttlSeconds, input.now);
       state.waiters.delete(input.sessionId);
       state.lease = lease;
       return {
@@ -326,8 +326,8 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
   }
 
   async renew(input: RenewLeaseInput): Promise<RenewLeaseResult> {
-    return this.mutateWorkspace<RenewLeaseResult>(input.workspaceId, input.now, workspace => {
-      const state = deserializeWorkspaceState(workspace);
+    return this.mutateCanvas<RenewLeaseResult>(input.canvasId, input.now, canvas => {
+      const state = deserializeCanvasState(canvas);
       expireStateData(state, input.now, this.waiterTtlSeconds);
       const lease = state.lease;
       if (!lease) {
@@ -349,8 +349,8 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
   }
 
   async release(input: ReleaseLeaseInput): Promise<void> {
-    await this.mutateWorkspace(input.workspaceId, new Date(), workspace => {
-      const state = deserializeWorkspaceState(workspace);
+    await this.mutateCanvas(input.canvasId, new Date(), canvas => {
+      const state = deserializeCanvasState(canvas);
       if (state.lease?.holderSessionId === input.sessionId) {
         state.lease = null;
       }
@@ -359,8 +359,8 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
   }
 
   async getStatus(input: LeaseStatusInput): Promise<LeaseStatusResult> {
-    return this.mutateWorkspace<LeaseStatusResult>(input.workspaceId, input.now, workspace => {
-      const state = deserializeWorkspaceState(workspace);
+    return this.mutateCanvas<LeaseStatusResult>(input.canvasId, input.now, canvas => {
+      const state = deserializeCanvasState(canvas);
       expireStateData(state, input.now, this.waiterTtlSeconds);
 
       if (state.lease?.holderSessionId === input.sessionId) {
@@ -414,13 +414,13 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
     });
   }
 
-  private async mutateWorkspace<TResult>(
-    workspaceId: string,
+  private async mutateCanvas<TResult>(
+    canvasId: string,
     now: Date,
-    mutator: (serialized: string | null) => { state: WorkspaceState; result: TResult }
+    mutator: (serialized: string | null) => { state: CanvasState; result: TResult }
   ): Promise<TResult> {
     const client = await this.getClient();
-    const key = getWorkspaceRedisKey(workspaceId);
+    const key = getCanvasRedisKey(canvasId);
 
     for (let attempt = 0; attempt < 8; attempt += 1) {
       await client.watch(key);
@@ -428,11 +428,11 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
         const current = await client.get(key);
         const { state, result } = mutator(current);
         const transaction = client.multi();
-        const ttlSeconds = getWorkspaceStateTtlSeconds(state, now, this.waiterTtlSeconds);
+        const ttlSeconds = getCanvasStateTtlSeconds(state, now, this.waiterTtlSeconds);
         if (state.lease === null && state.waiters.size === 0) {
           transaction.del(key);
         } else {
-          transaction.set(key, serializeWorkspaceState(state), {
+          transaction.set(key, serializeCanvasState(state), {
             EX: ttlSeconds
           });
         }
@@ -445,7 +445,7 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
       }
     }
 
-    throw new Error(`Failed to update workspace lease state for ${workspaceId}.`);
+    throw new Error(`Failed to update canvas lease state for ${canvasId}.`);
   }
 
   private async getClient(): Promise<RedisClientType> {
@@ -463,18 +463,18 @@ export class RedisWorkspaceLeaseStore implements WorkspaceLeaseStore {
   }
 }
 
-export function createWorkspaceLeaseStore(config: AppConfig): WorkspaceLeaseStore {
+export function createCanvasLeaseStore(config: AppConfig): CanvasLeaseStore {
   if (config.REDIS_URL.includes("test.local")) {
-    return new InMemoryWorkspaceLeaseStore();
+    return new InMemoryCanvasLeaseStore();
   }
-  return new RedisWorkspaceLeaseStore(config.REDIS_URL);
+  return new RedisCanvasLeaseStore(config.REDIS_URL);
 }
 
-function getWorkspaceRedisKey(workspaceId: string): string {
-  return `${REDIS_KEY_PREFIX}:${workspaceId}`;
+function getCanvasRedisKey(canvasId: string): string {
+  return `${REDIS_KEY_PREFIX}:${canvasId}`;
 }
 
-function serializeWorkspaceState(state: WorkspaceState): string {
+function serializeCanvasState(state: CanvasState): string {
   return JSON.stringify({
     lease: state.lease,
     waiters: Array.from(state.waiters.entries()),
@@ -483,7 +483,7 @@ function serializeWorkspaceState(state: WorkspaceState): string {
   });
 }
 
-function deserializeWorkspaceState(serialized: string | null): WorkspaceState {
+function deserializeCanvasState(serialized: string | null): CanvasState {
   if (!serialized) {
     return {
       lease: null,
@@ -506,14 +506,14 @@ function deserializeWorkspaceState(serialized: string | null): WorkspaceState {
   };
 }
 
-function getWorkspaceStateTtlSeconds(state: WorkspaceState, now: Date, waiterTtlSeconds: number): number {
+function getCanvasStateTtlSeconds(state: CanvasState, now: Date, waiterTtlSeconds: number): number {
   const leaseSeconds = state.lease
     ? Math.max(1, Math.ceil((new Date(state.lease.expiresAt).getTime() - now.getTime()) / 1000))
     : 0;
   return Math.max(waiterTtlSeconds, leaseSeconds, 1);
 }
 
-function expireStateData(state: WorkspaceState, now: Date, waiterTtlSeconds: number): void {
+function expireStateData(state: CanvasState, now: Date, waiterTtlSeconds: number): void {
   if (state.lease && new Date(state.lease.expiresAt).getTime() <= now.getTime()) {
     state.lease = null;
   }
@@ -524,7 +524,7 @@ function expireStateData(state: WorkspaceState, now: Date, waiterTtlSeconds: num
   }
 }
 
-function ensureWaiter(state: WorkspaceState, sessionId: string, now: Date): void {
+function ensureWaiter(state: CanvasState, sessionId: string, now: Date): void {
   const existing = state.waiters.get(sessionId);
   if (existing) {
     state.waiters.set(sessionId, {
@@ -541,16 +541,16 @@ function ensureWaiter(state: WorkspaceState, sessionId: string, now: Date): void
 }
 
 function createLease(
-  workspaceId: string,
+  canvasId: string,
   sessionId: string,
-  state: WorkspaceState,
+  state: CanvasState,
   ttlSeconds: number,
   now: Date
 ): LeaseRecord {
   const leaseEpoch = state.lastLeaseEpoch + 1;
   state.lastLeaseEpoch = leaseEpoch;
   return {
-    workspaceId,
+    canvasId,
     holderSessionId: sessionId,
     leaseEpoch,
     expiresAt: new Date(now.getTime() + ttlSeconds * 1000).toISOString()
@@ -564,7 +564,7 @@ function bumpExpiry(lease: LeaseRecord, ttlSeconds: number, now: Date): LeaseRec
   };
 }
 
-function getHighestPriorityWaiter(state: WorkspaceState): { sessionId: string; displacedSeq: number } | null {
+function getHighestPriorityWaiter(state: CanvasState): { sessionId: string; displacedSeq: number } | null {
   let next: { sessionId: string; displacedSeq: number } | null = null;
   for (const [sessionId, waiter] of state.waiters.entries()) {
     if (!next || waiter.displacedSeq < next.displacedSeq) {

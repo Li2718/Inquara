@@ -3,7 +3,7 @@ import type { HTMLAttributes, SVGProps } from "react";
 type IconProps = SVGProps<SVGSVGElement>;
 type SpanIconProps = HTMLAttributes<HTMLSpanElement>;
 
-export function SidebarPanelIcon({ className = "workspace-sidebar-open-icon", ...props }: SpanIconProps) {
+export function SidebarPanelIcon({ className = "canvas-sidebar-open-icon", ...props }: SpanIconProps) {
   return (
     <span className={className} aria-hidden="true" {...props}>
       <span />
@@ -12,7 +12,7 @@ export function SidebarPanelIcon({ className = "workspace-sidebar-open-icon", ..
   );
 }
 
-export function SidebarCollapseIcon({ className = "workspace-sidebar-collapse-icon", ...props }: SpanIconProps) {
+export function SidebarCollapseIcon({ className = "canvas-sidebar-collapse-icon", ...props }: SpanIconProps) {
   return <span className={className} aria-hidden="true" {...props} />;
 }
 

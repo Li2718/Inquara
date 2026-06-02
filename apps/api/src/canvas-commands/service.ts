@@ -1,4 +1,4 @@
-import type { WorkspaceCommand, WorkspaceEvent } from "@inquara/domain";
+import type { CanvasCommand, CanvasEvent } from "@inquara/domain";
 import type { AIProvider } from "../ai/provider";
 import {
   createNodeAtPosition,
@@ -20,12 +20,12 @@ export type LeaseValidation = {
   leaseEpoch: number;
 };
 
-export async function dispatchWorkspaceCommand(
+export async function dispatchCanvasCommand(
   userId: string,
-  command: WorkspaceCommand
-): Promise<WorkspaceEvent[]> {
+  command: CanvasCommand
+): Promise<CanvasEvent[]> {
   if (command.type === "message.sendUserMessage") {
-    throw new UnsupportedWorkspaceCommandError(command.type);
+    throw new UnsupportedCanvasCommandError(command.type);
   }
   if (command.type === "node.createAtPosition") {
     return createNodeAtPosition(userId, command);
@@ -52,7 +52,7 @@ export async function dispatchWorkspaceCommand(
     return hideNodeSubtree(userId, {
       type: command.type,
       clientMutationId: command.clientMutationId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       nodeId: command.nodeId,
       ...(command.scrollTop === undefined ? {} : { scrollTop: command.scrollTop })
     });
@@ -61,7 +61,7 @@ export async function dispatchWorkspaceCommand(
     return restoreNodeBranch(userId, {
       type: command.type,
       clientMutationId: command.clientMutationId,
-      workspaceId: command.workspaceId,
+      canvasId: command.canvasId,
       nodeId: command.nodeId,
       ...(command.x === undefined ? {} : { x: command.x }),
       ...(command.y === undefined ? {} : { y: command.y })
@@ -77,19 +77,19 @@ export async function dispatchWorkspaceCommand(
   return [];
 }
 
-export async function streamWorkspaceMessageCommand(
+export async function streamCanvasMessageCommand(
   userId: string,
-  command: Extract<WorkspaceCommand, { type: "message.sendUserMessage" }>,
+  command: Extract<CanvasCommand, { type: "message.sendUserMessage" }>,
   provider: AIProvider,
-  onEvent: (event: WorkspaceEvent) => Promise<void> | void,
+  onEvent: (event: CanvasEvent) => Promise<void> | void,
   assertCanContinue?: () => Promise<void>
 ): Promise<void> {
   await sendUserMessage(userId, command, provider, onEvent, undefined, assertCanContinue);
 }
 
-export class UnsupportedWorkspaceCommandError extends Error {
+export class UnsupportedCanvasCommandError extends Error {
   constructor(commandType: string) {
-    super(`Unsupported workspace command: ${commandType}`);
-    this.name = "UnsupportedWorkspaceCommandError";
+    super(`Unsupported canvas command: ${commandType}`);
+    this.name = "UnsupportedCanvasCommandError";
   }
 }

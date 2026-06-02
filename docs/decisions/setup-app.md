@@ -17,7 +17,7 @@
 
 Fresh self-managed deployments need a setup flow before normal product and administration pages are useful. This is installation-time behavior, not a normal product route.
 
-The setup flow also has to fit Inquara's existing split architecture: Next.js handles the web surface, Fastify owns the API, and PostgreSQL stores users, password identities, sessions, workspaces, and redemption codes.
+The setup flow also has to fit Inquara's existing split architecture: Next.js handles the web surface, Fastify owns the API, and PostgreSQL stores users, password identities, sessions, canvases, and redemption codes.
 
 ## Decision
 

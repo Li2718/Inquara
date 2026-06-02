@@ -23,7 +23,7 @@ Local development uses `.env.dev`, `docker-compose.dev.yml`, and `npm run dev`; 
 | Service | Type | Responsibility |
 | --- | --- | --- |
 | `postgres` | long-running infrastructure | Stores all application state. |
-| `redis` | long-running infrastructure | Stores active workspace lease state and waiter priority for takeover recovery. |
+| `redis` | long-running infrastructure | Stores active canvas lease state and waiter priority for takeover recovery. |
 | `migrate` | one-shot | Runs Prisma migrations with `npm run db:migrate:deploy`, then exits. |
 | `api` | long-running application | Runs the Fastify HTTP API and assistant streaming routes on container port `4000`. |
 | `web` | long-running application | Runs setup mode or normal Next.js web mode on container port `3000`. |
@@ -139,7 +139,7 @@ The local development scripts load development env files in this order:
 
 The first loaded value wins. Production `.env` is intentionally not loaded by local development commands.
 
-The development scripts compose `DATABASE_URL` from the split `POSTGRES_*` values before running Prisma, the API, or workspace dev commands:
+The development scripts compose `DATABASE_URL` from the split `POSTGRES_*` values before running Prisma, the API, or canvas dev commands:
 
 ```text
 postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@<POSTGRES_HOST>:<POSTGRES_PORT>/<POSTGRES_DB>?schema=<POSTGRES_SCHEMA>
@@ -214,7 +214,7 @@ The web health path exists in both setup mode and normal Next.js mode so Docker 
 
 - The `proxy` service publishes one HTTP port. Set `WEB_PORT` to choose it, or leave it unset to let Docker assign an available host port.
 - The `proxy` service owns its nginx configuration inside its image.
-- The API remains a separate internal service so workspace mutations, lease enforcement, and AI streaming stay isolated from the Next.js runtime.
+- The API remains a separate internal service so canvas mutations, lease enforcement, and AI streaming stay isolated from the Next.js runtime.
 - TLS automation is expected to be provided by the deployment platform, such as Dokploy Domains.
 - Postgres is internal to the Compose network by default and is not published to the host.
 - Backup, restore, external secret manager, observability, and multi-host deployment are not included yet.

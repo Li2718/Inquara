@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cancelPendingWorkspaceLeaseRelease, scheduleWorkspaceLeaseRelease } from "./leaseReleaseScheduler";
+import { cancelPendingCanvasLeaseRelease, scheduleCanvasLeaseRelease } from "./leaseReleaseScheduler";
 
 describe("lease release scheduler", () => {
   beforeEach(() => {
@@ -11,20 +11,20 @@ describe("lease release scheduler", () => {
     vi.useRealTimers();
   });
 
-  it("cancels a pending release when the same workspace remounts immediately", async () => {
+  it("cancels a pending release when the same canvas remounts immediately", async () => {
     const release = vi.fn();
 
-    scheduleWorkspaceLeaseRelease("workspace-1", release, 250);
-    cancelPendingWorkspaceLeaseRelease("workspace-1");
+    scheduleCanvasLeaseRelease("canvas-1", release, 250);
+    cancelPendingCanvasLeaseRelease("canvas-1");
     await vi.advanceTimersByTimeAsync(250);
 
     expect(release).not.toHaveBeenCalled();
   });
 
-  it("releases the workspace when the unmount is final", async () => {
+  it("releases the canvas when the unmount is final", async () => {
     const release = vi.fn();
 
-    scheduleWorkspaceLeaseRelease("workspace-1", release, 250);
+    scheduleCanvasLeaseRelease("canvas-1", release, 250);
     await vi.advanceTimersByTimeAsync(250);
 
     expect(release).toHaveBeenCalledTimes(1);

@@ -3,22 +3,22 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
 import { createApiTestEnv, resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
-let workspaceId = "";
+let canvasId = "";
 let nodeId = "";
 
 beforeEach(async () => {
   await resetTestDatabase();
 
   const user = await prisma.user.create({
-    data: { email: "http-workspace@inquara.local", name: "HTTP Workspace User" }
+    data: { email: "http-canvas@inquara.local", name: "HTTP Canvas User" }
   });
-  const workspace = await prisma.workspace.create({
+  const canvas = await prisma.canvas.create({
     data: { ownerId: user.id, title: "HTTP Canvas" }
   });
-  workspaceId = workspace.id;
+  canvasId = canvas.id;
   const node = await prisma.canvasNode.create({
     data: {
-      workspaceId,
+      canvasId,
       title: "Main chat",
       x: 100,
       y: 100,
@@ -34,14 +34,14 @@ afterAll(async () => {
   await stopEphemeralTestDatabase();
 });
 
-describe("workspace lease and http command routes", () => {
-  it("acquires and renews a workspace lease over HTTP", async () => {
+describe("canvas lease and http command routes", () => {
+  it("acquires and renews a canvas lease over HTTP", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
 
     const acquired = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
@@ -52,7 +52,7 @@ describe("workspace lease and http command routes", () => {
 
     const renewed = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/renew`,
+      url: `/canvases/${canvasId}/lease/renew`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a", leaseEpoch: 1 }
     });
@@ -64,24 +64,24 @@ describe("workspace lease and http command routes", () => {
 
   it("allows explicit reacquire over HTTP after a session was displaced", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
 
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-b" }
     });
 
     const reacquired = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
@@ -95,47 +95,47 @@ describe("workspace lease and http command routes", () => {
 
   it("keeps passive recovery ordered after release over HTTP", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
 
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-b" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-c" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/release`,
+      url: `/canvases/${canvasId}/lease/release`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-c" }
     });
 
     const earliest = await app.inject({
       method: "GET",
-      url: `/workspaces/${workspaceId}/lease/status?sessionId=tab-b`,
+      url: `/canvases/${canvasId}/lease/status?sessionId=tab-b`,
       cookies: { inquara_session: session }
     });
     const later = await app.inject({
       method: "GET",
-      url: `/workspaces/${workspaceId}/lease/status?sessionId=tab-a`,
+      url: `/canvases/${canvasId}/lease/status?sessionId=tab-a`,
       cookies: { inquara_session: session }
     });
 
@@ -151,42 +151,42 @@ describe("workspace lease and http command routes", () => {
 
   it("allows explicit reacquire over HTTP even when another waiter has passive priority", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
 
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-b" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-c" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/release`,
+      url: `/canvases/${canvasId}/lease/release`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-c" }
     });
 
     const reacquired = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
@@ -200,23 +200,23 @@ describe("workspace lease and http command routes", () => {
 
   it("rejects stale command writes after a takeover", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
     await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-b" }
     });
 
     const response = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/commands`,
+      url: `/canvases/${canvasId}/commands`,
       cookies: { inquara_session: session },
       payload: {
         sessionId: "tab-a",
@@ -224,7 +224,7 @@ describe("workspace lease and http command routes", () => {
         command: {
           type: "node.updatePosition",
           clientMutationId: "mutation-http-stale",
-          workspaceId,
+          canvasId,
           nodeId,
           x: 240,
           y: 180
@@ -233,16 +233,16 @@ describe("workspace lease and http command routes", () => {
     });
 
     expect(response.statusCode).toBe(409);
-    expect(response.json()).toEqual({ error: "Workspace lease is stale." });
+    expect(response.json()).toEqual({ error: "Canvas lease is stale." });
     await app.close();
   });
 
   it("persists canvas mutations through the HTTP command route", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
     const acquired = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
@@ -250,7 +250,7 @@ describe("workspace lease and http command routes", () => {
 
     const response = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/commands`,
+      url: `/canvases/${canvasId}/commands`,
       cookies: { inquara_session: session },
       payload: {
         sessionId: "tab-a",
@@ -258,7 +258,7 @@ describe("workspace lease and http command routes", () => {
         command: {
           type: "node.updatePosition",
           clientMutationId: "mutation-http-position",
-          workspaceId,
+          canvasId,
           nodeId,
           x: 320,
           y: 260
@@ -268,7 +268,7 @@ describe("workspace lease and http command routes", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().events).toHaveLength(1);
-    expect(response.json().events[0].type).toBe("workspace.node.updated");
+    expect(response.json().events[0].type).toBe("canvas.node.updated");
     const updated = await prisma.canvasNode.findUniqueOrThrow({ where: { id: nodeId } });
     expect(updated.x).toBe(320);
     expect(updated.y).toBe(260);
@@ -277,10 +277,10 @@ describe("workspace lease and http command routes", () => {
 
   it("organizes canvas nodes through the HTTP command route", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
     const child = await prisma.canvasNode.create({
       data: {
-        workspaceId,
+        canvasId,
         title: "Branch",
         x: 900,
         y: 900,
@@ -292,7 +292,7 @@ describe("workspace lease and http command routes", () => {
     });
     const acquired = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
@@ -300,7 +300,7 @@ describe("workspace lease and http command routes", () => {
 
     const response = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/commands`,
+      url: `/canvases/${canvasId}/commands`,
       cookies: { inquara_session: session },
       payload: {
         sessionId: "tab-a",
@@ -308,7 +308,7 @@ describe("workspace lease and http command routes", () => {
         command: {
           type: "node.organize",
           clientMutationId: "mutation-http-organize",
-          workspaceId
+          canvasId
         }
       }
     });
@@ -326,10 +326,10 @@ describe("workspace lease and http command routes", () => {
 
   it("streams assistant events over HTTP for the active lease holder", async () => {
     const app = await buildApp({ env: createApiTestEnv() });
-    const session = await registerForSession(app, "http-workspace@inquara.local");
+    const session = await registerForSession(app, "http-canvas@inquara.local");
     const acquired = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/lease/acquire`,
+      url: `/canvases/${canvasId}/lease/acquire`,
       cookies: { inquara_session: session },
       payload: { sessionId: "tab-a" }
     });
@@ -337,7 +337,7 @@ describe("workspace lease and http command routes", () => {
 
     const response = await app.inject({
       method: "POST",
-      url: `/workspaces/${workspaceId}/messages/stream`,
+      url: `/canvases/${canvasId}/messages/stream`,
       cookies: { inquara_session: session },
       payload: {
         sessionId: "tab-a",
@@ -345,7 +345,7 @@ describe("workspace lease and http command routes", () => {
         command: {
           type: "message.sendUserMessage",
           clientMutationId: "mutation-http-message",
-          workspaceId,
+          canvasId,
           nodeId,
           userMessageId: "http-user-message-1",
           assistantMessageId: "http-assistant-message-1",
@@ -362,9 +362,9 @@ describe("workspace lease and http command routes", () => {
       .map(line => JSON.parse(line) as { type: string; event: { type: string; clientMutationId: string | null } });
     expect(lines.length).toBeGreaterThanOrEqual(4);
     expect(lines[0]?.type).toBe("event");
-    expect(lines[0]?.event.type).toBe("workspace.message.created");
-    expect(lines.some(line => line.event.type === "workspace.message.delta")).toBe(true);
-    expect(lines.at(-1)?.event.type).toBe("workspace.message.updated");
+    expect(lines[0]?.event.type).toBe("canvas.message.created");
+    expect(lines.some(line => line.event.type === "canvas.message.delta")).toBe(true);
+    expect(lines.at(-1)?.event.type).toBe("canvas.message.updated");
     expect(lines[0]?.event.clientMutationId).toBe("mutation-http-message");
     await app.close();
   });

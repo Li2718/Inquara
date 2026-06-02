@@ -38,7 +38,7 @@ Use these layers:
   - Examples: product shell, top controls, sidebar frame.
 - `product/`
   - Product-surface reusable components that are not generic enough for `ui/`.
-  - Examples: account menu composition, workspace navigation pieces.
+  - Examples: account menu composition, canvas navigation pieces.
 - `domain/`
   - Domain-composed components built from lower shared layers.
   - Examples: reusable canvas/node compositions that are not feature-private.
@@ -62,7 +62,7 @@ All pages and components must be classified by surface first:
 
 Rules:
 
-- Product pages are the normal authenticated Inquara workspace experience.
+- Product pages are the normal authenticated Inquara canvas experience.
 - Admin pages must use an explicit admin route and admin guard when they exist.
 - Debug UI must stay isolated from product UI and follow `docs/architecture.md`.
 - Debug is not a hidden product branch; it is development-only diagnostics.
@@ -74,8 +74,8 @@ Page-only components:
 
 - Put them under a same-name private directory beside the page file.
 - Example:
-  - `apps/web/src/app/workspaces/[workspaceId]/page.tsx`
-  - `apps/web/src/app/workspaces/[workspaceId]/page/LocalPanel.tsx`
+  - `apps/web/src/app/canvases/[canvasId]/page.tsx`
+  - `apps/web/src/app/canvases/[canvasId]/page/LocalPanel.tsx`
 
 Parent-component-only subcomponents:
 
@@ -149,7 +149,7 @@ Implemented shared components:
 
 The project currently has several feature-owned UI pieces that may be promoted into shared components as reuse becomes clear:
 
-- `features/workspaces/WorkspaceSidebar.tsx`
+- `features/canvases/CanvasSidebar.tsx`
 - `features/canvas/CanvasView.tsx`
 - `features/canvas/CanvasNodeView.tsx`
 - `features/canvas/SelectionFollowupToolbar.tsx`

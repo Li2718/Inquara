@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build the first production version of Inquara: an account-based personal AI thinking workspace where each user can create multiple infinite canvases, place chat nodes on a canvas, ask questions inside nodes, branch follow-up nodes from selected assistant text, and edit one workspace at a time through a single-active-client lease model.
+Build the first production version of Inquara: an account-based personal AI thinking canvas where each user can create multiple infinite canvases, place chat nodes on a canvas, ask questions inside nodes, branch follow-up nodes from selected assistant text, and edit one canvas at a time through a single-active-client lease model.
 
 The first production version should preserve the interaction proven by the demo while replacing the demo's in-memory state and static JavaScript with a maintainable TypeScript architecture, durable storage, authenticated APIs, and a real-time event pipeline.
 
@@ -11,22 +11,22 @@ The first production version should preserve the interaction proven by the demo 
 ### In Scope
 
 - Account system for individual users.
-- Multiple workspaces per user.
-- One infinite canvas per workspace.
+- Multiple canvases per user.
+- One infinite canvas view per canvas.
 - Canvas nodes that currently behave as chat boxes.
 - Creating a new node from selected assistant text.
 - Creating a new node directly from an empty canvas position.
 - Node dragging, resizing if needed, folding, and basic deletion.
 - Edges between related nodes.
 - Persistent nodes, edges, and messages.
-- Local-first workspace editing with a single active editing client per workspace.
-- AI streaming over HTTP for the active workspace client.
+- Local-first canvas editing with a single active editing client per canvas.
+- AI streaming over HTTP for the active canvas client.
 - Error handling for failed commands, disconnected real-time sessions, and failed AI responses.
 
 ### Out Of Scope For The First Version
 
 - Multi-user collaboration.
-- Workspace sharing and permissions beyond ownership.
+- Canvas sharing and permissions beyond ownership.
 - Offline editing and conflict merging.
 - Complex CRDT-based document synchronization.
 - Node types other than the current chat node behavior.
@@ -43,7 +43,7 @@ apps/web
   Next.js application for authenticated product UI and canvas experience.
 
 apps/api
-  Fastify service for HTTP APIs, workspace lease enforcement, command mutation routes, and AI streaming.
+  Fastify service for HTTP APIs, canvas lease enforcement, command mutation routes, and AI streaming.
 
 packages/domain
   Shared TypeScript types, command/event schemas, and validation helpers.
@@ -55,17 +55,17 @@ packages/config
   Shared environment parsing and runtime configuration.
 ```
 
-This is preferred over a pure Next.js full-stack design because Inquara's core experience depends on authenticated workspace mutation routes, lease enforcement, and AI stream handling. Keeping those responsibilities in a dedicated Fastify service makes the mutation and streaming path easier to reason about and easier to deploy independently. Next.js can focus on routing, authenticated pages, and the user interface.
+This is preferred over a pure Next.js full-stack design because Inquara's core experience depends on authenticated canvas mutation routes, lease enforcement, and AI stream handling. Keeping those responsibilities in a dedicated Fastify service makes the mutation and streaming path easier to reason about and easier to deploy independently. Next.js can focus on routing, authenticated pages, and the user interface.
 
 ## Technology Stack
 
 - Language: TypeScript.
 - Web app: Next.js, React, React Flow, TanStack Query, Zustand or a small `useSyncExternalStore` store.
-- API app: Fastify, Redis-backed workspace leases, and Zod or Valibot for runtime schemas.
+- API app: Fastify, Redis-backed canvas leases, and Zod or Valibot for runtime schemas.
 - Database: PostgreSQL.
 - ORM: Prisma.
 - Authentication: Auth.js or a hosted auth provider with server-side session verification. The design only requires a stable `userId` in the API layer.
-- Workspace mutation transport: authenticated HTTP routes.
+- Canvas mutation transport: authenticated HTTP routes.
 - AI provider integration: server-side AI gateway using an OpenAI-compatible streaming interface where practical.
 
 ## Debug System Rules
@@ -140,18 +140,18 @@ Important fields:
 
 `RedemptionCodeRedemption` stores each redemption separately from the code so multi-use codes and future reward histories do not overload a single `usedByUserId` field. Registration must validate and record the redemption in the same transaction that creates or attaches the user password identity.
 
-### Workspace
+### Canvas
 
-Represents one saved canvas owned by one user. A user can own many workspaces.
+Represents one saved canvas owned by one user. A user can own many canvases.
 
 ### CanvasNode
 
-Represents an object positioned on the workspace canvas. In the first version, every node behaves as a chat box, but the schema should not include unused `type`, `data`, image, artifact, or plugin fields yet.
+Represents an object positioned on the canvas. In the first version, every node behaves as a chat box, but the schema should not include unused `type`, `data`, image, artifact, or plugin fields yet.
 
 Important fields:
 
 - `id`
-- `workspaceId`
+- `canvasId`
 - `title`
 - `x`
 - `y`
@@ -174,7 +174,7 @@ Represents a message inside a canvas node.
 Important fields:
 
 - `id`
-- `workspaceId`
+- `canvasId`
 - `nodeId`
 - `role`: `user`, `assistant`, or `system`
 - `content`
@@ -191,7 +191,7 @@ Represents a relationship between two canvas nodes. A follow-up from selected as
 Important fields:
 
 - `id`
-- `workspaceId`
+- `canvasId`
 - `sourceNodeId`
 - `targetNodeId`
 - `sourceMessageId`
@@ -264,7 +264,7 @@ redemption_code_redemptions
   action
   created_at
 
-workspaces
+canvases
   id
   owner_id
   title
@@ -275,7 +275,7 @@ workspaces
 
 canvas_nodes
   id
-  workspace_id
+  canvas_id
   title
   x
   y
@@ -294,7 +294,7 @@ canvas_nodes
 
 canvas_edges
   id
-  workspace_id
+  canvas_id
   source_node_id
   target_node_id
   source_message_id
@@ -303,7 +303,7 @@ canvas_edges
 
 node_messages
   id
-  workspace_id
+  canvas_id
   node_id
   role
   content
@@ -316,25 +316,25 @@ node_messages
 
 Indexes:
 
-- `workspaces(owner_id, updated_at)`
+- `canvases(owner_id, updated_at)`
 - `redemption_codes(code)` unique
 - `redemption_codes(target, disabled_at, expires_at)`
 - `redemption_code_redemptions(redemption_code_id, user_id, target)` unique
-- `canvas_nodes(workspace_id)`
-- `canvas_edges(workspace_id)`
+- `canvas_nodes(canvas_id)`
+- `canvas_edges(canvas_id)`
 - `node_messages(node_id, created_at)`
-- `node_messages(workspace_id, created_at)`
+- `node_messages(canvas_id, created_at)`
 
 The schema deliberately avoids a generic node `type` column and a generic `data` JSON column for the first version. If a later product iteration introduces images or other node kinds, add that through an explicit migration once the requirements are known.
 
 ## Command And Event Model
 
-The client should not write arbitrary database-shaped objects. It should send commands to the API, and the API should validate ownership, apply the change, persist it, and broadcast a workspace event.
+The client should not write arbitrary database-shaped objects. It should send commands to the API, and the API should validate ownership, apply the change, persist it, and broadcast a canvas event.
 
 Example commands:
 
-- `workspace.create`
-- `workspace.rename`
+- `canvas.create`
+- `canvas.rename`
 - `node.createAtPosition`
 - `node.createFromSelection`
 - `node.updatePosition`
@@ -347,32 +347,32 @@ Example commands:
 
 Example events:
 
-- `workspace.snapshot.loaded`
-- `workspace.version.updated`
-- `workspace.node.created`
-- `workspace.node.updated`
-- `workspace.node.deleted`
-- `workspace.edge.created`
-- `workspace.edge.deleted`
-- `workspace.message.created`
-- `workspace.message.updated`
-- `workspace.message.delta`
-- `workspace.message.failed`
+- `canvas.snapshot.loaded`
+- `canvas.version.updated`
+- `canvas.node.created`
+- `canvas.node.updated`
+- `canvas.node.deleted`
+- `canvas.edge.created`
+- `canvas.edge.deleted`
+- `canvas.message.created`
+- `canvas.message.updated`
+- `canvas.message.delta`
+- `canvas.message.failed`
 
 Each client-originated command should include a `clientMutationId`. When the server broadcasts the resulting event, the originating window can use that id to reconcile optimistic UI state without applying the same change twice.
 
-## Workspace Session Model
+## Canvas Session Model
 
-Use the server as the authority for workspace state.
+Use the server as the authority for canvas state.
 
 Initial load:
 
 ```text
-1. Web app requests GET /workspaces/:workspaceId/snapshot.
-2. API verifies the authenticated user owns the workspace.
-3. Web app acquires a workspace lease for a tab-scoped session id.
+1. Web app requests GET /canvases/:canvasId/snapshot.
+2. API verifies the authenticated user owns the canvas.
+3. Web app acquires a canvas lease for a tab-scoped session id.
 4. If acquired, API returns the current lease epoch.
-5. Web app loads workspace metadata, nodes, edges, messages, and current workspace version.
+5. Web app loads canvas metadata, nodes, edges, messages, and current canvas version.
 ```
 
 Editing flow:
@@ -383,17 +383,17 @@ Editing flow:
 3. Web app sends a lease-aware HTTP command to the API.
 4. API validates ownership, lease epoch, and command shape.
 5. API writes the change to Postgres.
-6. API increments the workspace version.
-7. API returns the resulting workspace events, or streams them for assistant replies.
+6. API increments the canvas version.
+7. API returns the resulting canvas events, or streams them for assistant replies.
 8. The active client reconciles optimistic state with the returned events.
 ```
 
 Conflict handling:
 
-- Each workspace has exactly one active editing client at a time.
+- Each canvas has exactly one active editing client at a time.
 - A newer client may take over the lease immediately.
 - A displaced client becomes stale and blocked until it can reacquire and refetch the snapshot.
-- Each workspace has a monotonic `version`.
+- Each canvas has a monotonic `version`.
 - Offline editing is not supported in the first version.
 
 This approach is enough for one user moving between windows, tabs, or devices and avoids the complexity of live multi-client merge behavior until true multi-user collaboration exists.
@@ -409,20 +409,20 @@ Flow:
 2. Web app sends `message.sendUserMessage` to the HTTP streaming route together with the current lease epoch.
 3. API creates a complete user message.
 4. API creates an assistant message with `status = streaming` and empty content.
-5. API streams `workspace.message.created`.
+5. API streams `canvas.message.created`.
 6. API builds model context from the node's message history and source quote metadata.
 7. API calls the configured AI provider with streaming enabled.
 8. For each received chunk:
    - append chunk to an in-memory buffer
-   - stream `workspace.message.delta`
+   - stream `canvas.message.delta`
 9. When generation completes:
    - persist the full assistant message content
    - mark status as `complete`
-   - broadcast `workspace.message.updated`
+   - broadcast `canvas.message.updated`
 10. If generation fails:
    - mark the assistant message as `failed`
    - store a concise error message
-   - broadcast `workspace.message.failed`
+   - broadcast `canvas.message.failed`
 ```
 
 Streaming deltas do not need to be written to the database one token at a time. Only the final assistant content must be persisted. This keeps the database clean while still allowing every open window to watch the same reply stream.
@@ -435,10 +435,10 @@ Suggested structure:
 
 ```text
 apps/web/src/app
-  Authentication routes and workspace pages.
+  Authentication routes and canvas pages.
 
-apps/web/src/features/workspaces
-  Workspace list, creation, renaming, and navigation.
+apps/web/src/features/canvases
+  Canvas list, creation, renaming, and navigation.
 
 apps/web/src/features/canvas
   React Flow canvas, node rendering, edge rendering, selection toolbar, pan/zoom behavior.
@@ -446,8 +446,8 @@ apps/web/src/features/canvas
 apps/web/src/features/node-chat
   Message list, composer, streaming assistant display, retry UI.
 
-apps/web/src/features/workspace-session
-  Workspace lease lifecycle, optimistic HTTP mutation flow, stale-blocking recovery, and streamed assistant handling.
+apps/web/src/features/canvas-session
+  Canvas lease lifecycle, optimistic HTTP mutation flow, stale-blocking recovery, and streamed assistant handling.
 
 apps/web/src/shared
   UI primitives, hooks, formatting, utilities.
@@ -465,59 +465,59 @@ Responsibilities:
 
 - Public login/register routes.
 - Authenticated shell layout.
-- Workspace list page.
-- Workspace canvas page.
+- Canvas list page.
+- Canvas page.
 - Route-level loading and error boundaries.
 
 Does not own:
 
 - Canvas state mutation logic.
-- Workspace event application and optimistic mutation reconciliation.
+- Canvas event application and optimistic mutation reconciliation.
 - AI message sending logic.
 
 Primary interfaces:
 
-- Renders `WorkspaceListPage`.
-- Renders `WorkspaceCanvasPage` with the route `workspaceId`.
+- Renders `CanvasListPage`.
+- Renders `CanvasSurfacePage` with the route `canvasId`.
 
-#### `features/workspaces`
+#### `features/canvases`
 
-Owns workspace-level product flows.
+Owns canvas-level product flows.
 
 Responsibilities:
 
-- Fetching the user's workspace list.
-- Creating a workspace.
-- Renaming and archiving a workspace.
-- Choosing the initial workspace after login.
+- Fetching the user's canvas list.
+- Creating a canvas.
+- Renaming and archiving a canvas.
+- Choosing the initial canvas after login.
 
 Primary interfaces:
 
-- `useWorkspaces()`
-- `createWorkspace(input)`
-- `renameWorkspace(input)`
-- `archiveWorkspace(input)`
+- `useCanvases()`
+- `createCanvas(input)`
+- `renameCanvas(input)`
+- `archiveCanvas(input)`
 
-The module should not know how nodes, edges, or messages are rendered inside a workspace.
+The module should not know how nodes, edges, or messages are rendered inside a canvas.
 
-#### `features/workspace-session`
+#### `features/canvas-session`
 
-Owns the lifecycle of one opened workspace.
+Owns the lifecycle of one opened canvas.
 
 Responsibilities:
 
-- Loading the initial workspace snapshot.
-- Creating the in-memory workspace store from the snapshot.
-- Acquiring the workspace lease before enabling editing.
+- Loading the initial canvas snapshot.
+- Creating the in-memory canvas store from the snapshot.
+- Acquiring the canvas lease before enabling editing.
 - Polling for recovery and refetching the snapshot after stale takeover or network recovery.
-- Exposing the live workspace state to canvas and chat modules.
+- Exposing the live canvas state to canvas and chat modules.
 
 Primary interfaces:
 
-- `WorkspaceSessionProvider`
-- `useWorkspaceSession()`
-- `useWorkspaceState(selector)`
-- `dispatchWorkspaceCommand(command)`
+- `CanvasSessionProvider`
+- `useCanvasSession()`
+- `useCanvasState(selector)`
+- `dispatchCanvasCommand(command)`
 
 This module is the bridge between snapshot loading, lease state, HTTP mutation flows, streaming replies, and UI state.
 
@@ -569,15 +569,15 @@ Primary interfaces:
 
 This module should not know about React Flow internals. It reports branchable selections to the canvas module through callbacks.
 
-#### `features/workspace-session`
+#### `features/canvas-session`
 
-Owns the browser workspace lease client and mutation session state.
+Owns the browser canvas lease client and mutation session state.
 
 Responsibilities:
 
-- Acquiring, renewing, and releasing workspace leases.
+- Acquiring, renewing, and releasing canvas leases.
 - Polling for recovery when the client becomes stale.
-- Sending workspace commands over HTTP.
+- Sending canvas commands over HTTP.
 - Streaming assistant replies over HTTP.
 - Reporting `active`, `recovering`, and `blocked-stale` state changes to the rest of the product.
 
@@ -614,22 +614,22 @@ Shared code should not import feature modules.
 State responsibilities:
 
 - TanStack Query handles initial snapshots and HTTP mutations.
-- A small workspace store holds the live canvas state after snapshot load.
-- The workspace session feature applies optimistic changes and server events to that store.
-- React Flow renders controlled nodes and edges from the workspace store.
+- A small canvas store holds the live canvas state after snapshot load.
+- The canvas session feature applies optimistic changes and server events to that store.
+- React Flow renders controlled nodes and edges from the canvas store.
 
 The canvas node component should include a message list and composer, but the logic for sending messages should stay in the node-chat feature so it can be tested separately from React Flow.
 
 ### Frontend Data Flow
 
-Opening a workspace:
+Opening a canvas:
 
 ```text
-Workspace route
-  -> WorkspaceSessionProvider
-  -> GET workspace snapshot
-  -> initialize workspace store
-  -> acquire workspace lease
+Canvas route
+  -> CanvasSessionProvider
+  -> GET canvas snapshot
+  -> initialize canvas store
+  -> acquire canvas lease
   -> render CanvasView
 ```
 
@@ -638,10 +638,10 @@ Dragging a node:
 ```text
 React Flow node drag
   -> canvas module creates node.updatePosition command
-  -> workspace-session applies optimistic position update
+  -> canvas-session applies optimistic position update
   -> session client sends HTTP command
-  -> API persists and returns workspace.node.updated
-  -> workspace-session reconciles optimistic state with server event
+  -> API persists and returns canvas.node.updated
+  -> canvas-session reconciles optimistic state with server event
 ```
 
 Sending a message:
@@ -651,7 +651,7 @@ MessageComposer submit
   -> node-chat creates message.sendUserMessage command
   -> session client sends HTTP streaming request
   -> API creates user and assistant messages
-  -> workspace-session receives streamed message events and deltas
+  -> canvas-session receives streamed message events and deltas
   -> NodeChatPanel renders the stream
 ```
 
@@ -678,8 +678,8 @@ apps/api/src/http
 apps/api/src/auth
   Session verification and current-user extraction.
 
-apps/api/src/workspaces
-  Workspace queries, snapshot endpoint, workspace commands.
+apps/api/src/canvases
+  Canvas queries, snapshot endpoint, canvas commands.
 
 apps/api/src/canvas
   Node and edge commands.
@@ -688,7 +688,7 @@ apps/api/src/messages
   User message creation, assistant retry, message persistence.
 
 apps/api/src/leases
-  Workspace lease acquisition, renewal, release, and recovery priority logic.
+  Canvas lease acquisition, renewal, release, and recovery priority logic.
 
 apps/api/src/ai
   Provider abstraction, context building, stream handling.
@@ -696,7 +696,7 @@ apps/api/src/ai
 
 Backend rules:
 
-- Every workspace command must verify `workspace.ownerId === currentUser.id`.
+- Every canvas command must verify `canvas.ownerId === currentUser.id`.
 - All writes go through command handlers, not direct route-level database mutations.
 - Command handlers return the persisted result and the event or events to return or stream.
 - The AI gateway is the only code allowed to call external model providers.
@@ -712,7 +712,7 @@ Responsibilities:
 
 - Registering plugins.
 - Registering HTTP routes.
-- Registering workspace lease, mutation, and streaming routes.
+- Registering canvas lease, mutation, and streaming routes.
 - Attaching request ids and logging.
 - Converting thrown domain errors into HTTP responses.
 
@@ -730,29 +730,29 @@ Responsibilities:
 - Tracking identity providers in a way that can accept OAuth providers later.
 - Loading the current user.
 - Exposing `requireUser(request)`.
-- Providing authorization helpers such as `requireWorkspaceOwner(userId, workspaceId)`.
+- Providing authorization helpers such as `requireCanvasOwner(userId, canvasId)`.
 
 The rest of the backend should depend on this module for identity checks instead of parsing auth details directly.
 
-#### `workspaces`
+#### `canvases`
 
-Owns workspace queries and workspace-level commands.
+Owns canvas queries and canvas-level commands.
 
 Responsibilities:
 
-- Listing workspaces for a user.
-- Creating a workspace with an initial root node when appropriate.
-- Renaming and archiving a workspace.
-- Loading a full workspace snapshot.
-- Incrementing the workspace version inside write transactions.
+- Listing canvases for a user.
+- Creating a canvas with an initial root node when appropriate.
+- Renaming and archiving a canvas.
+- Loading a full canvas snapshot.
+- Incrementing the canvas version inside write transactions.
 
 Primary services:
 
-- `listWorkspaces(userId)`
-- `createWorkspace(userId, input)`
-- `renameWorkspace(userId, input)`
-- `archiveWorkspace(userId, input)`
-- `getWorkspaceSnapshot(userId, workspaceId)`
+- `listCanvases(userId)`
+- `createCanvas(userId, input)`
+- `renameCanvas(userId, input)`
+- `archiveCanvas(userId, input)`
+- `getCanvasSnapshot(userId, canvasId)`
 
 #### `canvas`
 
@@ -820,11 +820,11 @@ This module should expose a provider-neutral stream interface so the app can cha
 
 #### `leases`
 
-Owns workspace lease coordination and active-session enforcement.
+Owns canvas lease coordination and active-session enforcement.
 
 Responsibilities:
 
-- Acquiring, renewing, and releasing one active editing lease per workspace.
+- Acquiring, renewing, and releasing one active editing lease per canvas.
 - Recording waiter priority after takeover.
 - Determining when a blocked client may recover.
 - Rejecting stale writers through lease epoch validation.
@@ -836,7 +836,7 @@ Owns event schemas and event construction.
 Responsibilities:
 
 - Defining event payload shapes.
-- Creating versioned workspace events.
+- Creating versioned canvas events.
 - Validating outbound events in tests.
 - Keeping event names stable.
 
@@ -868,16 +868,16 @@ Example: create a follow-up from selected assistant text.
 ```text
 HTTP command envelope
   -> lease validation
-  -> auth.requireWorkspaceOwner
+  -> auth.requireCanvasOwner
   -> canvas.createNodeFromSelection
   -> database transaction:
        validate source node and source message
        create child canvas node
        create canvas edge
-       increment workspace version
+       increment canvas version
   -> events.createNodeCreatedEvent
   -> events.createEdgeCreatedEvent
-  -> HTTP response returns workspace events
+  -> HTTP response returns canvas events
 ```
 
 Example: send a message and stream an assistant reply.
@@ -889,7 +889,7 @@ HTTP command envelope
   -> database transaction:
        create user message
        create assistant placeholder
-       increment workspace version
+       increment canvas version
   -> stream message.created events
   -> ai.streamAssistantReply
   -> for each chunk:
@@ -911,7 +911,7 @@ Client behavior:
 Server behavior:
 
 - Return typed validation errors for malformed commands.
-- Return authorization errors when the user does not own a workspace.
+- Return authorization errors when the user does not own a canvas.
 - Store concise AI error messages on failed assistant messages.
 - Log provider errors with request ids, but do not expose secrets or raw provider payloads to the client.
 
@@ -922,12 +922,12 @@ Detailed test quality rules live in `docs/testing-standards.md`. The architectur
 Use tests at the boundaries where mistakes are most likely:
 
 - Domain tests for command validation and event reducers.
-- Database integration tests for workspace ownership, node creation, branch creation, and message persistence.
+- Database integration tests for canvas ownership, node creation, branch creation, and message persistence.
 - API tests for snapshot loading and command endpoints.
 - Lease and HTTP route tests for takeover, stale rejection, and streamed replies.
 - AI gateway tests with a fake streaming provider.
 - Frontend component tests for node composer, message streaming display, and selection follow-up creation.
-- A Playwright smoke test for logging in, creating a workspace, asking a question, branching from selected text, and verifying takeover or stale blocking across two browser contexts.
+- A Playwright smoke test for logging in, creating a canvas, asking a question, branching from selected text, and verifying takeover or stale blocking across two browser contexts.
 
 Database-backed tests must be isolated from local development data.
 
