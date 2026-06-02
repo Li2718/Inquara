@@ -19,6 +19,7 @@ import {
 import { formatDate } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { interpolate, type AppMessages } from "../../shared/messages";
+import { getWorkspaceDeleteDialogOpeningState } from "./workspaceDeleteDialogState";
 
 type WorkspaceSidebarProps = {
   currentWorkspaceId: string;
@@ -86,6 +87,13 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
     setRenamingId(workspace.id);
     setRenameTitle(workspace.title);
     setError("");
+  }
+
+  function openDeleteDialog(workspace: Workspace) {
+    const nextState = getWorkspaceDeleteDialogOpeningState(workspace);
+    setActiveMenuId(nextState.activeMenuId);
+    setIsDeleting(nextState.isDeleting);
+    setDeletingWorkspace(nextState.deletingWorkspace);
   }
 
   async function submitRename(event: FormEvent<HTMLFormElement>, workspace: Workspace) {
@@ -191,7 +199,7 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
               messages={messages}
               renamingId={renamingId}
               renameTitle={renameTitle}
-              setDeletingWorkspace={setDeletingWorkspace}
+              openDeleteDialog={openDeleteDialog}
               setRenameTitle={setRenameTitle}
               setRenamingId={setRenamingId}
               submitRename={submitRename}
@@ -224,9 +232,9 @@ function WorkspaceSidebarItem({
   onWorkspaceNavigate,
   locale,
   messages,
+  openDeleteDialog,
   renamingId,
   renameTitle,
-  setDeletingWorkspace,
   setRenameTitle,
   setRenamingId,
   submitRename,
@@ -237,11 +245,11 @@ function WorkspaceSidebarItem({
   onMenuToggle(activeMenuId: string | null): void;
   onRename(workspace: Workspace): void;
   onWorkspaceNavigate(targetWorkspaceId: string, options?: { replace?: boolean }): Promise<void>;
+  openDeleteDialog(workspace: Workspace): void;
   locale: ReturnType<typeof useLocale>["locale"];
   messages: AppMessages;
   renamingId: string | null;
   renameTitle: string;
-  setDeletingWorkspace(workspace: Workspace): void;
   setRenameTitle(title: string): void;
   setRenamingId(workspaceId: string | null): void;
   submitRename(event: FormEvent<HTMLFormElement>, workspace: Workspace): Promise<void>;
@@ -305,8 +313,7 @@ function WorkspaceSidebarItem({
             <PopupMenuItem
               tone="danger"
               onClick={() => {
-                onMenuToggle(null);
-                setDeletingWorkspace(workspace);
+                openDeleteDialog(workspace);
               }}
             >
               {messages.common.delete}
