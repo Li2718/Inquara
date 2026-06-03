@@ -6,7 +6,9 @@ export type StageViewport = {
 
 export type StageRect = {
   left: number;
+  top: number;
   width: number;
+  height: number;
 };
 
 export function compensateViewportForStageRect({
@@ -18,10 +20,13 @@ export function compensateViewportForStageRect({
   stage: StageRect;
   viewport: StageViewport;
 }): StageViewport {
-  const previousCenter = previousStage.left + previousStage.width / 2;
-  const center = stage.left + stage.width / 2;
+  const previousCenterX = previousStage.width / 2;
+  const previousCenterY = previousStage.height / 2;
+  const centerX = stage.width / 2;
+  const centerY = stage.height / 2;
   return {
     ...viewport,
-    x: viewport.x - (center - previousCenter)
+    x: viewport.x + (centerX - previousCenterX),
+    y: viewport.y + (centerY - previousCenterY)
   };
 }

@@ -32,6 +32,7 @@ type CanvasSidebarProps = {
 };
 
 let canvasListCache: Canvas[] | null = null;
+const CANVAS_SIDEBAR_TRANSITION_MS = 220;
 
 export function CanvasSidebar({
   updatedCanvas,
@@ -51,6 +52,17 @@ export function CanvasSidebar({
   const [deletingCanvas, setDeletingCanvas] = useState<Canvas | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsClosing(false);
+      return;
+    }
+    setIsClosing(true);
+    const timeout = window.setTimeout(() => setIsClosing(false), CANVAS_SIDEBAR_TRANSITION_MS);
+    return () => window.clearTimeout(timeout);
+  }, [isOpen]);
 
   useEffect(() => {
     void loadCanvases({ showLoading: canvasListCache === null });
@@ -144,7 +156,7 @@ export function CanvasSidebar({
   }
 
   return (
-    <aside className="canvas-sidebar" data-open={isOpen} aria-label={copy.canvasNavigation}>
+    <aside className="canvas-sidebar" data-open={isOpen} data-closing={isClosing} aria-label={copy.canvasNavigation}>
       <button
         type="button"
         className="canvas-sidebar-morph-button"

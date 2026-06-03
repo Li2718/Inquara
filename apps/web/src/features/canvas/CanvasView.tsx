@@ -7,6 +7,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useStoreApi,
   useViewport,
   type Edge,
   type Node,
@@ -86,7 +87,6 @@ function CanvasFlow({
   const isBlocked = state.leaseState !== "active";
   const isViewportBlocked = state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
   const { screenToFlowPosition } = useReactFlow();
-  const viewport = useViewport();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
     () => ({
@@ -378,8 +378,6 @@ function CanvasFlow({
           />
           <CanvasStageLayoutCompensator
             isEnabled={!isPreparingCanvasSwitch && !isShowingStaleSnapshot}
-            isSidebarOpen={isSidebarOpen}
-            viewport={viewport}
           />
         </ReactFlow>
       </CanvasViewportProvider>
@@ -589,44 +587,105 @@ function CanvasViewportControls({
 }
 
 function CanvasStageLayoutCompensator({
-  isEnabled,
-  isSidebarOpen,
-  viewport
+  isEnabled
 }: {
   isEnabled: boolean;
-  isSidebarOpen: boolean;
-  viewport: { x: number; y: number; zoom: number };
 }) {
   const { setViewport } = useReactFlow();
+  const store = useStoreApi();
+  const isEnabledRef = useRef(isEnabled);
   const previousStageRef = useRef<StageRect | null>(null);
-  const viewportRef = useRef(viewport);
+  const setViewportRef = useRef(setViewport);
 
   useEffect(() => {
-    viewportRef.current = viewport;
-  }, [viewport]);
+    isEnabledRef.current = isEnabled;
+    if (!isEnabled) {
+      previousStageRef.current = null;
+    }
+  }, [isEnabled]);
+
+  useEffect(() => {
+    setViewportRef.current = setViewport;
+  }, [setViewport]);
 
   useLayoutEffect(() => {
-    const stage = document.querySelector(".canvas-stage");
-    const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
-    if (!stageRect) return;
-
-    const currentStage = { left: stageRect.left, width: stageRect.width };
-    const previousStage = previousStageRef.current;
-    previousStageRef.current = currentStage;
-    if (!isEnabled || !previousStage || canvasStageRectsEqual(previousStage, currentStage)) return;
-
-    const nextViewport = compensateViewportForStageRect({
-      previousStage,
-      stage: currentStage,
-      viewport: viewportRef.current
+    let frame = 0;
+    let observedStage: HTMLElement | null = null;
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
     });
-    viewportRef.current = nextViewport;
-    void setViewport(nextViewport, { duration: 0 });
-  }, [isEnabled, isSidebarOpen, setViewport, viewport]);
+
+    const observeStage = (stage: HTMLElement) => {
+      if (observedStage === stage) return;
+      if (observedStage) {
+        resizeObserver.unobserve(observedStage);
+      }
+      observedStage = stage;
+      resizeObserver.observe(stage);
+    };
+
+    const measure = () => {
+      const stage = document.querySelector(".canvas-stage");
+      if (!(stage instanceof HTMLElement)) return;
+      observeStage(stage);
+      const stageRect = stage.getBoundingClientRect();
+      const currentStage = {
+        height: stageRect.height,
+        left: stageRect.left,
+        top: stageRect.top,
+        width: stageRect.width
+      };
+      if (!isEnabledRef.current) {
+        previousStageRef.current = null;
+        return;
+      }
+      const previousStage = previousStageRef.current;
+      previousStageRef.current = currentStage;
+      if (!previousStage || canvasStageRectsEqual(previousStage, currentStage)) return;
+      const [x, y, zoom] = store.getState().transform;
+
+      const nextViewport = compensateViewportForStageRect({
+        previousStage,
+        stage: currentStage,
+        viewport: { x, y, zoom }
+      });
+      store.setState({ transform: [nextViewport.x, nextViewport.y, nextViewport.zoom] });
+      void setViewportRef.current(nextViewport, { duration: 0 });
+      applyViewportTransformToDom(nextViewport);
+    };
+
+    const trackStageLayout = () => {
+      measure();
+      frame = window.requestAnimationFrame(trackStageLayout);
+    };
+    const measureStageLayout = () => {
+      measure();
+    };
+
+    measure();
+    frame = window.requestAnimationFrame(trackStageLayout);
+    window.addEventListener("resize", measureStageLayout);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measureStageLayout);
+    };
+  }, [store]);
 
   return null;
 }
 
+function applyViewportTransformToDom(viewport: { x: number; y: number; zoom: number }) {
+  const viewportElement = document.querySelector(".react-flow__viewport");
+  if (!(viewportElement instanceof HTMLElement)) return;
+  viewportElement.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
+}
+
 function canvasStageRectsEqual(left: StageRect, right: StageRect): boolean {
-  return Math.abs(left.left - right.left) < 0.5 && Math.abs(left.width - right.width) < 0.5;
+  return (
+    Math.abs(left.left - right.left) < 0.5 &&
+    Math.abs(left.top - right.top) < 0.5 &&
+    Math.abs(left.width - right.width) < 0.5 &&
+    Math.abs(left.height - right.height) < 0.5
+  );
 }
