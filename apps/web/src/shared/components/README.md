@@ -145,6 +145,7 @@ Implemented shared components:
 - `ui/icons.tsx` provides the shared routine product icon source for current sidebar, menu, check, plus, and reset-view icons. Prefer this file before adding inline SVG or text-symbol icons in feature code.
 - `product/ErrorScreen.tsx` provides the shared product error fallback used by app-level and global Next.js error boundaries.
 - `product/clientFatalErrorFallback.ts` provides the pre-hydration client fatal error fallback script for uncaught browser runtime errors that escape React/Next.js error boundaries.
+- `domain/NodeComposerFrame.tsx` provides the shared node composer visual frame used by canvas nodes and new-canvas morph surfaces so input and send controls keep identical dimensions and styling across handoffs.
 - `admin/AdminShell.tsx` provides the shared admin surface frame and navigation for administrator pages.
 
 The project currently has several feature-owned UI pieces that may be promoted into shared components as reuse becomes clear:

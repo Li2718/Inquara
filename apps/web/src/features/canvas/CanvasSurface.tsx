@@ -5,6 +5,7 @@ import React from "react";
 import { useEffect, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { AppTopBar } from "../../shared/components/chrome";
+import { NodeComposerDisplay, NodeComposerFrame, NodeComposerSubmit } from "../../shared/components/domain";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { CanvasLeaseBlocker } from "../canvas-session/CanvasLeaseBlocker";
 import { CanvasSessionProvider, useCanvasSession } from "../canvas-session/CanvasSessionProvider";
@@ -246,10 +247,12 @@ export function NewCanvasMorphOverlay({ content, sendLabel }: { content: string;
       <div className="new-canvas-morph-node">
         <div className="new-canvas-morph-node-header" />
         <div className="new-canvas-morph-node-body" />
-        <div className="new-canvas-morph-composer">
-          <div className="new-canvas-morph-input">{content}</div>
-          <div className="new-canvas-morph-send">{sendLabel}</div>
-        </div>
+        <NodeComposerFrame className="new-canvas-morph-composer">
+          <NodeComposerDisplay>{content}</NodeComposerDisplay>
+          <NodeComposerSubmit disabled tabIndex={-1}>
+            {sendLabel}
+          </NodeComposerSubmit>
+        </NodeComposerFrame>
       </div>
     </div>
   );

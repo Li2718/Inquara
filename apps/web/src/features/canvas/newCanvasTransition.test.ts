@@ -72,6 +72,7 @@ describe("new canvas transition", () => {
     const markup = renderToStaticMarkup(createElement(NewCanvasMorphOverlay, { content: "First question", sendLabel: "Send" }));
 
     expect(markup).toContain("Send");
-    expect(markup).toContain("new-canvas-morph-send");
+    expect(markup).toContain("node-composer-frame-submit");
+    expect(markup).not.toContain("new-canvas-morph-send");
   });
 });

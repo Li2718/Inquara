@@ -3,7 +3,7 @@
 import type { Canvas } from "@inquara/domain";
 import { FormEvent, KeyboardEvent, useEffect, useState } from "react";
 import { apiJson } from "../../shared/api";
-import { Button } from "../../shared/components/ui";
+import { NodeComposerFrame, NodeComposerSubmit, NodeComposerTextarea } from "../../shared/components/domain";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import {
   clearNewCanvasDraft,
@@ -68,10 +68,9 @@ export function NewCanvasEntry({
   }
 
   return (
-    <form className="new-canvas-starter" data-state={isSubmitting ? "morphing" : "ready"} onSubmit={submit}>
-      <div className="new-canvas-starter-inner">
-        <textarea
-          className="new-canvas-starter-input"
+    <div className="new-canvas-starter" data-state={isSubmitting ? "morphing" : "ready"}>
+      <NodeComposerFrame className="new-canvas-starter-inner" mode="starter" onSubmit={submit}>
+        <NodeComposerTextarea
           value={content}
           onChange={event => updateContent(event.target.value)}
           placeholder={messages.newCanvasEntry.placeholder}
@@ -80,11 +79,11 @@ export function NewCanvasEntry({
           autoFocus
           onKeyDown={handleStarterKeyDown}
         />
-        <Button type="submit" disabled={!content.trim() || isSubmitting}>
+        <NodeComposerSubmit disabled={!content.trim() || isSubmitting}>
           {messages.chat.send}
-        </Button>
-      </div>
+        </NodeComposerSubmit>
+      </NodeComposerFrame>
       {error ? <p className="error-text">{error}</p> : null}
-    </form>
+    </div>
   );
 }
