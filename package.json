@@ -28,7 +28,6 @@
     "lint:fix": "eslint . --fix --cache --cache-location ./.cache/eslint/",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
-    "test:unit": "vitest run",
     "test:watch": "vitest",
     "verify:debug-free": "node scripts/verify-debug-free.mjs",
     "db:generate": "node scripts/run-workspace.mjs @inquara/db generate",
