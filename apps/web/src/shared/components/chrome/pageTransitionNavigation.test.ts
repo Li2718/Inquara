@@ -47,7 +47,7 @@ describe("page transition navigation", () => {
 
     const wrapped = await navigateWithPageTransition(
       { push: vi.fn(), replace },
-      "/workspaces/workspace-1",
+      "/canvases/canvas-1",
       {
         replace: true,
         document: {} as Document,
@@ -56,7 +56,7 @@ describe("page transition navigation", () => {
     );
 
     expect(wrapped).toBe(false);
-    expect(replace).toHaveBeenCalledWith("/workspaces/workspace-1", undefined);
+    expect(replace).toHaveBeenCalledWith("/canvases/canvas-1", undefined);
   });
 
   it("falls back to plain navigation when reduced motion is requested", () => {

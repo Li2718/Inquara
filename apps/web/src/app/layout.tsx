@@ -10,7 +10,7 @@ import "../shared/styles.css";
 
 export const metadata: Metadata = {
   title: "Inquara",
-  description: "AI canvas workspace",
+  description: "AI canvas",
   icons: {
     icon: [{ url: "/favicon-brand.svg", type: "image/svg+xml" }],
     shortcut: ["/favicon-brand.svg"]

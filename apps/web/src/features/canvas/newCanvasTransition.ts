@@ -1,26 +1,26 @@
-import type { WorkspaceSnapshot } from "@inquara/domain";
+import type { CanvasSnapshot } from "@inquara/domain";
 
 export type NewCanvasTransitionState =
   | {
       content: "";
       status: "idle";
-      workspaceId: null;
+      canvasId: null;
     }
   | {
+      canvasId: string;
       content: string;
       status: "morphing";
-      workspaceId: string;
     };
 
 export type NewCanvasTransitionEvent =
   | {
+      canvasId: string;
       content: string;
       type: "submitted";
-      workspaceId: string;
     }
   | {
+      canvasId: string;
       type: "starterMessageVisible";
-      workspaceId: string;
     }
   | {
       type: "reset";
@@ -29,7 +29,7 @@ export type NewCanvasTransitionEvent =
 export const initialNewCanvasTransitionState: NewCanvasTransitionState = {
   content: "",
   status: "idle",
-  workspaceId: null
+  canvasId: null
 };
 
 export function advanceNewCanvasTransition(
@@ -38,14 +38,14 @@ export function advanceNewCanvasTransition(
 ): NewCanvasTransitionState {
   if (event.type === "submitted") {
     return {
+      canvasId: event.canvasId,
       content: event.content,
-      status: "morphing",
-      workspaceId: event.workspaceId
+      status: "morphing"
     };
   }
 
   if (event.type === "starterMessageVisible") {
-    if (state.status !== "morphing" || state.workspaceId !== event.workspaceId) return state;
+    if (state.status !== "morphing" || state.canvasId !== event.canvasId) return state;
     return initialNewCanvasTransitionState;
   }
 
@@ -55,14 +55,14 @@ export function advanceNewCanvasTransition(
 }
 
 export function hasVisibleStarterMessage(
-  snapshot: WorkspaceSnapshot | null,
-  starter: { content: string; workspaceId: string | null }
+  snapshot: CanvasSnapshot | null,
+  starter: { canvasId: string | null; content: string }
 ): boolean {
-  if (!snapshot || !starter.workspaceId) return false;
-  if (snapshot.workspace.id !== starter.workspaceId) return false;
+  if (!snapshot || !starter.canvasId) return false;
+  if (snapshot.canvas.id !== starter.canvasId) return false;
   return snapshot.messages.some(
     message =>
-      message.workspaceId === starter.workspaceId &&
+      message.canvasId === starter.canvasId &&
       message.role === "user" &&
       message.status === "complete" &&
       message.content === starter.content

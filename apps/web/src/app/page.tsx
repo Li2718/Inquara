@@ -1,5 +1,5 @@
-import { WorkspaceListPage } from "../features/workspaces/WorkspaceListPage";
+import { CanvasListPage } from "../features/canvases/CanvasListPage";
 
 export default function Page() {
-  return <WorkspaceListPage />;
+  return <CanvasListPage />;
 }

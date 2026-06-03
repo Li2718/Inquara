@@ -77,7 +77,7 @@ English source copy must be written first for new product UI. The source copy sh
 
 Acceptable exceptions are:
 
-- user-created workspace, node, account, or database record names
+- user-created canvas, node, account, or database record names
 - IDs, slugs, enum values, model names, provider names, and other technical identifiers
 - raw external API error messages when preserving the provider response is the intended behavior
 - debug-only labels inside development-only debug files

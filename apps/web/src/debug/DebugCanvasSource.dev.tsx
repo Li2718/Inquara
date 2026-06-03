@@ -9,13 +9,13 @@ export function DebugCanvasSource(props: DebugCanvasSourceProps) {
 
   useEffect(() => {
     setDebugPageSnapshot(props, ownerRef.current);
-  }, [props.leaseState, props.pendingClientMutationCount, props.snapshot, props.workspaceId]);
+  }, [props.leaseState, props.pendingClientMutationCount, props.snapshot, props.canvasId]);
 
   useEffect(
     () => () => {
-      clearDebugPageSnapshot(props.workspaceId, ownerRef.current, { defer: true });
+      clearDebugPageSnapshot(props.canvasId, ownerRef.current, { defer: true });
     },
-    [props.workspaceId]
+    [props.canvasId]
   );
 
   return null;

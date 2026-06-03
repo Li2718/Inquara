@@ -11,7 +11,7 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
-CREATE TABLE "workspaces" (
+CREATE TABLE "canvases" (
     "id" TEXT NOT NULL,
     "owner_id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -20,13 +20,13 @@ CREATE TABLE "workspaces" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "archived_at" TIMESTAMP(3),
 
-    CONSTRAINT "workspaces_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "canvases_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "canvas_nodes" (
     "id" TEXT NOT NULL,
-    "workspace_id" TEXT NOT NULL,
+    "canvas_id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "x" DOUBLE PRECISION NOT NULL,
     "y" DOUBLE PRECISION NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE "canvas_nodes" (
 -- CreateTable
 CREATE TABLE "canvas_edges" (
     "id" TEXT NOT NULL,
-    "workspace_id" TEXT NOT NULL,
+    "canvas_id" TEXT NOT NULL,
     "source_node_id" TEXT NOT NULL,
     "target_node_id" TEXT NOT NULL,
     "source_message_id" TEXT,
@@ -62,7 +62,7 @@ CREATE TABLE "canvas_edges" (
 -- CreateTable
 CREATE TABLE "node_messages" (
     "id" TEXT NOT NULL,
-    "workspace_id" TEXT NOT NULL,
+    "canvas_id" TEXT NOT NULL,
     "node_id" TEXT NOT NULL,
     "role" TEXT NOT NULL,
     "content" TEXT NOT NULL,
@@ -79,25 +79,25 @@ CREATE TABLE "node_messages" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE INDEX "workspaces_owner_id_updated_at_idx" ON "workspaces"("owner_id", "updated_at");
+CREATE INDEX "canvases_owner_id_updated_at_idx" ON "canvases"("owner_id", "updated_at");
 
 -- CreateIndex
-CREATE INDEX "canvas_nodes_workspace_id_idx" ON "canvas_nodes"("workspace_id");
+CREATE INDEX "canvas_nodes_canvas_id_idx" ON "canvas_nodes"("canvas_id");
 
 -- CreateIndex
-CREATE INDEX "canvas_edges_workspace_id_idx" ON "canvas_edges"("workspace_id");
+CREATE INDEX "canvas_edges_canvas_id_idx" ON "canvas_edges"("canvas_id");
 
 -- CreateIndex
 CREATE INDEX "node_messages_node_id_created_at_idx" ON "node_messages"("node_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "node_messages_workspace_id_created_at_idx" ON "node_messages"("workspace_id", "created_at");
+CREATE INDEX "node_messages_canvas_id_created_at_idx" ON "node_messages"("canvas_id", "created_at");
 
 -- AddForeignKey
-ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvases" ADD CONSTRAINT "canvases_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas_nodes" ADD CONSTRAINT "canvas_nodes_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas_nodes" ADD CONSTRAINT "canvas_nodes_canvas_id_fkey" FOREIGN KEY ("canvas_id") REFERENCES "canvases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "canvas_nodes" ADD CONSTRAINT "canvas_nodes_parent_node_id_fkey" FOREIGN KEY ("parent_node_id") REFERENCES "canvas_nodes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -109,7 +109,7 @@ ALTER TABLE "canvas_nodes" ADD CONSTRAINT "canvas_nodes_source_node_id_fkey" FOR
 ALTER TABLE "canvas_nodes" ADD CONSTRAINT "canvas_nodes_source_message_id_fkey" FOREIGN KEY ("source_message_id") REFERENCES "node_messages"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas_edges" ADD CONSTRAINT "canvas_edges_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas_edges" ADD CONSTRAINT "canvas_edges_canvas_id_fkey" FOREIGN KEY ("canvas_id") REFERENCES "canvases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "canvas_edges" ADD CONSTRAINT "canvas_edges_source_node_id_fkey" FOREIGN KEY ("source_node_id") REFERENCES "canvas_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -121,7 +121,7 @@ ALTER TABLE "canvas_edges" ADD CONSTRAINT "canvas_edges_target_node_id_fkey" FOR
 ALTER TABLE "canvas_edges" ADD CONSTRAINT "canvas_edges_source_message_id_fkey" FOREIGN KEY ("source_message_id") REFERENCES "node_messages"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "node_messages" ADD CONSTRAINT "node_messages_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "node_messages" ADD CONSTRAINT "node_messages_canvas_id_fkey" FOREIGN KEY ("canvas_id") REFERENCES "canvases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "node_messages" ADD CONSTRAINT "node_messages_node_id_fkey" FOREIGN KEY ("node_id") REFERENCES "canvas_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;

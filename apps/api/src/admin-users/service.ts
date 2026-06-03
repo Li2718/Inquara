@@ -31,32 +31,32 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
   });
   const userIds = users.map(user => user.id);
   const [canvasCounts, chatCounts, questionCounts, lastQuestions, lastLogins, loginDays] = await Promise.all([
-    prisma.workspace.groupBy({
+    prisma.canvas.groupBy({
       by: ["ownerId"],
       where: { ownerId: { in: userIds }, archivedAt: null },
       _count: { _all: true }
     }),
     prisma.canvasNode.groupBy({
-      by: ["workspaceId"],
+      by: ["canvasId"],
       where: {
         deletedAt: null,
-        workspace: { ownerId: { in: userIds }, archivedAt: null }
+        canvas: { ownerId: { in: userIds }, archivedAt: null }
       },
       _count: { _all: true }
     }),
     prisma.nodeMessage.groupBy({
-      by: ["workspaceId"],
+      by: ["canvasId"],
       where: {
         role: "user",
-        workspace: { ownerId: { in: userIds }, archivedAt: null }
+        canvas: { ownerId: { in: userIds }, archivedAt: null }
       },
       _count: { _all: true }
     }),
     prisma.nodeMessage.groupBy({
-      by: ["workspaceId"],
+      by: ["canvasId"],
       where: {
         role: "user",
-        workspace: { ownerId: { in: userIds }, archivedAt: null }
+        canvas: { ownerId: { in: userIds }, archivedAt: null }
       },
       _max: { createdAt: true }
     }),
@@ -71,16 +71,16 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
     })
   ]);
 
-  const workspaceOwners = await prisma.workspace.findMany({
+  const canvasOwners = await prisma.canvas.findMany({
     where: { ownerId: { in: userIds }, archivedAt: null },
     select: { id: true, ownerId: true }
   });
-  const workspaceOwnerById = new Map(workspaceOwners.map(workspace => [workspace.id, workspace.ownerId]));
+  const canvasOwnerById = new Map(canvasOwners.map(canvas => [canvas.id, canvas.ownerId]));
 
   const canvasCountByUser = new Map(canvasCounts.map(item => [item.ownerId, item._count._all]));
-  const chatCountByUser = sumWorkspaceCountsByUser(chatCounts, workspaceOwnerById);
-  const questionCountByUser = sumWorkspaceCountsByUser(questionCounts, workspaceOwnerById);
-  const lastQuestionByUser = maxWorkspaceDatesByUser(lastQuestions, workspaceOwnerById);
+  const chatCountByUser = sumCanvasCountsByUser(chatCounts, canvasOwnerById);
+  const questionCountByUser = sumCanvasCountsByUser(questionCounts, canvasOwnerById);
+  const lastQuestionByUser = maxCanvasDatesByUser(lastQuestions, canvasOwnerById);
   const lastLoginByUser = new Map(lastLogins.map(item => [item.userId, item._max.createdAt ?? null]));
   const loginDaysByUser = countDistinctLoginDays(loginDays);
 
@@ -103,26 +103,26 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
     .sort(compareAdminUsers);
 }
 
-function sumWorkspaceCountsByUser(
-  counts: Array<{ workspaceId: string; _count: { _all: number } }>,
-  workspaceOwnerById: Map<string, string>
+function sumCanvasCountsByUser(
+  counts: Array<{ canvasId: string; _count: { _all: number } }>,
+  canvasOwnerById: Map<string, string>
 ): Map<string, number> {
   const result = new Map<string, number>();
   for (const item of counts) {
-    const userId = workspaceOwnerById.get(item.workspaceId);
+    const userId = canvasOwnerById.get(item.canvasId);
     if (!userId) continue;
     result.set(userId, (result.get(userId) ?? 0) + item._count._all);
   }
   return result;
 }
 
-function maxWorkspaceDatesByUser(
-  rows: Array<{ workspaceId: string; _max: { createdAt: Date | null } }>,
-  workspaceOwnerById: Map<string, string>
+function maxCanvasDatesByUser(
+  rows: Array<{ canvasId: string; _max: { createdAt: Date | null } }>,
+  canvasOwnerById: Map<string, string>
 ): Map<string, Date> {
   const result = new Map<string, Date>();
   for (const row of rows) {
-    const userId = workspaceOwnerById.get(row.workspaceId);
+    const userId = canvasOwnerById.get(row.canvasId);
     const value = row._max.createdAt;
     if (!userId || !value) continue;
     const current = result.get(userId);

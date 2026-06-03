@@ -19,7 +19,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { FloatingCircleButton, LoadingState, OrganizeLayoutIcon, PopupMenu, PopupMenuItem, ResetViewIcon } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { interpolate } from "../../shared/messages";
-import { useWorkspaceSession } from "../workspace-session/WorkspaceSessionProvider";
+import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
@@ -46,43 +46,44 @@ const CANVAS_CONTEXT_MENU_EXIT_MS = 110;
 const CANVAS_ITEM_EXIT_MS = 150;
 
 export function CanvasView({
-  isPreparingWorkspaceSwitch,
+  isPreparingCanvasSwitch,
   isSidebarOpen,
   resetViewportRequest,
-  routeWorkspaceId
+  routeCanvasId
 }: {
-  isPreparingWorkspaceSwitch: boolean;
+  isPreparingCanvasSwitch: boolean;
   isSidebarOpen: boolean;
   resetViewportRequest: number;
-  routeWorkspaceId: string;
+  routeCanvasId: string;
 }) {
   return (
     <ReactFlowProvider>
       <CanvasFlow
-        isPreparingWorkspaceSwitch={isPreparingWorkspaceSwitch}
+        isPreparingCanvasSwitch={isPreparingCanvasSwitch}
         isSidebarOpen={isSidebarOpen}
         resetViewportRequest={resetViewportRequest}
-        routeWorkspaceId={routeWorkspaceId}
+        routeCanvasId={routeCanvasId}
       />
     </ReactFlowProvider>
   );
 }
 
 function CanvasFlow({
-  isPreparingWorkspaceSwitch,
+  isPreparingCanvasSwitch,
   isSidebarOpen,
   resetViewportRequest,
-  routeWorkspaceId
+  routeCanvasId
 }: {
-  isPreparingWorkspaceSwitch: boolean;
+  isPreparingCanvasSwitch: boolean;
   isSidebarOpen: boolean;
   resetViewportRequest: number;
-  routeWorkspaceId: string;
+  routeCanvasId: string;
 }) {
   const { messages } = useLocale();
   const copy = messages.canvas;
-  const { state, commands, sendCommand } = useWorkspaceSession();
+  const { state, commands, sendCommand } = useCanvasSession();
   const isBlocked = state.leaseState !== "active";
+  const isViewportBlocked = state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
   const { screenToFlowPosition } = useReactFlow();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
@@ -92,18 +93,18 @@ function CanvasFlow({
     []
   );
   const snapshot = state.snapshot;
-  const workspaceId = snapshot?.workspace.id ?? null;
-  const isShowingStaleSnapshot = Boolean(workspaceId && workspaceId !== routeWorkspaceId);
-  const previousWorkspaceIdRef = useRef<string | null>(workspaceId);
+  const canvasId = snapshot?.canvas.id ?? null;
+  const isShowingStaleSnapshot = Boolean(canvasId && canvasId !== routeCanvasId);
+  const previousCanvasIdRef = useRef<string | null>(canvasId);
   const previousVisibleFlowItemsRef = useRef<{
     edges: Map<string, Edge>;
     nodes: Map<string, ChatFlowNode>;
-    workspaceId: string | null;
-  }>({ edges: new Map(), nodes: new Map(), workspaceId: null });
+    canvasId: string | null;
+  }>({ edges: new Map(), nodes: new Map(), canvasId: null });
   const [contextMenu, setContextMenu] = useState<null | { screenX: number; screenY: number; flowX: number; flowY: number }>(null);
   const [exitingEdges, setExitingEdges] = useState<Edge[]>([]);
   const [exitingNodes, setExitingNodes] = useState<ChatFlowNode[]>([]);
-  const [isSettlingWorkspace, setIsSettlingWorkspace] = useState(false);
+  const [isSettlingCanvas, setIsSettlingCanvas] = useState(false);
   const [isViewportReady, setIsViewportReady] = useState(false);
   const contextMenuCreateTimerRef = useRef<number | null>(null);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
@@ -125,7 +126,7 @@ function CanvasFlow({
   const { appearingEdgeIds, appearingNodeIds } = useCanvasVisibilityMotion({
     edgeIds: visibleEdgeIds,
     nodeIds: visibleNodeIds,
-    workspaceId
+    canvasId
   });
 
   const visibleFlowNodes = useMemo<ChatFlowNode[]>(
@@ -146,25 +147,25 @@ function CanvasFlow({
 
   useEffect(() => {
     setIsViewportReady(false);
-  }, [workspaceId]);
+  }, [canvasId]);
 
   const handleViewportReady = useCallback(() => {
     setIsViewportReady(true);
   }, []);
 
   useEffect(() => {
-    if (!workspaceId) return;
-    if (previousWorkspaceIdRef.current === null) {
-      previousWorkspaceIdRef.current = workspaceId;
+    if (!canvasId) return;
+    if (previousCanvasIdRef.current === null) {
+      previousCanvasIdRef.current = canvasId;
       return;
     }
-    if (previousWorkspaceIdRef.current === workspaceId) return;
+    if (previousCanvasIdRef.current === canvasId) return;
 
-    previousWorkspaceIdRef.current = workspaceId;
-    setIsSettlingWorkspace(true);
-    const timeout = window.setTimeout(() => setIsSettlingWorkspace(false), 110);
+    previousCanvasIdRef.current = canvasId;
+    setIsSettlingCanvas(true);
+    const timeout = window.setTimeout(() => setIsSettlingCanvas(false), 110);
     return () => window.clearTimeout(timeout);
-  }, [workspaceId]);
+  }, [canvasId]);
 
   const visibleFlowEdges = useMemo<Edge[]>(
     () =>
@@ -185,11 +186,11 @@ function CanvasFlow({
     const nextNodeMap = new Map(visibleFlowNodes.map(node => [node.id, node]));
     const nextEdgeMap = new Map(visibleFlowEdges.map(edge => [edge.id, edge]));
 
-    if (!workspaceId || previous.workspaceId !== workspaceId) {
+    if (!canvasId || previous.canvasId !== canvasId) {
       previousVisibleFlowItemsRef.current = {
         edges: nextEdgeMap,
         nodes: nextNodeMap,
-        workspaceId
+        canvasId
       };
       setExitingEdges([]);
       setExitingNodes([]);
@@ -216,7 +217,7 @@ function CanvasFlow({
     previousVisibleFlowItemsRef.current = {
       edges: nextEdgeMap,
       nodes: nextNodeMap,
-      workspaceId
+      canvasId
     };
 
     setExitingNodes(current => current.filter(node => !nextNodeMap.has(node.id)));
@@ -240,7 +241,7 @@ function CanvasFlow({
       setExitingEdges(current => current.filter(edge => !removedEdgeIds.has(edge.id)));
     }, CANVAS_ITEM_EXIT_MS);
     return () => window.clearTimeout(timeout);
-  }, [visibleFlowEdges, visibleFlowNodes, workspaceId]);
+  }, [visibleFlowEdges, visibleFlowNodes, canvasId]);
 
   const renderedNodes = useMemo(
     () => [
@@ -342,10 +343,10 @@ function CanvasFlow({
   return (
     <div
       className="canvas-view"
-      data-workspace-transition={
-        isPreparingWorkspaceSwitch || isShowingStaleSnapshot
+      data-canvas-transition={
+        isPreparingCanvasSwitch || isShowingStaleSnapshot
           ? "leaving"
-          : state.leaseState === "acquiring" || state.leaseState === "recovering" || isSettlingWorkspace
+          : state.leaseState === "acquiring" || state.leaseState === "recovering" || isSettlingCanvas
             ? "entering"
             : "idle"
       }
@@ -362,7 +363,7 @@ function CanvasFlow({
           nodesConnectable={false}
           elementsSelectable={false}
           nodesDraggable={!isBlocked}
-          panOnDrag={!isBlocked}
+          panOnDrag={!isViewportBlocked}
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={28} size={1} />
@@ -371,7 +372,7 @@ function CanvasFlow({
             firstRootNode={firstRootNode}
             isSidebarOpen={isSidebarOpen}
             onReady={handleViewportReady}
-            workspaceId={workspaceId}
+            canvasId={canvasId}
           />
         </ReactFlow>
       </CanvasViewportProvider>
@@ -418,24 +419,24 @@ function CanvasInitialViewport({
   firstRootNode,
   isSidebarOpen,
   onReady,
-  workspaceId
+  canvasId
 }: {
   firstRootNode: CanvasNode | null;
   isSidebarOpen: boolean;
   onReady(): void;
-  workspaceId: string | null;
+  canvasId: string | null;
 }) {
   const { setViewport } = useReactFlow();
-  const initializedWorkspaceIdRef = useRef<string | null>(null);
+  const initializedCanvasIdRef = useRef<string | null>(null);
   const stabilityRef = useRef<CanvasViewportStabilityState>(initialCanvasViewportStabilityState);
 
   useLayoutEffect(() => {
-    if (!workspaceId || !firstRootNode) return;
-    if (initializedWorkspaceIdRef.current !== workspaceId) {
-      initializedWorkspaceIdRef.current = null;
+    if (!canvasId || !firstRootNode) return;
+    if (initializedCanvasIdRef.current !== canvasId) {
+      initializedCanvasIdRef.current = null;
       stabilityRef.current = initialCanvasViewportStabilityState;
     }
-    if (initializedWorkspaceIdRef.current === workspaceId) {
+    if (initializedCanvasIdRef.current === canvasId) {
       onReady();
       return;
     }
@@ -467,7 +468,7 @@ function CanvasInitialViewport({
         }),
         { duration: 0 }
       );
-      initializedWorkspaceIdRef.current = workspaceId;
+      initializedCanvasIdRef.current = canvasId;
       onReady();
     };
 
@@ -476,14 +477,14 @@ function CanvasInitialViewport({
       cancelled = true;
       window.cancelAnimationFrame(frame);
     };
-  }, [firstRootNode, isSidebarOpen, onReady, setViewport, workspaceId]);
+  }, [firstRootNode, isSidebarOpen, onReady, setViewport, canvasId]);
 
   return null;
 }
 
 function getCanvasViewportMeasurement(isSidebarOpen: boolean): CanvasViewportMeasurement | null {
   const stage = document.querySelector(".canvas-stage");
-  const sidebar = isSidebarOpen ? document.querySelector(".workspace-sidebar") : null;
+  const sidebar = isSidebarOpen ? document.querySelector(".canvas-sidebar") : null;
   const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
   const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
   if (!stageRect || stageRect.width <= 0 || stageRect.height <= 0) return null;
@@ -544,7 +545,7 @@ function CanvasViewportControls({
   const resetViewportToRoot = useCallback(() => {
     if (!firstRootNode) return;
     const stage = document.querySelector(".canvas-stage");
-    const sidebar = isSidebarOpen ? document.querySelector(".workspace-sidebar") : null;
+    const sidebar = isSidebarOpen ? document.querySelector(".canvas-sidebar") : null;
     const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
     const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
     const reservedLeft = stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0;

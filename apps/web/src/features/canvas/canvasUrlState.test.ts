@@ -3,13 +3,13 @@ import { parseCanvasPathState, writeCanvasPathState } from "./canvasUrlState";
 
 describe("canvas URL state", () => {
   it("parses a new-canvas path as local new mode", () => {
-    expect(parseCanvasPathState("/workspaces/new")).toEqual({ mode: "new" });
+    expect(parseCanvasPathState("/canvases/new")).toEqual({ mode: "new" });
   });
 
-  it("parses a workspace path as an existing workspace", () => {
-    expect(parseCanvasPathState("/workspaces/workspace-1")).toEqual({
-      mode: "workspace",
-      workspaceId: "workspace-1"
+  it("parses a canvas path as an existing canvas", () => {
+    expect(parseCanvasPathState("/canvases/canvas-1")).toEqual({
+      canvasId: "canvas-1",
+      mode: "canvas"
     });
   });
 
@@ -18,21 +18,21 @@ describe("canvas URL state", () => {
     const replaceState = vi.fn();
     const windowRef = {
       history: { pushState, replaceState },
-      location: { pathname: "/workspaces/workspace-1" }
+      location: { pathname: "/canvases/canvas-1" }
     } as unknown as Window;
 
     writeCanvasPathState({ mode: "new" }, { windowRef });
-    writeCanvasPathState({ mode: "workspace", workspaceId: "workspace-2" }, { replace: true, windowRef });
+    writeCanvasPathState({ canvasId: "canvas-2", mode: "canvas" }, { replace: true, windowRef });
 
-    expect(pushState).toHaveBeenCalledWith(null, "", "/workspaces/new");
-    expect(replaceState).toHaveBeenCalledWith(null, "", "/workspaces/workspace-2");
+    expect(pushState).toHaveBeenCalledWith(null, "", "/canvases/new");
+    expect(replaceState).toHaveBeenCalledWith(null, "", "/canvases/canvas-2");
   });
 
   it("does not rewrite history when the path already matches state", () => {
     const pushState = vi.fn();
     const windowRef = {
       history: { pushState, replaceState: vi.fn() },
-      location: { pathname: "/workspaces/new" }
+      location: { pathname: "/canvases/new" }
     } as unknown as Window;
 
     writeCanvasPathState({ mode: "new" }, { windowRef });

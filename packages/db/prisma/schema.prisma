@@ -19,7 +19,7 @@ model User {
   redemptions   RedemptionCodeRedemption[]
   identities   UserIdentity[]
   sessions     UserSession[]
-  workspaces   Workspace[]
+  canvases   Canvas[]
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
@@ -103,7 +103,7 @@ model RedemptionCodeRedemption {
   @@map("redemption_code_redemptions")
 }
 
-model Workspace {
+model Canvas {
   id         String        @id @default(cuid())
   ownerId    String        @map("owner_id")
   owner      User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -117,13 +117,13 @@ model Workspace {
   archivedAt DateTime?     @map("archived_at")
 
   @@index([ownerId, updatedAt])
-  @@map("workspaces")
+  @@map("canvases")
 }
 
 model CanvasNode {
   id               String        @id @default(cuid())
-  workspaceId      String        @map("workspace_id")
-  workspace        Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canvasId      String        @map("canvas_id")
+  canvas        Canvas     @relation(fields: [canvasId], references: [id], onDelete: Cascade)
   title            String
   x                Float
   y                Float
@@ -152,14 +152,14 @@ model CanvasNode {
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  @@index([workspaceId])
+  @@index([canvasId])
   @@map("canvas_nodes")
 }
 
 model CanvasEdge {
   id              String       @id @default(cuid())
-  workspaceId     String       @map("workspace_id")
-  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canvasId     String       @map("canvas_id")
+  canvas       Canvas    @relation(fields: [canvasId], references: [id], onDelete: Cascade)
   sourceNodeId    String       @map("source_node_id")
   sourceNode      CanvasNode   @relation("OutgoingEdges", fields: [sourceNodeId], references: [id], onDelete: Cascade)
   targetNodeId    String       @map("target_node_id")
@@ -169,14 +169,14 @@ model CanvasEdge {
   label           String
   createdAt       DateTime     @default(now()) @map("created_at")
 
-  @@index([workspaceId])
+  @@index([canvasId])
   @@map("canvas_edges")
 }
 
 model NodeMessage {
   id             String       @id @default(cuid())
-  workspaceId    String       @map("workspace_id")
-  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canvasId    String       @map("canvas_id")
+  canvas      Canvas    @relation(fields: [canvasId], references: [id], onDelete: Cascade)
   nodeId         String       @map("node_id")
   node           CanvasNode   @relation(fields: [nodeId], references: [id], onDelete: Cascade)
   role           String
@@ -190,6 +190,6 @@ model NodeMessage {
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
   @@index([nodeId, createdAt])
-  @@index([workspaceId, createdAt])
+  @@index([canvasId, createdAt])
   @@map("node_messages")
 }

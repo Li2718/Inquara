@@ -5,7 +5,7 @@ import { sendUserMessage } from "../messages/service";
 import { resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
-let workspaceId = "";
+let canvasId = "";
 let childNodeId = "";
 let capturedContext: ChatContextMessage[] = [];
 
@@ -26,14 +26,14 @@ beforeEach(async () => {
   });
   userId = user.id;
 
-  const workspace = await prisma.workspace.create({
+  const canvas = await prisma.canvas.create({
     data: { ownerId: user.id, title: "Message Canvas" }
   });
-  workspaceId = workspace.id;
+  canvasId = canvas.id;
 
   const rootNode = await prisma.canvasNode.create({
     data: {
-      workspaceId,
+      canvasId,
       title: "Main chat",
       x: 100,
       y: 100,
@@ -45,7 +45,7 @@ beforeEach(async () => {
 
   await prisma.nodeMessage.create({
     data: {
-      workspaceId,
+      canvasId,
       nodeId: rootNode.id,
       role: "user",
       content: "Explain transformer attention.",
@@ -54,7 +54,7 @@ beforeEach(async () => {
   });
   const sourceMessage = await prisma.nodeMessage.create({
     data: {
-      workspaceId,
+      canvasId,
       nodeId: rootNode.id,
       role: "assistant",
       content: "Attention decides which context matters before producing the next token.",
@@ -64,7 +64,7 @@ beforeEach(async () => {
 
   const childNode = await prisma.canvasNode.create({
     data: {
-      workspaceId,
+      canvasId,
       title: "Follow-up",
       x: 560,
       y: 120,
@@ -100,7 +100,7 @@ describe("message command services", () => {
       {
         type: "message.sendUserMessage",
         clientMutationId: "mutation-partial-stream",
-        workspaceId,
+        canvasId,
         nodeId: childNodeId,
         userMessageId: "message-user-partial-1",
         assistantMessageId: "message-assistant-partial-1",
@@ -112,7 +112,7 @@ describe("message command services", () => {
 
     const assistantMessage = await prisma.nodeMessage.findFirstOrThrow({
       where: {
-        workspaceId,
+        canvasId,
         nodeId: childNodeId,
         role: "assistant"
       },
@@ -130,7 +130,7 @@ describe("message command services", () => {
       {
         type: "message.sendUserMessage",
         clientMutationId: "mutation-follow-up-message",
-        workspaceId,
+        canvasId,
         nodeId: childNodeId,
         userMessageId: "message-user-followup-1",
         assistantMessageId: "message-assistant-followup-1",
@@ -157,7 +157,7 @@ describe("message command services", () => {
   it("keeps upstream source conversations when replying in a nested follow-up node", async () => {
     const childQuestion = await prisma.nodeMessage.create({
       data: {
-        workspaceId,
+        canvasId,
         nodeId: childNodeId,
         role: "user",
         content: "What does context refer to here?",
@@ -166,7 +166,7 @@ describe("message command services", () => {
     });
     const childAnswer = await prisma.nodeMessage.create({
       data: {
-        workspaceId,
+        canvasId,
         nodeId: childNodeId,
         role: "assistant",
         content: "Context refers to the earlier tokens and relationships the model can attend to.",
@@ -175,7 +175,7 @@ describe("message command services", () => {
     });
     const nestedNode = await prisma.canvasNode.create({
       data: {
-        workspaceId,
+        canvasId,
         title: "Nested follow-up",
         x: 1020,
         y: 160,
@@ -196,7 +196,7 @@ describe("message command services", () => {
       {
         type: "message.sendUserMessage",
         clientMutationId: "mutation-nested-follow-up-message",
-        workspaceId,
+        canvasId,
         nodeId: nestedNode.id,
         userMessageId: "message-user-nested-1",
         assistantMessageId: "message-assistant-nested-1",

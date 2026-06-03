@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  InMemoryWorkspaceLeaseStore,
+  InMemoryCanvasLeaseStore,
   type AcquireLeaseInput,
   type LeaseStatusInput,
-  type WorkspaceLeaseStore
+  type CanvasLeaseStore
 } from "../leases/service";
 
 function createInput(overrides: Partial<AcquireLeaseInput> = {}): AcquireLeaseInput {
   return {
-    workspaceId: "workspace-1",
+    canvasId: "canvas-1",
     sessionId: "session-1",
     ttlSeconds: 15,
     now: new Date("2026-06-01T10:00:00.000Z"),
@@ -16,8 +16,8 @@ function createInput(overrides: Partial<AcquireLeaseInput> = {}): AcquireLeaseIn
   };
 }
 
-describe("workspace lease store", () => {
-  it("acquires a free workspace lease", async () => {
+describe("canvas lease store", () => {
+  it("acquires a free canvas lease", async () => {
     const store = createStore();
 
     const result = await store.acquire(createInput());
@@ -88,7 +88,7 @@ describe("workspace lease store", () => {
     await store.acquire(createInput({ sessionId: "session-a", now: new Date("2026-06-01T10:00:02.000Z") }));
     await store.acquire(createInput({ sessionId: "session-c", now: new Date("2026-06-01T10:00:03.000Z") }));
     await store.release({
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       sessionId: "session-c"
     });
 
@@ -112,7 +112,7 @@ describe("workspace lease store", () => {
     await store.acquire(createInput({ sessionId: "session-a", now: new Date("2026-06-01T10:00:02.000Z") }));
     await store.acquire(createInput({ sessionId: "session-c", now: new Date("2026-06-01T10:00:03.000Z") }));
     await store.release({
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       sessionId: "session-c"
     });
 
@@ -143,7 +143,7 @@ describe("workspace lease store", () => {
     await store.acquire(createInput({ sessionId: "session-2", now: new Date("2026-06-01T10:00:01.000Z") }));
 
     const renewed = await store.renew({
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       sessionId: "session-1",
       leaseEpoch: 1,
       ttlSeconds: 15,
@@ -159,7 +159,7 @@ describe("workspace lease store", () => {
     await store.acquire(createInput({ sessionId: "session-b", now: new Date("2026-06-01T10:00:01.000Z") }));
     await store.acquire(createInput({ sessionId: "session-c", now: new Date("2026-06-01T10:00:02.000Z") }));
     await store.release({
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       sessionId: "session-c"
     });
 
@@ -176,7 +176,7 @@ describe("workspace lease store", () => {
     await store.acquire(createInput({ sessionId: "session-b", now: new Date("2026-06-01T10:00:01.000Z") }));
     await store.acquire(createInput({ sessionId: "session-c", now: new Date("2026-06-01T10:00:02.000Z") }));
     await store.release({
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       sessionId: "session-c"
     });
 
@@ -194,7 +194,7 @@ describe("workspace lease store", () => {
     await store.acquire(createInput({ sessionId: "session-b", now: new Date("2026-06-01T10:00:01.000Z") }));
     await store.acquire(createInput({ sessionId: "session-c", now: new Date("2026-06-01T10:00:02.000Z") }));
     await store.release({
-      workspaceId: "workspace-1",
+      canvasId: "canvas-1",
       sessionId: "session-c"
     });
 
@@ -211,13 +211,13 @@ describe("workspace lease store", () => {
   });
 });
 
-function createStore(): WorkspaceLeaseStore {
-  return new InMemoryWorkspaceLeaseStore();
+function createStore(): CanvasLeaseStore {
+  return new InMemoryCanvasLeaseStore();
 }
 
 function createStatusInput(overrides: Partial<LeaseStatusInput> = {}): LeaseStatusInput {
   return {
-    workspaceId: "workspace-1",
+    canvasId: "canvas-1",
     sessionId: "session-1",
     now: new Date("2026-06-01T10:00:00.000Z"),
     ...overrides

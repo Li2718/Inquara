@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const textFileExtensions = new Set([
@@ -115,10 +115,10 @@ describe("repository hygiene", () => {
       findLocalPathViolations(
         "fixture.txt",
         [
-          "apps/web/src/app/workspaces/[workspaceId]/page.tsx",
-          "http://localhost:3000/workspaces/workspace-1",
+          "apps/web/src/app/canvases/[canvasId]/page.tsx",
+          "http://localhost:3000/canvases/canvas-1",
           "postgresql://inquara:inquara@localhost:5432/inquara?schema=public",
-          "/workspaces/:workspaceId/snapshot",
+          "/canvases/:canvasId/snapshot",
           "/var/lib/postgresql/data",
           "/app/packages/api"
         ].join("\n")
@@ -130,6 +130,7 @@ describe("repository hygiene", () => {
     const violations = [];
 
     for (const filePath of listTrackedFiles()) {
+      if (!existsSync(filePath)) continue;
       if (!isTextFile(filePath)) continue;
       const text = readFileSync(filePath, "utf8");
       violations.push(...findLocalPathViolations(filePath, text));

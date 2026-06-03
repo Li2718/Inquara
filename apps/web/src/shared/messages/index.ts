@@ -52,18 +52,18 @@ export const messages = {
       resetCanvasView: "Reset canvas view",
       resetView: "Reset view"
     },
-    workspaceList: {
+    canvasList: {
       openingCanvas: "Opening canvas",
       researchCanvas: "Research canvas"
     },
-    workspaceSidebar: {
+    canvasSidebar: {
       canvasActions: "Canvas actions for {title}",
       canvasList: "Canvas list",
       canvases: "Canvases",
       collapseSidebar: "Collapse sidebar",
       couldNotCreate: "Could not create canvas.",
       couldNotDelete: "Could not delete canvas.",
-      couldNotLoad: "Could not load workspaces.",
+      couldNotLoad: "Could not load canvases.",
       couldNotRename: "Could not rename canvas.",
       deleteCanvas: "Delete canvas?",
       deleteDescription: "{title} will be removed from your canvas list. This uses a soft delete.",
@@ -74,7 +74,7 @@ export const messages = {
       rename: "Rename",
       save: "Save",
       untitledCanvas: "Untitled canvas",
-      workspaceNavigation: "Workspace navigation"
+      canvasNavigation: "Canvas navigation"
     },
     canvas: {
       actions: "Canvas actions",
@@ -88,7 +88,7 @@ export const messages = {
       resetView: "Reset view",
       resetViewAria: "Reset view to root chat",
       stage: "Canvas",
-      workspace: "Canvas workspace",
+      canvas: "Canvas view",
       zoomControls: "Canvas zoom controls"
     },
     newCanvasEntry: {
@@ -112,27 +112,28 @@ export const messages = {
       send: "Send"
     },
     lease: {
-      activeElsewhereMessage: "This workspace is active in another client.",
-      acquireFailedMessage: "Failed to acquire the workspace.",
-      blockedEyebrow: "Workspace blocked",
-      blockedTitle: "This workspace is active in another client",
-      defaultMessage: "The content shown here may be out of date. Editing stays disabled until this client reconnects and becomes active again.",
-      recoverFailedMessage: "Failed to recover the workspace.",
-      recoveringEyebrow: "Recovering workspace",
-      recoveringTitle: "Waiting to restore editing",
-      syncFailedMessage: "Workspace sync failed.",
+      activeElsewhereMessage: "This canvas is active in another client.",
+      acquireFailedMessage: "Failed to acquire the canvas.",
+      blockedEyebrow: "Editing active elsewhere",
+      blockedTitle: "This canvas is active in another client",
+      defaultMessage: "Only one client can edit a canvas at a time. Taking over editing will stop editing in the other client.",
+      reconnect: "Reconnect",
+      recoverFailedMessage: "Failed to recover the canvas.",
+      recoveringEyebrow: "Restoring connection",
+      recoveringTitle: "Network connection is unstable",
+      syncFailedMessage: "Canvas sync failed.",
       streamFailedMessage: "Failed to stream the assistant reply.",
-      unstableNetworkMessage: "Network connection is unstable.",
-      takeOver: "Take over here"
+      unstableNetworkMessage: "Editing pauses until the connection recovers. Unsynced changes may not apply.",
+      takeOver: "Take over editing"
     },
     error: {
       backToCanvas: "Back to canvas",
       defaultHeading: "This view lost its thread.",
-      defaultMessage: "Something interrupted the page while it was loading. Try again, or return to the canvas.",
-      globalHeading: "The workspace hit a snag.",
-      globalMessage: "The page could not finish loading. Try again, or return to the canvas from a fresh tab.",
+      defaultMessage: "Something interrupted the page while it was loading. Please reload the page.",
+      globalHeading: "The canvas hit a snag.",
+      globalMessage: "The page could not finish loading. Please reload the page.",
       holdOn: "Hold on",
-      tryAgain: "Try again"
+      tryAgain: "Reload"
     },
     notFound: {
       action: "Back to canvas",
@@ -160,7 +161,7 @@ export const messages = {
       registered: "Registered",
       registeredDays: "Registered days",
       roleAdmin: "Admin",
-      subtitle: "Review account activity, content volume, and recency across the workspace.",
+      subtitle: "Review account activity, content volume, and recency across the canvas.",
       summary: "User activity summary",
       unnamed: "Unnamed user",
       user: "User",
@@ -271,18 +272,18 @@ export const messages = {
       resetCanvasView: "重置画布视图",
       resetView: "重置视图"
     },
-    workspaceList: {
+    canvasList: {
       openingCanvas: "正在打开画布",
       researchCanvas: "研究画布"
     },
-    workspaceSidebar: {
+    canvasSidebar: {
       canvasActions: "{title} 的画布操作",
       canvasList: "画布列表",
       canvases: "画布",
       collapseSidebar: "收起侧边栏",
       couldNotCreate: "无法创建画布。",
       couldNotDelete: "无法删除画布。",
-      couldNotLoad: "无法加载工作区。",
+      couldNotLoad: "无法加载画布。",
       couldNotRename: "无法重命名画布。",
       deleteCanvas: "删除画布？",
       deleteDescription: "{title} 将从画布列表中移除。此操作使用软删除。",
@@ -293,7 +294,7 @@ export const messages = {
       rename: "重命名",
       save: "保存",
       untitledCanvas: "未命名画布",
-      workspaceNavigation: "工作区导航"
+      canvasNavigation: "画布导航"
     },
     canvas: {
       actions: "画布操作",
@@ -307,7 +308,7 @@ export const messages = {
       resetView: "重置视图",
       resetViewAria: "重置到根聊天视图",
       stage: "画布",
-      workspace: "画布工作区",
+      canvas: "画布视图",
       zoomControls: "画布缩放控件"
     },
     newCanvasEntry: {
@@ -331,27 +332,28 @@ export const messages = {
       send: "发送"
     },
     lease: {
-      activeElsewhereMessage: "此工作区正在另一个客户端中使用。",
-      acquireFailedMessage: "无法获取工作区编辑权。",
-      blockedEyebrow: "工作区已阻止",
-      blockedTitle: "此工作区正在另一个客户端中使用",
-      defaultMessage: "这里显示的内容可能已过期。在此客户端重新连接并重新变为活动状态前，编辑会保持禁用。",
-      recoverFailedMessage: "无法恢复工作区。",
-      recoveringEyebrow: "正在恢复工作区",
-      recoveringTitle: "等待恢复编辑",
-      syncFailedMessage: "工作区同步失败。",
+      activeElsewhereMessage: "此画布正在另一个客户端中使用。",
+      acquireFailedMessage: "无法获取画布编辑权。",
+      blockedEyebrow: "编辑权在其他客户端",
+      blockedTitle: "此画布正在另一个客户端中使用",
+      defaultMessage: "同一画布一次只能由一个客户端编辑。接管编辑后，其他客户端会停止编辑。",
+      reconnect: "重新连接",
+      recoverFailedMessage: "无法恢复画布。",
+      recoveringEyebrow: "正在恢复连接",
+      recoveringTitle: "网络连接不稳定",
+      syncFailedMessage: "画布同步失败。",
       streamFailedMessage: "助手回复流式传输失败。",
-      unstableNetworkMessage: "网络连接不稳定。",
-      takeOver: "在此接管"
+      unstableNetworkMessage: "恢复完成前，编辑会暂停；未同步的修改可能无效。",
+      takeOver: "接管编辑"
     },
     error: {
       backToCanvas: "回到画布",
       defaultHeading: "此视图暂时中断。",
-      defaultMessage: "页面加载时被中断。请重试，或返回画布。",
-      globalHeading: "工作区遇到问题。",
-      globalMessage: "页面未能完成加载。请重试，或从新标签页返回画布。",
+      defaultMessage: "页面加载时被中断。请刷新页面。",
+      globalHeading: "画布遇到问题。",
+      globalMessage: "页面未能完成加载。请刷新页面。",
       holdOn: "请稍候",
-      tryAgain: "重试"
+      tryAgain: "刷新"
     },
     notFound: {
       action: "回到画布",
@@ -379,7 +381,7 @@ export const messages = {
       registered: "注册时间",
       registeredDays: "注册天数",
       roleAdmin: "管理员",
-      subtitle: "查看工作区内账户活跃度、内容规模和最近行为。",
+      subtitle: "查看画布内账户活跃度、内容规模和最近行为。",
       summary: "用户活跃概览",
       unnamed: "未命名用户",
       user: "用户",

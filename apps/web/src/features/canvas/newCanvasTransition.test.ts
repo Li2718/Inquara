@@ -2,44 +2,44 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { advanceNewCanvasTransition, initialNewCanvasTransitionState, hasVisibleStarterMessage } from "./newCanvasTransition";
-import { NewCanvasMorphOverlay } from "./CanvasWorkspace";
+import { NewCanvasMorphOverlay } from "./CanvasSurface";
 
 describe("new canvas transition", () => {
-  it("keeps the starter overlay while the created workspace is loading", () => {
+  it("keeps the starter overlay while the created canvas is loading", () => {
     const morphing = advanceNewCanvasTransition(initialNewCanvasTransitionState, {
+      canvasId: "canvas-1",
       content: "First question",
-      type: "submitted",
-      workspaceId: "workspace-1"
+      type: "submitted"
     });
 
     expect(morphing).toEqual({
+      canvasId: "canvas-1",
       content: "First question",
-      status: "morphing",
-      workspaceId: "workspace-1"
+      status: "morphing"
     });
   });
 
-  it("settles only when the starter message appears in the matching workspace", () => {
+  it("settles only when the starter message appears in the matching canvas", () => {
     const morphing = {
+      canvasId: "canvas-1",
       content: "First question",
-      status: "morphing" as const,
-      workspaceId: "workspace-1"
+      status: "morphing" as const
     };
 
-    expect(advanceNewCanvasTransition(morphing, { type: "starterMessageVisible", workspaceId: "workspace-2" })).toBe(morphing);
-    expect(advanceNewCanvasTransition(morphing, { type: "starterMessageVisible", workspaceId: "workspace-1" })).toEqual({
+    expect(advanceNewCanvasTransition(morphing, { canvasId: "canvas-2", type: "starterMessageVisible" })).toBe(morphing);
+    expect(advanceNewCanvasTransition(morphing, { canvasId: "canvas-1", type: "starterMessageVisible" })).toEqual({
+      canvasId: null,
       content: "",
-      status: "idle",
-      workspaceId: null
+      status: "idle"
     });
   });
 
-  it("detects the submitted user message in the current workspace snapshot", () => {
+  it("detects the submitted user message in the current canvas snapshot", () => {
     expect(
       hasVisibleStarterMessage(
         {
-          workspace: {
-            id: "workspace-1",
+          canvas: {
+            id: "canvas-1",
             ownerId: "user-1",
             title: "Untitled",
             version: 1,
@@ -50,8 +50,8 @@ describe("new canvas transition", () => {
           edges: [],
           messages: [
             {
+              canvasId: "canvas-1",
               id: "message-1",
-              workspaceId: "workspace-1",
               nodeId: "node-1",
               role: "user",
               content: "First question",
@@ -63,7 +63,7 @@ describe("new canvas transition", () => {
             }
           ]
         },
-        { content: "First question", workspaceId: "workspace-1" }
+        { canvasId: "canvas-1", content: "First question" }
       )
     ).toBe(true);
   });

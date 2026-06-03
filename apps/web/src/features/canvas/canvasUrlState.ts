@@ -3,23 +3,23 @@ export type CanvasPathState =
       mode: "new";
     }
   | {
-      mode: "workspace";
-      workspaceId: string;
+      canvasId: string;
+      mode: "canvas";
     };
 
 export function parseCanvasPathState(pathname: string): CanvasPathState | null {
-  if (pathname === "/workspaces/new") return { mode: "new" };
+  if (pathname === "/canvases/new") return { mode: "new" };
 
-  const match = /^\/workspaces\/([^/?#]+)$/.exec(pathname);
+  const match = /^\/canvases\/([^/?#]+)$/.exec(pathname);
   if (!match?.[1]) return null;
   return {
-    mode: "workspace",
-    workspaceId: decodeURIComponent(match[1])
+    canvasId: decodeURIComponent(match[1]),
+    mode: "canvas"
   };
 }
 
 export function canvasPathForState(state: CanvasPathState): string {
-  return state.mode === "new" ? "/workspaces/new" : `/workspaces/${encodeURIComponent(state.workspaceId)}`;
+  return state.mode === "new" ? "/canvases/new" : `/canvases/${encodeURIComponent(state.canvasId)}`;
 }
 
 export function writeCanvasPathState(

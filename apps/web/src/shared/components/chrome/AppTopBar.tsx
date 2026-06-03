@@ -67,8 +67,8 @@ export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasReque
   }, [currentUser]);
   const isAdmin = currentUser?.role === "admin";
   const isAdminRoute = pathname.startsWith("/admin");
-  const isNewCanvasRoute = pathname === "/workspaces/new";
-  const isCanvasRoute = isCanvasSurface ?? (pathname.startsWith("/workspaces/") && !isNewCanvasRoute);
+  const isNewCanvasRoute = pathname === "/canvases/new";
+  const isCanvasRoute = isCanvasSurface ?? (pathname.startsWith("/canvases/") && !isNewCanvasRoute);
 
   async function handleBrandClick() {
     if (isCanvasRoute) {

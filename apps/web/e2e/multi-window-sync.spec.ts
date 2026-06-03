@@ -9,24 +9,25 @@ test.afterAll(async () => {
   await stopEphemeralTestDatabase();
 });
 
-test("new workspace window takes over and blocks the previous client", async ({ page }) => {
+test("new canvas window takes over and blocks the previous client", async ({ page }) => {
   await clearDebugPosition(page);
   await page.goto("/");
   await register(page);
-  await expect(page).toHaveURL(/\/workspaces\/[^/]+$/);
+  await expect(page).toHaveURL(/\/canvases\/[^/]+$/);
   await expect(page.getByTestId("canvas-node")).toHaveCount(1);
-  const workspacePath = new URL(page.url()).pathname;
+  const canvasPath = new URL(page.url()).pathname;
 
   await page.getByPlaceholder("Ask in this node").fill("What is attention?");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("What is attention?", { exact: true })).toBeVisible();
 
   const second = await page.context().newPage();
-  await second.goto(workspacePath);
+  await second.goto(canvasPath);
   await expect(second.getByTestId("canvas-node")).toHaveCount(1);
   await expect(second.getByPlaceholder("Ask in this node")).toBeEnabled();
 
-  await expect(page.getByRole("heading", { name: "This workspace is active in another client" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "This canvas is active in another client" })).toBeVisible();
+  await expect(page.getByTestId("canvas-node")).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
 
   await second.getByPlaceholder("Ask in this node").fill("Give me one concrete example.");

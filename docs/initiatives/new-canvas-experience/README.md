@@ -30,7 +30,7 @@ The initiative should make the canvas experience:
 In scope for this initiative:
 
 - product-surface canvas experience and empty states
-- pre-create canvas entry flow from workspace navigation into the first question
+- pre-create canvas entry flow from canvas navigation into the first question
 - cached pre-create input draft when users switch away and return
 - canvas toolbar, status, and recovery affordances when they affect first-use clarity
 - loading, stale, disabled, and ready states visible around the canvas
@@ -51,24 +51,24 @@ Explicitly out of scope for this slice:
 2. Empty and recovery states can easily drift from the real synchronization model; product copy must stay accurate about what the user can safely do.
 3. New product copy must update both supported locales in the same change.
 4. Debug affordances must remain mounted through the central debug root and must not leak into product canvas components.
-5. The new-canvas entrypoint must not create a database workspace until the user submits the first message.
+5. The new-canvas entrypoint must not create a database canvas until the user submits the first message.
 
 ## Current Status
 
 Started.
 
-The repository now has an isolated managed worktree and branch for this topic so canvas experience design and implementation can proceed without disturbing the main workspace.
+The repository now has an isolated managed worktree and branch for this topic so canvas experience design and implementation can proceed without disturbing the main checkout.
 
 ## Completed Work
 
 - Classified this documentation as active initiative documentation.
 - Created isolated worktree and branch: `new-canvas-experience`.
 - Opened this active initiative document as the source of truth for the work.
-- Clarified that the new-canvas empty state exists before workspace creation and must cache its input draft across canvas switches.
+- Clarified that the new-canvas empty state exists before canvas creation and must cache its input draft across canvas switches.
 
 ## Remaining Work
 
-- Replace new-canvas creation entrypoints with a pre-create route or surface that does not create a workspace immediately.
+- Replace new-canvas creation entrypoints with a pre-create route or surface that does not create a canvas immediately.
 - Add a centered, locked starter input with a taller field and send action.
 - Cache the starter input draft when users switch to another canvas and return to new-canvas entry.
 - On send, create the canvas and submit the starter message into its first node.
