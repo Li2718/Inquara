@@ -28,6 +28,7 @@ export const messages = {
       email: "Email",
       invitationCode: "Invitation code",
       invitationMore: "More",
+      invalidEmailOrPassword: "Invalid email or password.",
       loginAction: "Log in",
       loginFailed: "Login failed.",
       loginPanel: "Login",
@@ -53,6 +54,7 @@ export const messages = {
       resetView: "Reset view"
     },
     canvasList: {
+      couldNotOpenCanvas: "Could not open canvas.",
       openingCanvas: "Opening canvas",
       researchCanvas: "Research canvas"
     },
@@ -248,6 +250,7 @@ export const messages = {
       email: "邮箱",
       invitationCode: "邀请码",
       invitationMore: "更多",
+      invalidEmailOrPassword: "邮箱或密码无效。",
       loginAction: "登录",
       loginFailed: "登录失败。",
       loginPanel: "登录",
@@ -273,6 +276,7 @@ export const messages = {
       resetView: "重置视图"
     },
     canvasList: {
+      couldNotOpenCanvas: "无法打开画布。",
       openingCanvas: "正在打开画布",
       researchCanvas: "研究画布"
     },

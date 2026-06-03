@@ -5,53 +5,68 @@ import { useEffect, useState } from "react";
 import { LoginPage } from "../auth/LoginPage";
 import { apiJson } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
+import { ErrorScreen } from "../../shared/components/product";
 import { LoadingState } from "../../shared/components/ui";
-import { useLocale } from "../../shared/locale/LocaleProvider";
+import { getCanvasListFailureAction } from "./canvasListFailure";
+import { getCanvasListViewState } from "./canvasListViewState";
 
 export function CanvasListPage() {
-  const { messages } = useLocale();
   const navigation = usePageTransitionNavigation();
   const [isLoading, setIsLoading] = useState(true);
   const [needsLogin, setNeedsLogin] = useState(false);
-  const [error, setError] = useState("");
+  const [fatalError, setFatalError] = useState<Error | null>(null);
 
   useEffect(() => {
-    void openCanvas();
+    void openCanvas({ requireLoginOnFailure: true });
   }, []);
 
-  async function openCanvas() {
+  async function openCanvas({ requireLoginOnFailure = false }: { requireLoginOnFailure?: boolean } = {}) {
     setIsLoading(true);
-    setError("");
+    setFatalError(null);
+    if (!requireLoginOnFailure) {
+      setNeedsLogin(false);
+    }
     try {
       const items = await apiJson<Canvas[]>("/canvases");
       setNeedsLogin(false);
       await navigation.replace(items[0] ? `/canvases/${items[0].id}` : "/canvases/new");
-    } catch {
-      setNeedsLogin(true);
+    } catch (error) {
+      const action = getCanvasListFailureAction({ error, requireLoginOnFailure });
+      if (action === "show-login") {
+        setNeedsLogin(true);
+        return;
+      }
+      setNeedsLogin(false);
+      setFatalError(error instanceof Error ? error : new Error("Could not open canvas."));
     } finally {
       setIsLoading(false);
     }
   }
 
-  if (isLoading) {
+  const viewState = getCanvasListViewState({ isLoading, needsLogin });
+
+  if (fatalError) {
+    return <ErrorScreen onRetry={() => void openCanvas({ requireLoginOnFailure: true })} />;
+  }
+
+  if (viewState === "login") {
+    return <LoginPage onLoggedIn={() => openCanvas()} />;
+  }
+
+  if (viewState === "loading") {
     return (
       <main className="app-shell">
         <section className="canvas-panel canvas-loading-panel">
-          <LoadingState variant="page" aria-label={messages.canvasList.openingCanvas} />
+          <LoadingState variant="page" />
         </section>
       </main>
     );
   }
 
-  if (needsLogin) {
-    return <LoginPage onLoggedIn={openCanvas} />;
-  }
-
   return (
     <main className="app-shell">
       <section className="canvas-panel canvas-loading-panel">
-        <LoadingState variant="page" aria-label={messages.canvasList.openingCanvas} />
-        {error ? <p className="error-text">{error}</p> : null}
+        <LoadingState variant="page" />
       </section>
     </main>
   );
