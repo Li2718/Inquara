@@ -68,3 +68,26 @@ export function hasVisibleStarterMessage(
       message.content === starter.content
   );
 }
+
+export function canSettleStarterTransition({
+  pendingClientMutationCount,
+  snapshot,
+  starter
+}: {
+  pendingClientMutationCount: number;
+  snapshot: CanvasSnapshot | null;
+  starter: { canvasId: string | null; content: string };
+}): boolean {
+  if (pendingClientMutationCount > 0) return false;
+  return hasVisibleStarterMessage(snapshot, starter);
+}
+
+export function hasRenderedStarterMessage(renderedTexts: string[], content: string): boolean {
+  const normalizedContent = normalizeRenderedText(content);
+  if (!normalizedContent) return false;
+  return renderedTexts.some(text => normalizeRenderedText(text) === normalizedContent);
+}
+
+function normalizeRenderedText(value: string): string {
+  return value.replace(/\s+/gu, " ").trim();
+}

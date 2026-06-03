@@ -469,9 +469,13 @@ export async function registerRoutes(
         leaseEpoch: body.leaseEpoch
       });
       reply.hijack();
-      reply.header("Content-Type", "application/x-ndjson; charset=utf-8");
-      reply.header("Cache-Control", "no-store");
-      reply.raw.writeHead(200);
+      const corsOrigin = config?.WEB_ORIGIN ?? request.headers.origin ?? "*";
+      reply.raw.writeHead(200, {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Origin": corsOrigin,
+        "Cache-Control": "no-store",
+        "Content-Type": "application/x-ndjson; charset=utf-8"
+      });
       streamStarted = true;
       await streamCanvasMessageCommand(
         userId,

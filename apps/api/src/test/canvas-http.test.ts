@@ -338,6 +338,7 @@ describe("canvas lease and http command routes", () => {
     const response = await app.inject({
       method: "POST",
       url: `/canvases/${canvasId}/messages/stream`,
+      headers: { origin: "http://localhost:3000" },
       cookies: { inquara_session: session },
       payload: {
         sessionId: "tab-a",
@@ -355,6 +356,8 @@ describe("canvas lease and http command routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:3000");
+    expect(response.headers["access-control-allow-credentials"]).toBe("true");
     const lines = response.body
       .trim()
       .split("\n")

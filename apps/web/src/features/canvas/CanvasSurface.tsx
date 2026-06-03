@@ -11,13 +11,14 @@ import { CanvasLeaseBlocker } from "../canvas-session/CanvasLeaseBlocker";
 import { CanvasSessionProvider, useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasSidebar } from "../canvases/CanvasSidebar";
 import { NewCanvasEntry } from "../canvases/NewCanvasEntry";
-import { clearPendingStarterMessage } from "../canvases/newCanvasDraft";
+import { clearPendingStarterMessage, getPendingStarterMessage } from "../canvases/newCanvasDraft";
 import { CANVAS_SIDEBAR_OPEN_COOKIE, CANVAS_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
 import { CanvasView } from "./CanvasView";
 import { parseCanvasPathState, writeCanvasPathState, type CanvasPathState } from "./canvasUrlState";
 import {
   advanceNewCanvasTransition,
-  hasVisibleStarterMessage,
+  canSettleStarterTransition,
+  hasRenderedStarterMessage,
   initialNewCanvasTransitionState,
   type NewCanvasTransitionState
 } from "./newCanvasTransition";
@@ -122,10 +123,11 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
         <CanvasSessionProvider
           canvasId={activeState.canvasId}
           initialStarterMessage={
-            pendingStarterSubmission?.canvasId === activeState.canvasId ? pendingStarterSubmission.content : null
+            pendingStarterSubmission?.canvasId === activeState.canvasId
+              ? pendingStarterSubmission.content
+              : getPendingStarterMessage(activeState.canvasId)
           }
           onInitialStarterMessageSent={canvasId => {
-            clearPendingStarterMessage(canvasId);
             setPendingStarterSubmission(current => (current?.canvasId === canvasId ? null : current));
           }}
         >
@@ -191,6 +193,7 @@ function CanvasSurfaceContent({
 }) {
   const { messages } = useLocale();
   const { refreshSnapshot, retryLease, state } = useCanvasSession();
+  const [starterRenderWaitTick, setStarterRenderWaitTick] = useState(0);
 
   useEffect(() => {
     if (!pendingCanvasId) return;
@@ -202,15 +205,41 @@ function CanvasSurfaceContent({
   useEffect(() => {
     if (state.leaseState !== "active") return;
     if (!transitionCanvasId) return;
-    if (!hasVisibleStarterMessage(state.snapshot, { canvasId: transitionCanvasId, content: transitionContent })) {
+    const starter = { canvasId: transitionCanvasId, content: transitionContent };
+    if (
+      !canSettleStarterTransition({
+        pendingClientMutationCount: state.pendingClientMutationIds.length,
+        snapshot: state.snapshot,
+        starter
+      })
+    ) {
       const timeout = window.setTimeout(() => {
         void refreshSnapshot();
       }, 500);
       return () => window.clearTimeout(timeout);
     }
+    const renderedMessages = Array.from(document.querySelectorAll<HTMLElement>(".message-bubble.message-user")).map(
+      element => element.textContent ?? ""
+    );
+    if (!hasRenderedStarterMessage(renderedMessages, transitionContent)) {
+      const timeout = window.setTimeout(() => {
+        setStarterRenderWaitTick(value => value + 1);
+      }, 50);
+      return () => window.clearTimeout(timeout);
+    }
+    clearPendingStarterMessage(transitionCanvasId);
     const timeout = window.setTimeout(() => onStarterTransitionReady(transitionCanvasId), 220);
     return () => window.clearTimeout(timeout);
-  }, [onStarterTransitionReady, refreshSnapshot, state.leaseState, state.snapshot, transitionContent, transitionCanvasId]);
+  }, [
+    onStarterTransitionReady,
+    refreshSnapshot,
+    state.leaseState,
+    state.pendingClientMutationIds.length,
+    state.snapshot,
+    starterRenderWaitTick,
+    transitionContent,
+    transitionCanvasId
+  ]);
 
   return (
     <>

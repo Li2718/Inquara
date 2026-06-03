@@ -1,7 +1,14 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { advanceNewCanvasTransition, initialNewCanvasTransitionState, hasVisibleStarterMessage } from "./newCanvasTransition";
+import type { CanvasSnapshot } from "@inquara/domain";
+import {
+  advanceNewCanvasTransition,
+  canSettleStarterTransition,
+  hasRenderedStarterMessage,
+  hasVisibleStarterMessage,
+  initialNewCanvasTransitionState
+} from "./newCanvasTransition";
 import { NewCanvasMorphOverlay } from "./CanvasSurface";
 
 describe("new canvas transition", () => {
@@ -35,37 +42,32 @@ describe("new canvas transition", () => {
   });
 
   it("detects the submitted user message in the current canvas snapshot", () => {
+    expect(hasVisibleStarterMessage(snapshotWithStarterMessage, { canvasId: "canvas-1", content: "First question" })).toBe(true);
+  });
+
+  it("does not settle while the starter message is only a pending client mutation", () => {
     expect(
-      hasVisibleStarterMessage(
-        {
-          canvas: {
-            id: "canvas-1",
-            ownerId: "user-1",
-            title: "Untitled",
-            version: 1,
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: "2026-01-01T00:00:00.000Z"
-          },
-          nodes: [],
-          edges: [],
-          messages: [
-            {
-              canvasId: "canvas-1",
-              id: "message-1",
-              nodeId: "node-1",
-              role: "user",
-              content: "First question",
-              status: "complete",
-              model: null,
-              errorMessage: null,
-              createdAt: "2026-01-01T00:00:00.000Z",
-              updatedAt: "2026-01-01T00:00:00.000Z"
-            }
-          ]
-        },
-        { canvasId: "canvas-1", content: "First question" }
-      )
+      canSettleStarterTransition({
+        pendingClientMutationCount: 1,
+        snapshot: snapshotWithStarterMessage,
+        starter: { canvasId: "canvas-1", content: "First question" }
+      })
+    ).toBe(false);
+
+    expect(
+      canSettleStarterTransition({
+        pendingClientMutationCount: 0,
+        snapshot: snapshotWithStarterMessage,
+        starter: { canvasId: "canvas-1", content: "First question" }
+      })
     ).toBe(true);
+  });
+
+  it("matches the starter message only after the real message bubble renders", () => {
+    expect(hasRenderedStarterMessage([], "First question")).toBe(false);
+    expect(hasRenderedStarterMessage(["First question"], "First question")).toBe(true);
+    expect(hasRenderedStarterMessage(["First\nquestion"], "First question")).toBe(true);
+    expect(hasRenderedStarterMessage(["Different question"], "First question")).toBe(false);
   });
 
   it("renders the morph send control with the normal send label", () => {
@@ -76,3 +78,30 @@ describe("new canvas transition", () => {
     expect(markup).not.toContain("new-canvas-morph-send");
   });
 });
+
+const snapshotWithStarterMessage: CanvasSnapshot = {
+  canvas: {
+    id: "canvas-1",
+    ownerId: "user-1",
+    title: "Untitled",
+    version: 1,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z"
+  },
+  nodes: [],
+  edges: [],
+  messages: [
+    {
+      canvasId: "canvas-1",
+      id: "message-1",
+      nodeId: "node-1",
+      role: "user",
+      content: "First question",
+      status: "complete",
+      model: null,
+      errorMessage: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    }
+  ]
+};

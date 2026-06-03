@@ -143,6 +143,7 @@ export function CanvasSessionProvider({
         await retryLeaseNow();
       },
       async sendCommand(command) {
+        stateRef.current = canvasSessionStore.getState();
         if (stateRef.current.leaseState !== "active") return;
         canvasSessionStore.getState().applyOptimisticCommand(command);
         try {
@@ -322,6 +323,20 @@ export function CanvasSessionProvider({
     if (snapshot.canvas.id !== canvasId) return;
     const rootNode = snapshot.nodes.find(node => !node.parentNodeId && !node.hiddenAt && !node.deletedAt);
     if (!rootNode) return;
+    if (
+      snapshot.messages.some(
+        message =>
+          message.canvasId === canvasId &&
+          message.nodeId === rootNode.id &&
+          message.role === "user" &&
+          message.status === "complete" &&
+          message.content === content
+      )
+    ) {
+      sentInitialStarterCanvasRef.current = canvasId;
+      onInitialStarterMessageSent?.(canvasId);
+      return;
+    }
 
     sentInitialStarterCanvasRef.current = canvasId;
     onInitialStarterMessageSent?.(canvasId);
