@@ -9,4 +9,5 @@ export type StreamHandlers = {
 
 export interface AIProvider {
   streamReply(messages: ChatContextMessage[], handlers: StreamHandlers): Promise<{ content: string; model: string }>;
+  completeSmallTask(messages: ChatContextMessage[]): Promise<{ content: string; model: string }>;
 }

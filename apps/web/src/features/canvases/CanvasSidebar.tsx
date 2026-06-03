@@ -23,7 +23,7 @@ import { getCanvasDeleteDialogOpeningState } from "./canvasDeleteDialogState";
 import { upsertCanvasList } from "./canvasListState";
 
 type CanvasSidebarProps = {
-  createdCanvas: Canvas | null;
+  updatedCanvas: Canvas | null;
   currentCanvasId: string;
   isOpen: boolean;
   onNewCanvasRequest(): void;
@@ -34,7 +34,7 @@ type CanvasSidebarProps = {
 let canvasListCache: Canvas[] | null = null;
 
 export function CanvasSidebar({
-  createdCanvas,
+  updatedCanvas,
   currentCanvasId,
   isOpen,
   onNewCanvasRequest,
@@ -57,13 +57,13 @@ export function CanvasSidebar({
   }, []);
 
   useEffect(() => {
-    if (!createdCanvas) return;
+    if (!updatedCanvas) return;
     setCanvases(previous => {
-      const nextCanvases = upsertCanvasList(previous, createdCanvas);
+      const nextCanvases = upsertCanvasList(previous, updatedCanvas);
       canvasListCache = nextCanvases;
       return nextCanvases;
     });
-  }, [createdCanvas]);
+  }, [updatedCanvas]);
 
   async function loadCanvases({ showLoading }: { showLoading: boolean }) {
     if (showLoading) setIsLoading(true);

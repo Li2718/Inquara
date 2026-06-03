@@ -41,6 +41,28 @@ const snapshot: CanvasSnapshot = {
 };
 
 describe("canvas session store", () => {
+  it("applies canvas title update events", () => {
+    const store = createCanvasSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyEvent({
+      id: "event-canvas-title",
+      type: "canvas.updated",
+      canvasId: "canvas-1",
+      version: 1,
+      clientMutationId: null,
+      createdAt: "2026-05-24T00:01:00.000Z",
+      canvas: {
+        ...snapshot.canvas,
+        title: "Generated title",
+        version: 1,
+        updatedAt: "2026-05-24T00:01:00.000Z"
+      }
+    });
+
+    expect(store.getState().snapshot?.canvas.title).toBe("Generated title");
+  });
+
   it("applies events and clears acknowledged client mutations", () => {
     const store = createCanvasSessionStore();
     store.getState().setSnapshot(snapshot);
@@ -113,5 +135,29 @@ describe("canvas session store", () => {
     expect(nodes.find(candidate => candidate.id === "node-1")).toMatchObject({ x: 0, y: 120 });
     expect(nodes.find(candidate => candidate.id === "node-2")).toMatchObject({ x: 484, y: 120 });
     expect(store.getState().pendingClientMutationIds).toEqual(["mutation-organize"]);
+  });
+
+  it("uses selected text as the optimistic follow-up node title", () => {
+    const store = createCanvasSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyOptimisticCommand({
+      type: "node.createFromSelection",
+      clientMutationId: "mutation-follow-up",
+      canvasId: "canvas-1",
+      nodeId: "node-follow-up",
+      edgeId: "edge-follow-up",
+      sourceNodeId: "node-1",
+      sourceMessageId: "message-1",
+      sourceQuote: "selected text for the follow-up",
+      sourceRangeStart: 0,
+      sourceRangeEnd: 31,
+      x: 480,
+      y: 120
+    });
+
+    expect(store.getState().snapshot?.nodes.find(candidate => candidate.id === "node-follow-up")?.title).toBe(
+      "selected text for the follow-up"
+    );
   });
 });

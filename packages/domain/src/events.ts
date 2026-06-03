@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CanvasEdgeSchema, CanvasNodeSchema, IdSchema, NodeMessageSchema } from "./schemas";
+import { CanvasEdgeSchema, CanvasNodeSchema, CanvasSchema, IdSchema, NodeMessageSchema } from "./schemas";
 
 const BaseEventSchema = z.object({
   id: IdSchema,
@@ -10,6 +10,7 @@ const BaseEventSchema = z.object({
 });
 
 export const CanvasEventSchema = z.discriminatedUnion("type", [
+  BaseEventSchema.extend({ type: z.literal("canvas.updated"), canvas: CanvasSchema }),
   BaseEventSchema.extend({ type: z.literal("canvas.node.created"), node: CanvasNodeSchema }),
   BaseEventSchema.extend({ type: z.literal("canvas.node.updated"), node: CanvasNodeSchema }),
   BaseEventSchema.extend({ type: z.literal("canvas.edge.created"), edge: CanvasEdgeSchema }),

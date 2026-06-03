@@ -287,7 +287,7 @@ function applyOptimisticCommand(snapshot: CanvasSnapshot, command: CanvasCommand
     const node: CanvasNode = {
       id: command.nodeId,
       canvasId: command.canvasId,
-      title: "Follow-up",
+      title: truncateTitle(command.sourceQuote),
       x: command.x,
       y: command.y,
       width: 420,
@@ -328,4 +328,10 @@ function applyOptimisticCommand(snapshot: CanvasSnapshot, command: CanvasCommand
   }
 
   return snapshot;
+}
+
+function truncateTitle(value: string, maxLength = 80): string {
+  const normalized = value.replace(/\s+/gu, " ").trim();
+  if (normalized.length <= maxLength) return normalized || "Follow-up";
+  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 }

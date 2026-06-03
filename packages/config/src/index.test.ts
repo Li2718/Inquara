@@ -35,10 +35,12 @@ describe("loadConfig", () => {
       AI_PROVIDER: "openai-compatible",
       OPENAI_COMPATIBLE_BASE_URL: "https://api.example.com/v1",
       OPENAI_COMPATIBLE_API_KEY: "secret-key",
-      OPENAI_COMPATIBLE_MODEL: "example-model"
+      OPENAI_COMPATIBLE_MODEL: "example-model",
+      OPENAI_COMPATIBLE_SMALL_MODEL: "small-model"
     });
 
     expect(config.AI_PROVIDER).toBe("openai-compatible");
     expect(config.OPENAI_COMPATIBLE_MODEL).toBe("example-model");
+    expect(config.OPENAI_COMPATIBLE_SMALL_MODEL).toBe("small-model");
   });
 });

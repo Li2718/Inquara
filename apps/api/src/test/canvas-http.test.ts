@@ -365,10 +365,12 @@ describe("canvas lease and http command routes", () => {
       .map(line => JSON.parse(line) as { type: string; event: { type: string; clientMutationId: string | null } });
     expect(lines.length).toBeGreaterThanOrEqual(4);
     expect(lines[0]?.type).toBe("event");
-    expect(lines[0]?.event.type).toBe("canvas.message.created");
+    expect(lines.some(line => line.event.type === "canvas.node.updated")).toBe(true);
+    expect(lines.some(line => line.event.type === "canvas.updated")).toBe(true);
+    expect(lines.some(line => line.event.type === "canvas.message.created")).toBe(true);
     expect(lines.some(line => line.event.type === "canvas.message.delta")).toBe(true);
     expect(lines.at(-1)?.event.type).toBe("canvas.message.updated");
-    expect(lines[0]?.event.clientMutationId).toBe("mutation-http-message");
+    expect(lines.some(line => line.event.clientMutationId === "mutation-http-message")).toBe(true);
     await app.close();
   });
 });

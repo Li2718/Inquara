@@ -1,4 +1,4 @@
-import type { CanvasEdge, CanvasNode, NodeMessage, CanvasEvent } from "@inquara/domain";
+import type { Canvas, CanvasEdge, CanvasNode, NodeMessage, CanvasEvent } from "@inquara/domain";
 
 export type EventBaseInput = {
   canvasId: string;
@@ -10,6 +10,13 @@ export function createNodeCreatedEvent(input: EventBaseInput & { node: CanvasNod
   return {
     ...baseEvent("canvas.node.created", input),
     node: input.node
+  };
+}
+
+export function createCanvasUpdatedEvent(input: EventBaseInput & { canvas: Canvas }): CanvasEvent {
+  return {
+    ...baseEvent("canvas.updated", input),
+    canvas: input.canvas
   };
 }
 

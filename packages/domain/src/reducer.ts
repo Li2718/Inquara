@@ -4,6 +4,8 @@ import type { CanvasSnapshot } from "./schemas";
 export function applyCanvasEvent(snapshot: CanvasSnapshot, event: CanvasEvent): CanvasSnapshot {
   if (event.version < snapshot.canvas.version) return snapshot;
   const isSameVersion = event.version === snapshot.canvas.version;
+  const canApplySameVersionCanvasUpdate =
+    event.type === "canvas.updated" && snapshot.canvas.updatedAt < event.canvas.updatedAt;
   const canApplySameVersionCreate =
     (event.type === "canvas.node.created" && !snapshot.nodes.some(node => node.id === event.node.id)) ||
     (event.type === "canvas.edge.created" && !snapshot.edges.some(edge => edge.id === event.edge.id)) ||
@@ -14,11 +16,21 @@ export function applyCanvasEvent(snapshot: CanvasSnapshot, event: CanvasEvent): 
   const canApplySameVersionMessageUpdate =
     (event.type === "canvas.message.updated" || event.type === "canvas.message.failed") &&
     snapshot.messages.some(message => message.id === event.message.id && message.updatedAt < event.message.updatedAt);
-  if (isSameVersion && !canApplySameVersionCreate && !canApplySameVersionNodeUpdate && !canApplySameVersionMessageUpdate) {
+  if (
+    isSameVersion &&
+    !canApplySameVersionCanvasUpdate &&
+    !canApplySameVersionCreate &&
+    !canApplySameVersionNodeUpdate &&
+    !canApplySameVersionMessageUpdate
+  ) {
     return snapshot;
   }
 
   const canvas = { ...snapshot.canvas, version: event.version, updatedAt: event.createdAt };
+
+  if (event.type === "canvas.updated") {
+    return { ...snapshot, canvas: event.canvas };
+  }
 
   if (event.type === "canvas.node.created") {
     if (snapshot.nodes.some(node => node.id === event.node.id)) return snapshot;

@@ -38,7 +38,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
   const [isPreparingCanvasSwitch, setIsPreparingCanvasSwitch] = useState(false);
   const [pendingCanvasId, setPendingCanvasId] = useState<string | null>(null);
   const [pendingStarterSubmission, setPendingStarterSubmission] = useState<{ canvasId: string; content: string } | null>(null);
-  const [createdCanvasForSidebar, setCreatedCanvasForSidebar] = useState<Canvas | null>(null);
+  const [updatedCanvasForSidebar, setUpdatedCanvasForSidebar] = useState<Canvas | null>(null);
   const [newCanvasTransition, setNewCanvasTransition] = useState<NewCanvasTransitionState>(initialNewCanvasTransitionState);
   const [resetViewportRequest, setResetViewportRequest] = useState(0);
 
@@ -95,7 +95,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
         onNewCanvasRequest={() => showNewCanvas()}
       />
       <CanvasSidebar
-        createdCanvas={createdCanvasForSidebar}
+        updatedCanvas={updatedCanvasForSidebar}
         currentCanvasId={activeState.mode === "canvas" ? activeState.canvasId : "new"}
         isOpen={isSidebarOpen}
         onToggle={toggleSidebar}
@@ -114,7 +114,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
                 })
               );
               setPendingStarterSubmission({ canvasId: canvas.id, content });
-              setCreatedCanvasForSidebar(canvas);
+              setUpdatedCanvasForSidebar(canvas);
               await showCanvas(canvas.id, { replace: true });
             }}
           />
@@ -151,6 +151,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
               setIsPreparingCanvasSwitch(false);
               setPendingCanvasId(null);
             }}
+            onCanvasSnapshotUpdated={setUpdatedCanvasForSidebar}
           />
         </CanvasSessionProvider>
       )}
@@ -179,7 +180,8 @@ function CanvasSurfaceContent({
   transitionCanvasId,
   transitionContent,
   onStarterTransitionReady,
-  onCanvasSwitchReady
+  onCanvasSwitchReady,
+  onCanvasSnapshotUpdated
 }: {
   canvasId: string;
   isSidebarOpen: boolean;
@@ -190,10 +192,17 @@ function CanvasSurfaceContent({
   transitionContent: string;
   onStarterTransitionReady(canvasId: string): void;
   onCanvasSwitchReady(): void;
+  onCanvasSnapshotUpdated(canvas: Canvas): void;
 }) {
   const { messages } = useLocale();
   const { refreshSnapshot, retryLease, state } = useCanvasSession();
   const [starterRenderWaitTick, setStarterRenderWaitTick] = useState(0);
+
+  useEffect(() => {
+    if (state.snapshot?.canvas) {
+      onCanvasSnapshotUpdated(state.snapshot.canvas);
+    }
+  }, [onCanvasSnapshotUpdated, state.snapshot?.canvas]);
 
   useEffect(() => {
     if (!pendingCanvasId) return;

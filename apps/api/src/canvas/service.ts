@@ -154,7 +154,7 @@ export async function createNodeFromSelection(
       data: {
         id: command.nodeId,
         canvasId: command.canvasId,
-        title: "Follow-up",
+        title: truncateTitle(command.sourceQuote),
         x: command.x,
         y: command.y,
         width: 420,
@@ -195,6 +195,12 @@ export async function createNodeFromSelection(
       })
     ];
   });
+}
+
+function truncateTitle(value: string, maxLength = 80): string {
+  const normalized = value.replace(/\s+/gu, " ").trim();
+  if (normalized.length <= maxLength) return normalized || "Follow-up";
+  return `${normalized.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 }
 
 export async function updateNodePosition(

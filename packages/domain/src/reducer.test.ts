@@ -60,6 +60,28 @@ const baseSnapshot: CanvasSnapshot = {
 };
 
 describe("applyCanvasEvent", () => {
+  it("updates the canvas title and version", () => {
+    const event: CanvasEvent = {
+      id: "event-canvas-updated",
+      type: "canvas.updated",
+      canvasId: "canvas-1",
+      version: 2,
+      clientMutationId: null,
+      createdAt: "2026-05-24T00:00:02.000Z",
+      canvas: {
+        ...baseSnapshot.canvas,
+        title: "Generated title",
+        version: 2,
+        updatedAt: "2026-05-24T00:00:02.000Z"
+      }
+    };
+
+    const next = applyCanvasEvent(baseSnapshot, event);
+
+    expect(next.canvas.title).toBe("Generated title");
+    expect(next.canvas.version).toBe(2);
+  });
+
   it("adds a created node and advances the canvas version", () => {
     const event: CanvasEvent = {
       id: "event-1",

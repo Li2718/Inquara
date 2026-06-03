@@ -11,6 +11,7 @@ export function createAIProvider(config: AppConfig): AIProvider {
   return createOpenAICompatibleProvider({
     baseUrl: config.OPENAI_COMPATIBLE_BASE_URL,
     apiKey: config.OPENAI_COMPATIBLE_API_KEY,
-    model: config.OPENAI_COMPATIBLE_MODEL
+    model: config.OPENAI_COMPATIBLE_MODEL,
+    smallModel: config.OPENAI_COMPATIBLE_SMALL_MODEL || config.OPENAI_COMPATIBLE_MODEL
   });
 }

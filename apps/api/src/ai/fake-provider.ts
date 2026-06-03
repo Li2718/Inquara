@@ -14,5 +14,14 @@ export const fakeAIProvider: AIProvider = {
       await handlers.onDelta(part);
     }
     return { content, model: "fake-inquara-stream" };
+  },
+  async completeSmallTask(messages) {
+    const latest = [...messages].reverse().find(message => message.role === "user");
+    return { content: summarizeFakeTitle(latest?.content ?? "New chat"), model: "fake-inquara-small" };
   }
 };
+
+function summarizeFakeTitle(content: string): string {
+  const normalized = content.replace(/\s+/gu, " ").trim();
+  return normalized.length > 48 ? `${normalized.slice(0, 47).trimEnd()}...` : normalized || "New chat";
+}

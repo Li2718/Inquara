@@ -1,4 +1,5 @@
 import { prisma } from "@inquara/db";
+import type { CanvasEvent } from "@inquara/domain";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { AIProvider, ChatContextMessage } from "../ai/provider";
 import { sendUserMessage } from "../messages/service";
@@ -6,19 +7,26 @@ import { resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
 let canvasId = "";
+let rootNodeId = "";
 let childNodeId = "";
 let capturedContext: ChatContextMessage[] = [];
+let capturedSmallTasks: ChatContextMessage[][] = [];
 
 const capturingProvider: AIProvider = {
   async streamReply(messages, handlers) {
     capturedContext = messages;
     await handlers.onDelta("ok");
     return { content: "ok", model: "capturing-test-provider" };
+  },
+  async completeSmallTask(messages) {
+    capturedSmallTasks.push(messages);
+    return { content: "Generated concise title", model: "capturing-small-provider" };
   }
 };
 
 beforeEach(async () => {
   capturedContext = [];
+  capturedSmallTasks = [];
   await resetTestDatabase();
 
   const user = await prisma.user.create({
@@ -39,9 +47,18 @@ beforeEach(async () => {
       y: 100,
       width: 420,
       height: 520,
-      collapsed: false
+      collapsed: false,
+      hiddenStateSnapshot: {
+        hiddenChild: {
+          hiddenAt: new Date("2026-01-01T00:00:00.000Z").toISOString(),
+          offsetX: 12,
+          offsetY: 24,
+          scrollTop: 36
+        }
+      }
     }
   });
+  rootNodeId = rootNode.id;
 
   await prisma.nodeMessage.create({
     data: {
@@ -87,11 +104,151 @@ afterAll(async () => {
 });
 
 describe("message command services", () => {
+  it("renames the main chat and canvas from the first question, then applies the small-model title", async () => {
+    await prisma.nodeMessage.deleteMany({ where: { canvasId, nodeId: rootNodeId } });
+
+    const events: CanvasEvent[] = [];
+    await sendUserMessage(
+      userId,
+      {
+        type: "message.sendUserMessage",
+        clientMutationId: "mutation-root-title",
+        canvasId,
+        nodeId: rootNodeId,
+        userMessageId: "message-user-root-title",
+        assistantMessageId: "message-assistant-root-title",
+        content: "How should we evaluate long-term memory in agent workspaces?"
+      },
+      capturingProvider,
+      event => events.push(event)
+    );
+
+    const [canvas, node] = await Promise.all([
+      prisma.canvas.findUniqueOrThrow({ where: { id: canvasId } }),
+      prisma.canvasNode.findUniqueOrThrow({ where: { id: rootNodeId } })
+    ]);
+
+    expect(canvas.title).toBe("Generated concise title");
+    expect(node.title).toBe("Generated concise title");
+    expect(capturedSmallTasks[0]?.at(-1)?.content).toContain("How should we evaluate long-term memory");
+    expect(events.some(event => event.type === "canvas.updated")).toBe(true);
+    expect(events.filter(event => event.type === "canvas.node.updated")).toHaveLength(2);
+    const firstNodeUpdate = events.find(event => event.type === "canvas.node.updated");
+    expect(firstNodeUpdate?.type === "canvas.node.updated" ? firstNodeUpdate.node.hiddenStateSnapshot : null).toMatchObject({
+      hiddenChild: {
+        hiddenAt: "2026-01-01T00:00:00.000Z",
+        offsetX: 12,
+        offsetY: 24,
+        scrollTop: 36
+      }
+    });
+  });
+
+  it("uses the selected quote as the follow-up title, then names it from quote and first question", async () => {
+    await sendUserMessage(
+      userId,
+      {
+        type: "message.sendUserMessage",
+        clientMutationId: "mutation-follow-up-title",
+        canvasId,
+        nodeId: childNodeId,
+        userMessageId: "message-user-follow-up-title",
+        assistantMessageId: "message-assistant-follow-up-title",
+        content: "Why does this part matter?"
+      },
+      capturingProvider,
+      () => undefined
+    );
+
+    const childNode = await prisma.canvasNode.findUniqueOrThrow({ where: { id: childNodeId } });
+
+    expect(childNode.title).toBe("Generated concise title");
+    expect(capturedSmallTasks[0]?.at(-1)?.content).toContain("which context matters");
+    expect(capturedSmallTasks[0]?.at(-1)?.content).toContain("Why does this part matter?");
+  });
+
+  it("renames an independent chat from its first question without changing the canvas title", async () => {
+    const independentNode = await prisma.canvasNode.create({
+      data: {
+        canvasId,
+        title: "New chat",
+        x: 720,
+        y: 320,
+        width: 420,
+        height: 520,
+        collapsed: false
+      }
+    });
+
+    await sendUserMessage(
+      userId,
+      {
+        type: "message.sendUserMessage",
+        clientMutationId: "mutation-independent-title",
+        canvasId,
+        nodeId: independentNode.id,
+        userMessageId: "message-user-independent-title",
+        assistantMessageId: "message-assistant-independent-title",
+        content: "Compare vector clocks and CRDT merge strategies."
+      },
+      capturingProvider,
+      () => undefined
+    );
+
+    const [canvas, node] = await Promise.all([
+      prisma.canvas.findUniqueOrThrow({ where: { id: canvasId } }),
+      prisma.canvasNode.findUniqueOrThrow({ where: { id: independentNode.id } })
+    ]);
+
+    expect(canvas.title).toBe("Message Canvas");
+    expect(node.title).toBe("Generated concise title");
+    expect(capturedSmallTasks[0]?.at(-1)?.content).toContain("Compare vector clocks");
+  });
+
+  it("keeps the fallback first-question title when small-model naming fails", async () => {
+    await prisma.nodeMessage.deleteMany({ where: { canvasId, nodeId: rootNodeId } });
+    const failingTitleProvider: AIProvider = {
+      async streamReply(_messages, handlers) {
+        await handlers.onDelta("ok");
+        return { content: "ok", model: "reply-provider" };
+      },
+      async completeSmallTask() {
+        throw new Error("title model unavailable");
+      }
+    };
+
+    await sendUserMessage(
+      userId,
+      {
+        type: "message.sendUserMessage",
+        clientMutationId: "mutation-title-fallback",
+        canvasId,
+        nodeId: rootNodeId,
+        userMessageId: "message-user-title-fallback",
+        assistantMessageId: "message-assistant-title-fallback",
+        content: "What is the first question fallback title?"
+      },
+      failingTitleProvider,
+      () => undefined
+    );
+
+    const [canvas, node] = await Promise.all([
+      prisma.canvas.findUniqueOrThrow({ where: { id: canvasId } }),
+      prisma.canvasNode.findUniqueOrThrow({ where: { id: rootNodeId } })
+    ]);
+
+    expect(canvas.title).toBe("What is the first question fallback title?");
+    expect(node.title).toBe("What is the first question fallback title?");
+  });
+
   it("persists streamed assistant deltas before the final reply completes", async () => {
     const failingProvider: AIProvider = {
       async streamReply(_messages, handlers) {
         await handlers.onDelta("partial answer");
         throw new Error("provider timed out");
+      },
+      async completeSmallTask() {
+        return { content: "Partial stream title", model: "small-test-provider" };
       }
     };
 

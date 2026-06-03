@@ -6,12 +6,14 @@ export type OpenAICompatibleProviderOptions = {
   baseUrl: string;
   apiKey: string;
   model: string;
+  smallModel?: string;
   fetch?: FetchLike;
 };
 
 export function createOpenAICompatibleProvider(options: OpenAICompatibleProviderOptions): AIProvider {
   const fetcher = options.fetch ?? fetch;
   const model = options.model;
+  const smallModel = options.smallModel || model;
 
   return {
     async streamReply(messages, handlers) {
@@ -38,6 +40,27 @@ export function createOpenAICompatibleProvider(options: OpenAICompatibleProvider
         await handlers.onDelta(delta);
       }
       return { content, model };
+    },
+    async completeSmallTask(messages) {
+      const response = await fetcher(chatCompletionsUrl(options.baseUrl), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${options.apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: smallModel,
+          messages: messages.map(toProviderMessage),
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI-compatible small task request failed with status ${response.status}.`);
+      }
+
+      const body = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      return { content: body.choices?.[0]?.message?.content ?? "", model: smallModel };
     }
   };
 }
