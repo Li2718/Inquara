@@ -20,6 +20,7 @@ type AdminUser = {
   loginDays: number;
   name: string | null;
   questionCount: number;
+  registrationInviteNote: string | null;
   registeredDays: number;
   role: string;
 };
@@ -105,7 +106,12 @@ export function UserListAdminPage() {
                   <td className="admin-user-cell">
                     <UserAvatar user={user} />
                     <span>
-                      <strong>{user.name || copy.unnamed}</strong>
+                      <strong className="admin-user-name-line">
+                        <span className="admin-user-name-text">{user.name || copy.unnamed}</span>
+                        {user.registrationInviteNote ? (
+                          <span className="admin-user-invite-note">{user.registrationInviteNote}</span>
+                        ) : null}
+                      </strong>
                       <span>{user.email}</span>
                     </span>
                     {user.role === "admin" ? <span className="admin-user-role">{copy.roleAdmin}</span> : null}

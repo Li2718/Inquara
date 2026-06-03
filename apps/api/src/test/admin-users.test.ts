@@ -122,6 +122,7 @@ describe("admin users", () => {
       loginDays: number;
       name: string | null;
       questionCount: number;
+      registrationInviteNote: string | null;
       registeredDays: number;
       lastLoginAt: string | null;
       lastQuestionAt: string | null;
@@ -140,6 +141,7 @@ describe("admin users", () => {
       loginDays: 2,
       name: "Active Analyst",
       questionCount: 2,
+      registrationInviteNote: null,
       registeredDays: expect.any(Number),
       lastLoginAt: "2026-06-01T09:00:00.000Z",
       lastQuestionAt: "2026-05-31T08:00:00.000Z"
@@ -150,9 +152,54 @@ describe("admin users", () => {
       email: "quiet@inquara.local",
       loginDays: 0,
       questionCount: 0,
+      registrationInviteNote: null,
       lastLoginAt: null,
       lastQuestionAt: null
     });
+
+    await app.close();
+  });
+
+  it("includes the note from an administrator-created invitation code used for registration", async () => {
+    const app = await buildApp({ env: createApiTestEnv() });
+    const adminCookie = await signInAdmin(app);
+
+    const generated = await app.inject({
+      method: "POST",
+      url: "/admin/codes",
+      cookies: { inquara_session: adminCookie },
+      payload: { note: "Beta cohort" }
+    });
+    expect(generated.statusCode).toBe(200);
+    const code = generated.json<{ code: string }>().code;
+
+    const invited = await app.inject({
+      method: "POST",
+      url: "/auth/register",
+      payload: { email: "invited@inquara.local", password: "111111", redemptionCode: code }
+    });
+    expect(invited.statusCode).toBe(200);
+
+    await seedPasswordUser(prisma, {
+      email: "direct@inquara.local",
+      password: "111111"
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/users",
+      cookies: { inquara_session: adminCookie }
+    });
+
+    expect(response.statusCode).toBe(200);
+    const users = response.json<Array<{
+      email: string;
+      registrationInviteNote: string | null;
+    }>>();
+
+    expect(users.find(user => user.email === "invited@inquara.local")?.registrationInviteNote).toBe("Beta cohort");
+    expect(users.find(user => user.email === "direct@inquara.local")?.registrationInviteNote).toBeNull();
+    expect(users.find(user => user.email === "admin@inquara.local")?.registrationInviteNote).toBeNull();
 
     await app.close();
   });

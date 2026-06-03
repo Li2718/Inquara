@@ -1,4 +1,5 @@
 import { prisma } from "@inquara/db";
+import { adminSource, registrationEligibilityTarget } from "../redemption-codes/service";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -14,6 +15,7 @@ export type AdminUserListItem = {
   loginDays: number;
   name: string | null;
   questionCount: number;
+  registrationInviteNote: string | null;
   registeredDays: number;
   role: string;
 };
@@ -30,7 +32,7 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
     }
   });
   const userIds = users.map(user => user.id);
-  const [canvasCounts, chatCounts, questionCounts, lastQuestions, lastLogins, loginDays] = await Promise.all([
+  const [canvasCounts, chatCounts, questionCounts, lastQuestions, lastLogins, loginDays, invitationRedemptions] = await Promise.all([
     prisma.canvas.groupBy({
       by: ["ownerId"],
       where: { ownerId: { in: userIds }, archivedAt: null },
@@ -68,6 +70,23 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
     prisma.userSession.findMany({
       where: { userId: { in: userIds } },
       select: { createdAt: true, userId: true }
+    }),
+    prisma.redemptionCodeRedemption.findMany({
+      where: {
+        userId: { in: userIds },
+        redemptionCode: {
+          source: adminSource,
+          target: registrationEligibilityTarget
+        },
+        target: registrationEligibilityTarget
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        userId: true,
+        redemptionCode: {
+          select: { note: true }
+        }
+      }
     })
   ]);
 
@@ -83,6 +102,9 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
   const lastQuestionByUser = maxCanvasDatesByUser(lastQuestions, canvasOwnerById);
   const lastLoginByUser = new Map(lastLogins.map(item => [item.userId, item._max.createdAt ?? null]));
   const loginDaysByUser = countDistinctLoginDays(loginDays);
+  const registrationInviteNoteByUser = new Map(
+    invitationRedemptions.map(redemption => [redemption.userId, redemption.redemptionCode.note])
+  );
 
   return users
     .map(user => ({
@@ -97,6 +119,7 @@ export async function listAdminUsers(now = new Date()): Promise<AdminUserListIte
       loginDays: loginDaysByUser.get(user.id) ?? 0,
       name: user.name,
       questionCount: questionCountByUser.get(user.id) ?? 0,
+      registrationInviteNote: registrationInviteNoteByUser.get(user.id) ?? null,
       registeredDays: countInclusiveDays(user.createdAt, now),
       role: user.role
     }))
