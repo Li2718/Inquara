@@ -23,6 +23,7 @@ import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
+import { compensateViewportForStageRect, type StageRect } from "./stageLayoutCompensation";
 import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
 import {
   advanceCanvasViewportStability,
@@ -85,6 +86,7 @@ function CanvasFlow({
   const isBlocked = state.leaseState !== "active";
   const isViewportBlocked = state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
   const { screenToFlowPosition } = useReactFlow();
+  const viewport = useViewport();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
     () => ({
@@ -374,6 +376,11 @@ function CanvasFlow({
             onReady={handleViewportReady}
             canvasId={canvasId}
           />
+          <CanvasStageLayoutCompensator
+            isEnabled={!isPreparingCanvasSwitch && !isShowingStaleSnapshot}
+            isSidebarOpen={isSidebarOpen}
+            viewport={viewport}
+          />
         </ReactFlow>
       </CanvasViewportProvider>
       {!isViewportReady ? (
@@ -384,7 +391,6 @@ function CanvasFlow({
       {isViewportReady ? (
         <CanvasViewportControls
           firstRootNode={firstRootNode}
-          isSidebarOpen={isSidebarOpen}
           isBlocked={isBlocked}
           onOrganize={organizeCanvas}
           resetViewportRequest={resetViewportRequest}
@@ -446,7 +452,7 @@ function CanvasInitialViewport({
 
     const measure = () => {
       if (cancelled) return;
-      const measurement = getCanvasViewportMeasurement(isSidebarOpen);
+      const measurement = getCanvasViewportMeasurement();
       if (!measurement) {
         frame = window.requestAnimationFrame(measure);
         return;
@@ -463,8 +469,7 @@ function CanvasInitialViewport({
         calculateRootViewport({
           rootNode: firstRootNode,
           viewportWidth: measurement.viewportWidth,
-          viewportHeight: measurement.viewportHeight,
-          reservedLeft: measurement.reservedLeft
+          viewportHeight: measurement.viewportHeight
         }),
         { duration: 0 }
       );
@@ -482,15 +487,12 @@ function CanvasInitialViewport({
   return null;
 }
 
-function getCanvasViewportMeasurement(isSidebarOpen: boolean): CanvasViewportMeasurement | null {
+function getCanvasViewportMeasurement(): CanvasViewportMeasurement | null {
   const stage = document.querySelector(".canvas-stage");
-  const sidebar = isSidebarOpen ? document.querySelector(".canvas-sidebar") : null;
   const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
-  const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
   if (!stageRect || stageRect.width <= 0 || stageRect.height <= 0) return null;
 
   return {
-    reservedLeft: stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0,
     viewportWidth: stageRect.width,
     viewportHeight: stageRect.height
   };
@@ -527,13 +529,11 @@ function calculatePlacementViewport(viewport: { x: number; y: number; zoom: numb
 function CanvasViewportControls({
   firstRootNode,
   isBlocked,
-  isSidebarOpen,
   onOrganize,
   resetViewportRequest
 }: {
   firstRootNode: CanvasNode | null;
   isBlocked: boolean;
-  isSidebarOpen: boolean;
   onOrganize(): void;
   resetViewportRequest: number;
 }) {
@@ -545,20 +545,16 @@ function CanvasViewportControls({
   const resetViewportToRoot = useCallback(() => {
     if (!firstRootNode) return;
     const stage = document.querySelector(".canvas-stage");
-    const sidebar = isSidebarOpen ? document.querySelector(".canvas-sidebar") : null;
     const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
-    const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
-    const reservedLeft = stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0;
     void setViewport(
       calculateRootViewport({
         rootNode: firstRootNode,
         viewportWidth: stageRect?.width ?? window.innerWidth,
-        viewportHeight: stageRect?.height ?? window.innerHeight,
-        reservedLeft
+        viewportHeight: stageRect?.height ?? window.innerHeight
       }),
       { duration: 300 }
     );
-  }, [firstRootNode, isSidebarOpen, setViewport]);
+  }, [firstRootNode, setViewport]);
 
   useEffect(() => {
     if (resetViewportRequest === 0) return;
@@ -590,4 +586,47 @@ function CanvasViewportControls({
       </FloatingCircleButton>
     </div>
   );
+}
+
+function CanvasStageLayoutCompensator({
+  isEnabled,
+  isSidebarOpen,
+  viewport
+}: {
+  isEnabled: boolean;
+  isSidebarOpen: boolean;
+  viewport: { x: number; y: number; zoom: number };
+}) {
+  const { setViewport } = useReactFlow();
+  const previousStageRef = useRef<StageRect | null>(null);
+  const viewportRef = useRef(viewport);
+
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
+  useLayoutEffect(() => {
+    const stage = document.querySelector(".canvas-stage");
+    const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
+    if (!stageRect) return;
+
+    const currentStage = { left: stageRect.left, width: stageRect.width };
+    const previousStage = previousStageRef.current;
+    previousStageRef.current = currentStage;
+    if (!isEnabled || !previousStage || canvasStageRectsEqual(previousStage, currentStage)) return;
+
+    const nextViewport = compensateViewportForStageRect({
+      previousStage,
+      stage: currentStage,
+      viewport: viewportRef.current
+    });
+    viewportRef.current = nextViewport;
+    void setViewport(nextViewport, { duration: 0 });
+  }, [isEnabled, isSidebarOpen, setViewport, viewport]);
+
+  return null;
+}
+
+function canvasStageRectsEqual(left: StageRect, right: StageRect): boolean {
+  return Math.abs(left.left - right.left) < 0.5 && Math.abs(left.width - right.width) < 0.5;
 }

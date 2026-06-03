@@ -1,5 +1,4 @@
 export type CanvasViewportMeasurement = {
-  reservedLeft: number;
   viewportHeight: number;
   viewportWidth: number;
 };
@@ -35,9 +34,5 @@ export function advanceCanvasViewportStability(
 }
 
 function canvasViewportMeasurementsEqual(left: CanvasViewportMeasurement, right: CanvasViewportMeasurement): boolean {
-  return (
-    left.viewportWidth === right.viewportWidth &&
-    left.viewportHeight === right.viewportHeight &&
-    left.reservedLeft === right.reservedLeft
-  );
+  return left.viewportWidth === right.viewportWidth && left.viewportHeight === right.viewportHeight;
 }

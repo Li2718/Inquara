@@ -1581,14 +1581,26 @@ h2 {
 }
 
 .canvas-page {
+  --canvas-sidebar-collapsed-width: 38px;
+  --canvas-sidebar-expanded-width: min(320px, calc(100vw - 32px));
+  --canvas-sidebar-width: var(--canvas-sidebar-collapsed-width);
   position: relative;
   width: 100vw;
   height: 100svh;
+  display: grid;
+  grid-template-columns: var(--canvas-sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  padding: 66px 0 0 16px;
   overflow: hidden;
   background:
     radial-gradient(circle at 10% 12%, rgb(126 200 242 / 18%), transparent 24%),
     radial-gradient(circle at 88% 18%, rgb(57 183 165 / 14%), transparent 28%),
     linear-gradient(135deg, #f8fcff 0%, #f4fbf9 54%, #f9fcff 100%);
+}
+
+.canvas-page[data-sidebar-open="true"] {
+  --canvas-sidebar-width: var(--canvas-sidebar-expanded-width);
+  grid-template-columns: min(320px, calc(100vw - 32px)) minmax(0, 1fr);
 }
 
 .app-top-brand {
@@ -1819,6 +1831,8 @@ h2 {
 
 .canvas-stage {
   position: relative;
+  grid-column: 2;
+  grid-row: 1;
   width: 100%;
   height: 100%;
   min-width: 0;
@@ -2118,7 +2132,7 @@ textarea.node-composer-frame-input {
 
 .new-canvas-morph-overlay {
   position: absolute;
-  inset: 0;
+  inset: 66px 0 0 calc(16px + var(--canvas-sidebar-width));
   z-index: 18;
   display: grid;
   place-items: center;
@@ -2304,11 +2318,11 @@ textarea.node-composer-frame-input {
 }
 
 .canvas-sidebar {
-  position: absolute;
-  top: 66px;
-  left: 16px;
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
   z-index: 30;
-  width: min(320px, calc(100vw - 32px));
+  width: 100%;
   height: calc(100svh - 82px);
   min-width: 0;
   display: block;
@@ -2327,7 +2341,6 @@ textarea.node-composer-frame-input {
 }
 
 .canvas-sidebar[data-open="false"] {
-  width: 38px;
   height: 38px;
   border-radius: 20px;
   background: rgb(255 255 255 / 82%);
@@ -2335,7 +2348,7 @@ textarea.node-composer-frame-input {
 }
 
 .canvas-sidebar[data-open="true"] {
-  width: min(320px, calc(100vw - 32px));
+  width: 100%;
   height: calc(100svh - 82px);
 }
 
@@ -3618,7 +3631,12 @@ textarea.node-composer-frame-input {
   }
 
   .canvas-page {
-    grid-template-columns: 1fr;
+    --canvas-sidebar-expanded-width: min(320px, calc(100vw - 20px));
+    padding: 60px 0 0 10px;
+  }
+
+  .canvas-page[data-sidebar-open="true"] {
+    grid-template-columns: min(320px, calc(100vw - 20px)) minmax(0, 1fr);
   }
 
   .not-found-page {
@@ -3679,22 +3697,18 @@ textarea.node-composer-frame-input {
   }
 
   .canvas-sidebar {
-    position: absolute;
-    top: 60px;
-    left: 10px;
-    width: min(320px, calc(100vw - 20px));
+    width: var(--canvas-sidebar-expanded-width);
     height: calc(100svh - 70px);
     max-height: none;
     margin: 0;
   }
 
   .canvas-sidebar[data-open="false"] {
-    width: 38px;
     height: 38px;
   }
 
   .canvas-sidebar[data-open="true"] {
-    width: min(320px, calc(100vw - 20px));
+    width: var(--canvas-sidebar-expanded-width);
     height: calc(100svh - 70px);
   }
 }

@@ -7,7 +7,6 @@ import {
 
 function measurement(overrides: Partial<CanvasViewportMeasurement> = {}): CanvasViewportMeasurement {
   return {
-    reservedLeft: 336,
     viewportHeight: 900,
     viewportWidth: 1440,
     ...overrides
@@ -25,10 +24,16 @@ describe("advanceCanvasViewportStability", () => {
 
   it("resets stability when the layout measurement changes", () => {
     const first = advanceCanvasViewportStability(initialCanvasViewportStabilityState, measurement());
-    const changed = advanceCanvasViewportStability(first.state, measurement({ reservedLeft: 38 }));
-    const stable = advanceCanvasViewportStability(changed.state, measurement({ reservedLeft: 38 }));
+    const changed = advanceCanvasViewportStability(first.state, measurement({ viewportWidth: 1120 }));
+    const stable = advanceCanvasViewportStability(changed.state, measurement({ viewportWidth: 1120 }));
 
     expect(changed.isStable).toBe(false);
     expect(stable.isStable).toBe(true);
+  });
+
+  it("tracks only the pushed canvas stage size", () => {
+    const current = measurement();
+
+    expect(Object.keys(current).sort()).toEqual(["viewportHeight", "viewportWidth"]);
   });
 });
