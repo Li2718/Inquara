@@ -24,14 +24,8 @@ export function WorkspaceListPage() {
     setError("");
     try {
       const items = await apiJson<Workspace[]>("/workspaces");
-      const workspace =
-        items[0] ??
-        (await apiJson<Workspace>("/workspaces", {
-          method: "POST",
-          body: JSON.stringify({ title: messages.workspaceList.researchCanvas })
-        }));
       setNeedsLogin(false);
-      await navigation.replace(`/workspaces/${workspace.id}`);
+      await navigation.replace(items[0] ? `/workspaces/${items[0].id}` : "/workspaces/new");
     } catch {
       setNeedsLogin(true);
     } finally {

@@ -6,8 +6,6 @@ import { createUserSession, type CreateSessionOptions } from "../auth/session";
 import { redeemRegistrationCodeForUser } from "../redemption-codes/service";
 import { getInvitationOnlyRegistration } from "../settings/service";
 
-const rootAssistantText = "Ask me anything. Select part of an answer to branch into a focused follow-up.";
-
 export type UserDto = {
   id: string;
   email: string;
@@ -122,7 +120,7 @@ export async function createWorkspace(userId: string, title: string): Promise<Wo
     const created = await tx.workspace.create({
       data: { ownerId: userId, title }
     });
-    const rootNode = await tx.canvasNode.create({
+    await tx.canvasNode.create({
       data: {
         workspaceId: created.id,
         title: "Main chat",
@@ -131,15 +129,6 @@ export async function createWorkspace(userId: string, title: string): Promise<Wo
         width: 420,
         height: 520,
         collapsed: false
-      }
-    });
-    await tx.nodeMessage.create({
-      data: {
-        workspaceId: created.id,
-        nodeId: rootNode.id,
-        role: "assistant",
-        content: rootAssistantText,
-        status: "complete"
       }
     });
     return created;

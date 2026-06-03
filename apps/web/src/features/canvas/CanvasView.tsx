@@ -34,6 +34,7 @@ import {
 export type ChatFlowNodeData = CanvasNode & {
   isAppearing?: boolean;
   isExiting?: boolean;
+  messageRevision?: string;
 };
 export type ChatFlowNode = Node<ChatFlowNodeData, "chatNode">;
 
@@ -133,13 +134,13 @@ function CanvasFlow({
         id: node.id,
         type: "chatNode",
         position: { x: node.x, y: node.y },
-        data: { ...node, isAppearing: appearingNodeIds.has(node.id) },
+        data: { ...node, isAppearing: appearingNodeIds.has(node.id), messageRevision: getNodeMessageRevision(snapshot?.messages ?? [], node.id) },
         style: { width: node.width, height: node.height },
         width: node.width,
         height: node.height,
         dragHandle: ".canvas-node-header"
       })),
-    [appearingNodeIds, visibleNodes]
+    [appearingNodeIds, snapshot?.messages, visibleNodes]
   );
   const visibleFlowNodeIdSet = useMemo(() => new Set(visibleFlowNodes.map(node => node.id)), [visibleFlowNodes]);
 
@@ -401,6 +402,16 @@ function CanvasFlow({
       </PopupMenu>
     </div>
   );
+}
+
+function getNodeMessageRevision(
+  messages: Array<{ content: string; id: string; nodeId: string; status: string; updatedAt: string }>,
+  nodeId: string
+): string {
+  return messages
+    .filter(message => message.nodeId === nodeId)
+    .map(message => `${message.id}:${message.status}:${message.updatedAt}:${message.content.length}`)
+    .join("|");
 }
 
 function CanvasInitialViewport({

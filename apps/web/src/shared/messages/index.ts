@@ -91,6 +91,9 @@ export const messages = {
       workspace: "Canvas workspace",
       zoomControls: "Canvas zoom controls"
     },
+    newCanvasEntry: {
+      placeholder: "Start with a question"
+    },
     node: {
       actions: "Node actions",
       delete: "Delete",
@@ -306,6 +309,9 @@ export const messages = {
       stage: "画布",
       workspace: "画布工作区",
       zoomControls: "画布缩放控件"
+    },
+    newCanvasEntry: {
+      placeholder: "从一个问题开始"
     },
     node: {
       actions: "节点操作",

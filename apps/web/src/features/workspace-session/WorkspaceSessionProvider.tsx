@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkspaceCommand, WorkspaceSnapshot } from "@inquara/domain";
-import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { apiJson, apiRequest } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { useLocale } from "../../shared/locale/LocaleProvider";
@@ -12,6 +12,7 @@ import { workspaceSessionStore, type WorkspaceSessionState } from "./store";
 type WorkspaceSessionContextValue = {
   state: WorkspaceSessionState;
   commands: ReturnType<typeof createCommands>;
+  refreshSnapshot(): Promise<void>;
   sendCommand(command: WorkspaceCommand): Promise<void>;
 };
 
@@ -53,15 +54,20 @@ type LeaseStatusResponse =
 const WorkspaceSessionContext = createContext<WorkspaceSessionContextValue | null>(null);
 const workspaceSnapshotCache = new Map<string, WorkspaceSnapshot>();
 const renewIntervalMs = 5_000;
+const streamingRefreshIntervalMs = 700;
 const stalePollMinMs = 8_000;
 const stalePollJitterMs = 2_000;
 const leaseReleaseDelayMs = 250;
 const sessionStorageKeyPrefix = "inquara.workspace-session";
 
 export function WorkspaceSessionProvider({
+  initialStarterMessage,
+  onInitialStarterMessageSent,
   workspaceId,
   children
 }: {
+  initialStarterMessage?: string | null;
+  onInitialStarterMessageSent?(workspaceId: string): void;
   workspaceId: string;
   children: ReactNode;
 }) {
@@ -71,6 +77,7 @@ export function WorkspaceSessionProvider({
   const sessionIdRef = useRef<string | null>(null);
   const renewTimerRef = useRef<number | null>(null);
   const blockedPollTimerRef = useRef<number | null>(null);
+  const sentInitialStarterWorkspaceRef = useRef<string | null>(null);
   const releasedRef = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -111,44 +118,64 @@ export function WorkspaceSessionProvider({
     };
   }, [navigation, workspaceId]);
 
+  useEffect(() => {
+    if (state.leaseState !== "active") return;
+    if (!state.snapshot || state.snapshot.workspace.id !== workspaceId) return;
+    if (!state.snapshot.messages.some(message => message.status === "streaming")) return;
+    const timeout = window.setTimeout(() => {
+      void refreshWorkspaceSnapshot();
+    }, streamingRefreshIntervalMs);
+    return () => window.clearTimeout(timeout);
+  }, [state.leaseState, state.snapshot, workspaceId]);
+
+  const sendCommand = useCallback(
+    async (command: WorkspaceCommand) => {
+      const currentState = workspaceSessionStore.getState();
+      if (currentState.leaseState !== "active") return;
+      workspaceSessionStore.getState().applyOptimisticCommand(command);
+      try {
+        if (command.type === "message.sendUserMessage") {
+          await streamMessageCommand(command);
+          await refreshWorkspaceSnapshot();
+        } else {
+          const response = await apiJson<{ events: unknown[] }>(`/workspaces/${workspaceId}/commands`, {
+            method: "POST",
+            body: JSON.stringify({
+              sessionId: sessionIdRef.current,
+              leaseEpoch: currentState.lease.leaseEpoch,
+              command
+            })
+          });
+          const snapshot = workspaceSessionStore.getState().snapshot;
+          if (snapshot) {
+            workspaceSnapshotCache.set(workspaceId, snapshot);
+          }
+          if (!response.events.length) {
+            workspaceSessionStore.getState().clearPending(command.clientMutationId);
+          }
+        }
+      } catch (error) {
+        if (isLeaseStaleError(error)) {
+          await enterBlockedState("activeElsewhereMessage");
+          return;
+        }
+        workspaceSessionStore.getState().setErrorMessageKey("syncFailedMessage");
+        workspaceSessionStore.getState().clearPending(command.clientMutationId);
+      }
+    },
+    [workspaceId]
+  );
+
   const value = useMemo<WorkspaceSessionContextValue>(
     () => ({
       state,
       commands,
-      async sendCommand(command) {
-        if (stateRef.current.leaseState !== "active") return;
-        workspaceSessionStore.getState().applyOptimisticCommand(command);
-        try {
-          if (command.type === "message.sendUserMessage") {
-            await streamMessageCommand(command);
-          } else {
-            const response = await apiJson<{ events: unknown[] }>(`/workspaces/${workspaceId}/commands`, {
-              method: "POST",
-              body: JSON.stringify({
-                sessionId: sessionIdRef.current,
-                leaseEpoch: stateRef.current.lease.leaseEpoch,
-                command
-              })
-            });
-            const snapshot = workspaceSessionStore.getState().snapshot;
-            if (snapshot) {
-              workspaceSnapshotCache.set(workspaceId, snapshot);
-            }
-            if (!response.events.length) {
-              workspaceSessionStore.getState().clearPending(command.clientMutationId);
-            }
-          }
-        } catch (error) {
-          if (isLeaseStaleError(error)) {
-            await enterBlockedState("activeElsewhereMessage");
-            return;
-          }
-          workspaceSessionStore.getState().setErrorMessageKey("syncFailedMessage");
-          workspaceSessionStore.getState().clearPending(command.clientMutationId);
-        }
-      }
+      async refreshSnapshot() {
+        await refreshWorkspaceSnapshot();
+      },
+      sendCommand
     }),
-    [commands, state, workspaceId]
+    [commands, sendCommand, state]
   );
 
   return <WorkspaceSessionContext.Provider value={value}>{children}</WorkspaceSessionContext.Provider>;
@@ -169,10 +196,9 @@ export function WorkspaceSessionProvider({
           displacedSeq: null,
           expiresAt: acquire.lease.expiresAt
         });
-        const snapshot = await apiJson<WorkspaceSnapshot>(`/workspaces/${workspaceId}/snapshot`);
-        workspaceSnapshotCache.set(workspaceId, snapshot);
-        workspaceSessionStore.getState().setSnapshot(snapshot);
+        const snapshot = await refreshWorkspaceSnapshot();
         workspaceSessionStore.getState().setLeaseState("active");
+        sendInitialStarterMessage(snapshot);
         startRenewLoop();
         return;
       }
@@ -244,6 +270,26 @@ export function WorkspaceSessionProvider({
       expiresAt: null
     });
     startBlockedPollLoop();
+  }
+
+  async function refreshWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
+    const snapshot = await apiJson<WorkspaceSnapshot>(`/workspaces/${workspaceId}/snapshot`);
+    workspaceSnapshotCache.set(workspaceId, snapshot);
+    workspaceSessionStore.getState().setSnapshot(snapshot);
+    return snapshot;
+  }
+
+  function sendInitialStarterMessage(snapshot: WorkspaceSnapshot): void {
+    const content = initialStarterMessage?.trim();
+    if (!content) return;
+    if (sentInitialStarterWorkspaceRef.current === workspaceId) return;
+    if (snapshot.workspace.id !== workspaceId) return;
+    const rootNode = snapshot.nodes.find(node => !node.parentNodeId && !node.hiddenAt && !node.deletedAt);
+    if (!rootNode) return;
+
+    sentInitialStarterWorkspaceRef.current = workspaceId;
+    onInitialStarterMessageSent?.(workspaceId);
+    void sendCommand(commands.sendUserMessage(rootNode.id, content));
   }
 
   function startBlockedPollLoop(): void {

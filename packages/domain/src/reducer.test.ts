@@ -193,6 +193,118 @@ describe("applyWorkspaceEvent", () => {
     expect(afterSecond.nodes.find(node => node.id === "node-2")?.hiddenAt).toBeNull();
   });
 
+  it("applies streamed message events after optimistic message creation", () => {
+    const snapshot: WorkspaceSnapshot = {
+      ...baseSnapshot,
+      workspace: {
+        ...baseSnapshot.workspace,
+        version: 2
+      },
+      messages: [
+        {
+          id: "user-message-1",
+          workspaceId: "workspace-1",
+          nodeId: "node-1",
+          role: "user",
+          content: "First question",
+          status: "complete",
+          model: null,
+          errorMessage: null,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:03.000Z"
+        },
+        {
+          id: "assistant-message-1",
+          workspaceId: "workspace-1",
+          nodeId: "node-1",
+          role: "assistant",
+          content: "",
+          status: "streaming",
+          model: null,
+          errorMessage: null,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:03.000Z"
+        }
+      ]
+    };
+    const deltaEvent: WorkspaceEvent = {
+      id: "event-delta",
+      type: "workspace.message.delta",
+      workspaceId: "workspace-1",
+      version: 3,
+      clientMutationId: "mutation-message",
+      createdAt: "2026-05-24T00:00:04.000Z",
+      messageId: "assistant-message-1",
+      delta: "Hello"
+    };
+    const updateEvent: WorkspaceEvent = {
+      id: "event-updated",
+      type: "workspace.message.updated",
+      workspaceId: "workspace-1",
+      version: 4,
+      clientMutationId: "mutation-message",
+      createdAt: "2026-05-24T00:00:05.000Z",
+      message: {
+        ...snapshot.messages[1]!,
+        content: "Hello there",
+        status: "complete",
+        model: "fake",
+        updatedAt: "2026-05-24T00:00:05.000Z"
+      }
+    };
+
+    const afterDelta = applyWorkspaceEvent(snapshot, deltaEvent);
+    const afterUpdate = applyWorkspaceEvent(afterDelta, updateEvent);
+
+    expect(afterDelta.messages.find(message => message.id === "assistant-message-1")?.content).toBe("Hello");
+    expect(afterUpdate.messages.find(message => message.id === "assistant-message-1")?.content).toBe("Hello there");
+    expect(afterUpdate.messages.find(message => message.id === "assistant-message-1")?.status).toBe("complete");
+  });
+
+  it("applies same-version message updates to optimistic messages", () => {
+    const snapshot: WorkspaceSnapshot = {
+      ...baseSnapshot,
+      workspace: {
+        ...baseSnapshot.workspace,
+        version: 4
+      },
+      messages: [
+        {
+          id: "assistant-message-1",
+          workspaceId: "workspace-1",
+          nodeId: "node-1",
+          role: "assistant",
+          content: "Hello",
+          status: "streaming",
+          model: null,
+          errorMessage: null,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:03.000Z"
+        }
+      ]
+    };
+    const event: WorkspaceEvent = {
+      id: "event-updated",
+      type: "workspace.message.updated",
+      workspaceId: "workspace-1",
+      version: 4,
+      clientMutationId: "mutation-message",
+      createdAt: "2026-05-24T00:00:05.000Z",
+      message: {
+        ...snapshot.messages[0]!,
+        content: "Hello there",
+        status: "complete",
+        model: "fake",
+        updatedAt: "2026-05-24T00:00:05.000Z"
+      }
+    };
+
+    const next = applyWorkspaceEvent(snapshot, event);
+
+    expect(next.messages.find(message => message.id === "assistant-message-1")?.content).toBe("Hello there");
+    expect(next.messages.find(message => message.id === "assistant-message-1")?.status).toBe("complete");
+  });
+
   it("ignores events that are not newer than the current snapshot", () => {
     const event: WorkspaceEvent = {
       id: "event-3",

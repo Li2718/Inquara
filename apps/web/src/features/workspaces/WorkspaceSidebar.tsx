@@ -20,22 +20,31 @@ import { formatDate } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { interpolate, type AppMessages } from "../../shared/messages";
 import { getWorkspaceDeleteDialogOpeningState } from "./workspaceDeleteDialogState";
+import { upsertWorkspaceList } from "./workspaceListState";
 
 type WorkspaceSidebarProps = {
+  createdWorkspace: Workspace | null;
   currentWorkspaceId: string;
   isOpen: boolean;
+  onNewCanvasRequest(): void;
   onToggle(): void;
   onWorkspaceNavigate(targetWorkspaceId: string, options?: { replace?: boolean }): Promise<void>;
 };
 
 let workspaceListCache: Workspace[] | null = null;
 
-export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorkspaceNavigate }: WorkspaceSidebarProps) {
+export function WorkspaceSidebar({
+  createdWorkspace,
+  currentWorkspaceId,
+  isOpen,
+  onNewCanvasRequest,
+  onToggle,
+  onWorkspaceNavigate
+}: WorkspaceSidebarProps) {
   const { locale, messages } = useLocale();
   const copy = messages.workspaceSidebar;
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => workspaceListCache ?? []);
   const [isLoading, setIsLoading] = useState(workspaceListCache === null);
-  const [isCreating, setIsCreating] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
@@ -46,6 +55,15 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
   useEffect(() => {
     void loadWorkspaces({ showLoading: workspaceListCache === null });
   }, []);
+
+  useEffect(() => {
+    if (!createdWorkspace) return;
+    setWorkspaces(previous => {
+      const nextWorkspaces = upsertWorkspaceList(previous, createdWorkspace);
+      workspaceListCache = nextWorkspaces;
+      return nextWorkspaces;
+    });
+  }, [createdWorkspace]);
 
   async function loadWorkspaces({ showLoading }: { showLoading: boolean }) {
     if (showLoading) setIsLoading(true);
@@ -62,24 +80,8 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
   }
 
   async function createWorkspace() {
-    setIsCreating(true);
     setError("");
-    try {
-      const workspace = await apiJson<Workspace>("/workspaces", {
-        method: "POST",
-        body: JSON.stringify({ title: copy.untitledCanvas })
-      });
-      setWorkspaces(previous => {
-        const nextWorkspaces = [workspace, ...previous.filter(item => item.id !== workspace.id)];
-        workspaceListCache = nextWorkspaces;
-        return nextWorkspaces;
-      });
-      await onWorkspaceNavigate(workspace.id);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.couldNotCreate);
-    } finally {
-      setIsCreating(false);
-    }
+    onNewCanvasRequest();
   }
 
   function startRenaming(workspace: Workspace) {
@@ -128,17 +130,12 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
       setWorkspaces(nextWorkspaces);
       setDeletingWorkspace(null);
       if (deletingWorkspace.id === currentWorkspaceId) {
-        const nextWorkspace =
-          nextWorkspaces[0] ??
-          (await apiJson<Workspace>("/workspaces", {
-            method: "POST",
-            body: JSON.stringify({ title: copy.untitledCanvas })
-          }));
-        if (nextWorkspaces.length === 0) {
-          workspaceListCache = [nextWorkspace];
-          setWorkspaces([nextWorkspace]);
+        const nextWorkspace = nextWorkspaces[0];
+        if (nextWorkspace) {
+          await onWorkspaceNavigate(nextWorkspace.id, { replace: true });
+        } else {
+          onNewCanvasRequest();
         }
-        await onWorkspaceNavigate(nextWorkspace.id, { replace: true });
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : copy.couldNotDelete);
@@ -168,7 +165,6 @@ export function WorkspaceSidebar({ currentWorkspaceId, isOpen, onToggle, onWorks
             className="workspace-sidebar-create-button"
             onClick={createWorkspace}
             aria-label={copy.newCanvas}
-            disabled={isCreating}
           >
             <PlusIcon />
           </button>

@@ -70,8 +70,7 @@ describe("API auth and workspace snapshots", () => {
     expect(snapshot.nodes).toHaveLength(1);
     expect(snapshot.nodes[0].title).toBe("Main chat");
     expect(snapshot.nodes[0]).not.toHaveProperty("type");
-    expect(snapshot.messages).toHaveLength(1);
-    expect(snapshot.messages[0].role).toBe("assistant");
+    expect(snapshot.messages).toHaveLength(0);
 
     await app.close();
   });

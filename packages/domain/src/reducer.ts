@@ -11,7 +11,12 @@ export function applyWorkspaceEvent(snapshot: WorkspaceSnapshot, event: Workspac
   const canApplySameVersionNodeUpdate =
     event.type === "workspace.node.updated" &&
     snapshot.nodes.some(node => node.id === event.node.id && node.updatedAt < event.node.updatedAt);
-  if (isSameVersion && !canApplySameVersionCreate && !canApplySameVersionNodeUpdate) return snapshot;
+  const canApplySameVersionMessageUpdate =
+    (event.type === "workspace.message.updated" || event.type === "workspace.message.failed") &&
+    snapshot.messages.some(message => message.id === event.message.id && message.updatedAt < event.message.updatedAt);
+  if (isSameVersion && !canApplySameVersionCreate && !canApplySameVersionNodeUpdate && !canApplySameVersionMessageUpdate) {
+    return snapshot;
+  }
 
   const workspace = { ...snapshot.workspace, version: event.version, updatedAt: event.createdAt };
 
