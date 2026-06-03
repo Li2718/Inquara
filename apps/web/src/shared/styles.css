@@ -1644,6 +1644,11 @@ h2 {
 .app-top-brand-name {
   position: relative;
   display: inline-block;
+  -webkit-text-stroke: 3px rgb(248 253 255 / 92%);
+  paint-order: stroke fill;
+  text-shadow:
+    0 1px 2px rgb(248 253 255 / 92%),
+    0 8px 20px rgb(51 118 145 / 12%);
 }
 
 .app-top-brand-mark {
@@ -1663,6 +1668,7 @@ h2 {
   border-radius: 999px;
   background: rgb(235 249 246 / 74%);
   color: var(--accent-dark);
+  box-shadow: 0 1px 4px rgb(248 253 255 / 88%);
   font-size: 8px;
   font-weight: 800;
   line-height: 10px;
