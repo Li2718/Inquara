@@ -1,5 +1,4 @@
-import type { PrismaClient } from "./client";
-import { hashPassword } from "./password.ts";
+import { hashPassword, type PrismaClient } from "@inquara/db";
 
 export async function seedAdminUser(
   prisma: PrismaClient,

@@ -558,18 +558,27 @@ h2 {
   min-height: 36px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 12px;
   border-radius: 12px;
   color: var(--ink);
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease,
+    color 120ms ease;
 }
 
 .admin-nav-link:hover,
-.admin-nav-link[aria-current="page"] {
+.admin-nav-link[data-active="true"] {
   background: rgb(255 255 255 / 72%);
   box-shadow: 0 8px 24px rgb(51 118 145 / 8%);
+}
+
+.admin-nav-link[data-pending="true"] {
+  color: var(--accent-dark);
 }
 
 .admin-content {

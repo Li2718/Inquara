@@ -1,8 +1,8 @@
 import { prisma } from "@inquara/db";
-import { seedAdminUser, seedPasswordUser } from "@inquara/db/src/admin";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
 import { createApiTestEnv, resetTestDatabase, stopEphemeralTestDatabase } from "./database";
+import { seedAdminUser, seedPasswordUser } from "./seed-users";
 
 beforeEach(async () => {
   await resetTestDatabase();
