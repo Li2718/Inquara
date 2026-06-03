@@ -7,7 +7,6 @@ import { resetTestDatabase, stopEphemeralTestDatabase } from "./database";
 
 let userId = "";
 let canvasId = "";
-let rootNodeId = "";
 let childNodeId = "";
 let capturedContext: ChatContextMessage[] = [];
 let capturedSmallTasks: ChatContextMessage[][] = [];
@@ -58,7 +57,6 @@ beforeEach(async () => {
       }
     }
   });
-  rootNodeId = rootNode.id;
 
   await prisma.nodeMessage.create({
     data: {
@@ -105,7 +103,7 @@ afterAll(async () => {
 
 describe("message command services", () => {
   it("renames the main chat and canvas from the first question, then applies the small-model title", async () => {
-    await prisma.nodeMessage.deleteMany({ where: { canvasId, nodeId: rootNodeId } });
+    const emptyRoot = await createEmptyRootCanvas();
 
     const events: CanvasEvent[] = [];
     await sendUserMessage(
@@ -113,19 +111,19 @@ describe("message command services", () => {
       {
         type: "message.sendUserMessage",
         clientMutationId: "mutation-root-title",
-        canvasId,
-        nodeId: rootNodeId,
+        canvasId: emptyRoot.canvasId,
+        nodeId: emptyRoot.nodeId,
         userMessageId: "message-user-root-title",
         assistantMessageId: "message-assistant-root-title",
-        content: "How should we evaluate long-term memory in agent workspaces?"
+        content: "How should we evaluate long-term memory in agent systems?"
       },
       capturingProvider,
       event => events.push(event)
     );
 
     const [canvas, node] = await Promise.all([
-      prisma.canvas.findUniqueOrThrow({ where: { id: canvasId } }),
-      prisma.canvasNode.findUniqueOrThrow({ where: { id: rootNodeId } })
+      prisma.canvas.findUniqueOrThrow({ where: { id: emptyRoot.canvasId } }),
+      prisma.canvasNode.findUniqueOrThrow({ where: { id: emptyRoot.nodeId } })
     ]);
 
     expect(canvas.title).toBe("Generated concise title");
@@ -206,7 +204,7 @@ describe("message command services", () => {
   });
 
   it("keeps the fallback first-question title when small-model naming fails", async () => {
-    await prisma.nodeMessage.deleteMany({ where: { canvasId, nodeId: rootNodeId } });
+    const emptyRoot = await createEmptyRootCanvas();
     const failingTitleProvider: AIProvider = {
       async streamReply(_messages, handlers) {
         await handlers.onDelta("ok");
@@ -222,8 +220,8 @@ describe("message command services", () => {
       {
         type: "message.sendUserMessage",
         clientMutationId: "mutation-title-fallback",
-        canvasId,
-        nodeId: rootNodeId,
+        canvasId: emptyRoot.canvasId,
+        nodeId: emptyRoot.nodeId,
         userMessageId: "message-user-title-fallback",
         assistantMessageId: "message-assistant-title-fallback",
         content: "What is the first question fallback title?"
@@ -233,8 +231,8 @@ describe("message command services", () => {
     );
 
     const [canvas, node] = await Promise.all([
-      prisma.canvas.findUniqueOrThrow({ where: { id: canvasId } }),
-      prisma.canvasNode.findUniqueOrThrow({ where: { id: rootNodeId } })
+      prisma.canvas.findUniqueOrThrow({ where: { id: emptyRoot.canvasId } }),
+      prisma.canvasNode.findUniqueOrThrow({ where: { id: emptyRoot.nodeId } })
     ]);
 
     expect(canvas.title).toBe("What is the first question fallback title?");
@@ -375,3 +373,30 @@ describe("message command services", () => {
     });
   });
 });
+
+async function createEmptyRootCanvas(): Promise<{ canvasId: string; nodeId: string }> {
+  const canvas = await prisma.canvas.create({
+    data: { ownerId: userId, title: "Message Canvas" }
+  });
+  const node = await prisma.canvasNode.create({
+    data: {
+      canvasId: canvas.id,
+      title: "Main chat",
+      x: 100,
+      y: 100,
+      width: 420,
+      height: 520,
+      collapsed: false,
+      hiddenStateSnapshot: {
+        hiddenChild: {
+          hiddenAt: new Date("2026-01-01T00:00:00.000Z").toISOString(),
+          offsetX: 12,
+          offsetY: 24,
+          scrollTop: 36
+        }
+      }
+    }
+  });
+
+  return { canvasId: canvas.id, nodeId: node.id };
+}
