@@ -1,6 +1,5 @@
 "use client";
 
-import type { Canvas } from "@inquara/domain";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -18,10 +17,12 @@ type CurrentUser = {
 };
 
 type AppTopBarProps = {
+  isCanvasSurface?: boolean;
   onCanvasLogoClick?: () => void;
+  onNewCanvasRequest?: () => void;
 };
 
-export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
+export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasRequest }: AppTopBarProps) {
   const { messages } = useLocale();
   const copy = messages.appTopBar;
   const navigation = usePageTransitionNavigation();
@@ -30,7 +31,6 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isOpeningCanvas, setIsOpeningCanvas] = useState(false);
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -60,23 +60,6 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
     }
   }
 
-  async function openCanvas() {
-    if (isOpeningCanvas) return;
-    setIsOpeningCanvas(true);
-    try {
-      const items = await apiJson<Canvas[]>("/canvases");
-      const canvas =
-        items[0] ??
-        (await apiJson<Canvas>("/canvases", {
-          method: "POST",
-          body: JSON.stringify({ title: messages.canvasList.researchCanvas })
-        }));
-      await navigation.push(`/canvases/${canvas.id}`);
-    } finally {
-      setIsOpeningCanvas(false);
-    }
-  }
-
   const userLabel = currentUser?.name || currentUser?.email || messages.common.account;
   const userInitial = useMemo(() => {
     const source = currentUser?.name || currentUser?.email || "";
@@ -84,14 +67,15 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
   }, [currentUser]);
   const isAdmin = currentUser?.role === "admin";
   const isAdminRoute = pathname.startsWith("/admin");
-  const isCanvasRoute = pathname.startsWith("/canvases/");
+  const isNewCanvasRoute = pathname === "/canvases/new";
+  const isCanvasRoute = isCanvasSurface ?? (pathname.startsWith("/canvases/") && !isNewCanvasRoute);
 
   async function handleBrandClick() {
     if (isCanvasRoute) {
       onCanvasLogoClick?.();
       return;
     }
-    await openCanvas();
+    onNewCanvasRequest?.();
   }
 
   return (
@@ -136,14 +120,13 @@ export function AppTopBar({ onCanvasLogoClick }: AppTopBarProps) {
               onClick={async () => {
                 setIsAccountMenuOpen(false);
                 if (isAdminRoute) {
-                  await openCanvas();
+                  onNewCanvasRequest?.();
                 } else {
                   await navigation.push("/admin");
                 }
               }}
-              disabled={isOpeningCanvas}
             >
-              {isAdminRoute ? (isOpeningCanvas ? copy.openingCanvas : copy.backToCanvas) : copy.admin}
+              {isAdminRoute ? copy.backToCanvas : copy.admin}
             </PopupMenuItem>
           ) : null}
           <PopupMenuItem

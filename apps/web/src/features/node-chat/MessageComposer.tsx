@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Button } from "../../shared/components/ui";
+import { NodeComposerFrame, NodeComposerInput, NodeComposerSubmit } from "../../shared/components/domain";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 
@@ -21,16 +21,16 @@ export function MessageComposer({ nodeId }: { nodeId: string }) {
   }
 
   return (
-    <form className="message-composer nodrag" onSubmit={submit}>
-      <input
+    <NodeComposerFrame className="message-composer nodrag" onSubmit={submit}>
+      <NodeComposerInput
         value={content}
         onChange={event => setContent(event.target.value)}
         placeholder={copy.askPlaceholder}
         disabled={isBlocked}
       />
-      <Button type="submit" disabled={!content.trim() || isBlocked}>
+      <NodeComposerSubmit disabled={!content.trim() || isBlocked}>
         {copy.send}
-      </Button>
-    </form>
+      </NodeComposerSubmit>
+    </NodeComposerFrame>
   );
 }

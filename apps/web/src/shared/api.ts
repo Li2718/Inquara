@@ -2,6 +2,16 @@ const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || "/api";
 
 const DEFAULT_API_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body !== undefined && !headers.has("Content-Type")) {
@@ -15,7 +25,7 @@ export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<
   });
 
   if (!response.ok) {
-    throw new Error(await readApiErrorMessage(response));
+    throw new ApiError(await readApiErrorMessage(response), response.status);
   }
 
   if (response.status === 204) {

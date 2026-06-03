@@ -7,6 +7,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useStoreApi,
   useViewport,
   type Edge,
   type Node,
@@ -23,6 +24,7 @@ import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
+import { compensateViewportForStageRect, type StageRect } from "./stageLayoutCompensation";
 import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
 import {
   advanceCanvasViewportStability,
@@ -34,6 +36,7 @@ import {
 export type ChatFlowNodeData = CanvasNode & {
   isAppearing?: boolean;
   isExiting?: boolean;
+  messageRevision?: string;
 };
 export type ChatFlowNode = Node<ChatFlowNodeData, "chatNode">;
 
@@ -134,13 +137,13 @@ function CanvasFlow({
         id: node.id,
         type: "chatNode",
         position: { x: node.x, y: node.y },
-        data: { ...node, isAppearing: appearingNodeIds.has(node.id) },
+        data: { ...node, isAppearing: appearingNodeIds.has(node.id), messageRevision: getNodeMessageRevision(snapshot?.messages ?? [], node.id) },
         style: { width: node.width, height: node.height },
         width: node.width,
         height: node.height,
         dragHandle: ".canvas-node-header"
       })),
-    [appearingNodeIds, visibleNodes]
+    [appearingNodeIds, snapshot?.messages, visibleNodes]
   );
   const visibleFlowNodeIdSet = useMemo(() => new Set(visibleFlowNodes.map(node => node.id)), [visibleFlowNodes]);
 
@@ -373,6 +376,9 @@ function CanvasFlow({
             onReady={handleViewportReady}
             canvasId={canvasId}
           />
+          <CanvasStageLayoutCompensator
+            isEnabled={!isPreparingCanvasSwitch && !isShowingStaleSnapshot}
+          />
         </ReactFlow>
       </CanvasViewportProvider>
       {!isViewportReady ? (
@@ -383,7 +389,6 @@ function CanvasFlow({
       {isViewportReady ? (
         <CanvasViewportControls
           firstRootNode={firstRootNode}
-          isSidebarOpen={isSidebarOpen}
           isBlocked={isBlocked}
           onOrganize={organizeCanvas}
           resetViewportRequest={resetViewportRequest}
@@ -402,6 +407,16 @@ function CanvasFlow({
       </PopupMenu>
     </div>
   );
+}
+
+function getNodeMessageRevision(
+  messages: Array<{ content: string; id: string; nodeId: string; status: string; updatedAt: string }>,
+  nodeId: string
+): string {
+  return messages
+    .filter(message => message.nodeId === nodeId)
+    .map(message => `${message.id}:${message.status}:${message.updatedAt}:${message.content.length}`)
+    .join("|");
 }
 
 function CanvasInitialViewport({
@@ -435,7 +450,7 @@ function CanvasInitialViewport({
 
     const measure = () => {
       if (cancelled) return;
-      const measurement = getCanvasViewportMeasurement(isSidebarOpen);
+      const measurement = getCanvasViewportMeasurement();
       if (!measurement) {
         frame = window.requestAnimationFrame(measure);
         return;
@@ -452,8 +467,7 @@ function CanvasInitialViewport({
         calculateRootViewport({
           rootNode: firstRootNode,
           viewportWidth: measurement.viewportWidth,
-          viewportHeight: measurement.viewportHeight,
-          reservedLeft: measurement.reservedLeft
+          viewportHeight: measurement.viewportHeight
         }),
         { duration: 0 }
       );
@@ -471,15 +485,12 @@ function CanvasInitialViewport({
   return null;
 }
 
-function getCanvasViewportMeasurement(isSidebarOpen: boolean): CanvasViewportMeasurement | null {
+function getCanvasViewportMeasurement(): CanvasViewportMeasurement | null {
   const stage = document.querySelector(".canvas-stage");
-  const sidebar = isSidebarOpen ? document.querySelector(".canvas-sidebar") : null;
   const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
-  const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
   if (!stageRect || stageRect.width <= 0 || stageRect.height <= 0) return null;
 
   return {
-    reservedLeft: stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0,
     viewportWidth: stageRect.width,
     viewportHeight: stageRect.height
   };
@@ -516,13 +527,11 @@ function calculatePlacementViewport(viewport: { x: number; y: number; zoom: numb
 function CanvasViewportControls({
   firstRootNode,
   isBlocked,
-  isSidebarOpen,
   onOrganize,
   resetViewportRequest
 }: {
   firstRootNode: CanvasNode | null;
   isBlocked: boolean;
-  isSidebarOpen: boolean;
   onOrganize(): void;
   resetViewportRequest: number;
 }) {
@@ -534,20 +543,16 @@ function CanvasViewportControls({
   const resetViewportToRoot = useCallback(() => {
     if (!firstRootNode) return;
     const stage = document.querySelector(".canvas-stage");
-    const sidebar = isSidebarOpen ? document.querySelector(".canvas-sidebar") : null;
     const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
-    const sidebarRect = sidebar instanceof HTMLElement ? sidebar.getBoundingClientRect() : null;
-    const reservedLeft = stageRect && sidebarRect ? Math.max(0, sidebarRect.right - stageRect.left + 16) : 0;
     void setViewport(
       calculateRootViewport({
         rootNode: firstRootNode,
         viewportWidth: stageRect?.width ?? window.innerWidth,
-        viewportHeight: stageRect?.height ?? window.innerHeight,
-        reservedLeft
+        viewportHeight: stageRect?.height ?? window.innerHeight
       }),
       { duration: 300 }
     );
-  }, [firstRootNode, isSidebarOpen, setViewport]);
+  }, [firstRootNode, setViewport]);
 
   useEffect(() => {
     if (resetViewportRequest === 0) return;
@@ -578,5 +583,109 @@ function CanvasViewportControls({
         <ResetViewIcon />
       </FloatingCircleButton>
     </div>
+  );
+}
+
+function CanvasStageLayoutCompensator({
+  isEnabled
+}: {
+  isEnabled: boolean;
+}) {
+  const { setViewport } = useReactFlow();
+  const store = useStoreApi();
+  const isEnabledRef = useRef(isEnabled);
+  const previousStageRef = useRef<StageRect | null>(null);
+  const setViewportRef = useRef(setViewport);
+
+  useEffect(() => {
+    isEnabledRef.current = isEnabled;
+    if (!isEnabled) {
+      previousStageRef.current = null;
+    }
+  }, [isEnabled]);
+
+  useEffect(() => {
+    setViewportRef.current = setViewport;
+  }, [setViewport]);
+
+  useLayoutEffect(() => {
+    let frame = 0;
+    let observedStage: HTMLElement | null = null;
+    const resizeObserver = new ResizeObserver(() => {
+      measure();
+    });
+
+    const observeStage = (stage: HTMLElement) => {
+      if (observedStage === stage) return;
+      if (observedStage) {
+        resizeObserver.unobserve(observedStage);
+      }
+      observedStage = stage;
+      resizeObserver.observe(stage);
+    };
+
+    const measure = () => {
+      const stage = document.querySelector(".canvas-stage");
+      if (!(stage instanceof HTMLElement)) return;
+      observeStage(stage);
+      const stageRect = stage.getBoundingClientRect();
+      const currentStage = {
+        height: stageRect.height,
+        left: stageRect.left,
+        top: stageRect.top,
+        width: stageRect.width
+      };
+      if (!isEnabledRef.current) {
+        previousStageRef.current = null;
+        return;
+      }
+      const previousStage = previousStageRef.current;
+      previousStageRef.current = currentStage;
+      if (!previousStage || canvasStageRectsEqual(previousStage, currentStage)) return;
+      const [x, y, zoom] = store.getState().transform;
+
+      const nextViewport = compensateViewportForStageRect({
+        previousStage,
+        stage: currentStage,
+        viewport: { x, y, zoom }
+      });
+      store.setState({ transform: [nextViewport.x, nextViewport.y, nextViewport.zoom] });
+      void setViewportRef.current(nextViewport, { duration: 0 });
+      applyViewportTransformToDom(nextViewport);
+    };
+
+    const trackStageLayout = () => {
+      measure();
+      frame = window.requestAnimationFrame(trackStageLayout);
+    };
+    const measureStageLayout = () => {
+      measure();
+    };
+
+    measure();
+    frame = window.requestAnimationFrame(trackStageLayout);
+    window.addEventListener("resize", measureStageLayout);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measureStageLayout);
+    };
+  }, [store]);
+
+  return null;
+}
+
+function applyViewportTransformToDom(viewport: { x: number; y: number; zoom: number }) {
+  const viewportElement = document.querySelector(".react-flow__viewport");
+  if (!(viewportElement instanceof HTMLElement)) return;
+  viewportElement.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
+}
+
+function canvasStageRectsEqual(left: StageRect, right: StageRect): boolean {
+  return (
+    Math.abs(left.left - right.left) < 0.5 &&
+    Math.abs(left.top - right.top) < 0.5 &&
+    Math.abs(left.width - right.width) < 0.5 &&
+    Math.abs(left.height - right.height) < 0.5
   );
 }

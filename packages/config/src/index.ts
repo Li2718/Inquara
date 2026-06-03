@@ -8,7 +8,8 @@ const EnvSchema = z.object({
   AI_PROVIDER: z.enum(["fake", "openai-compatible"]).default("fake"),
   OPENAI_COMPATIBLE_BASE_URL: z.string().optional().default(""),
   OPENAI_COMPATIBLE_API_KEY: z.string().optional().default(""),
-  OPENAI_COMPATIBLE_MODEL: z.string().optional().default("")
+  OPENAI_COMPATIBLE_MODEL: z.string().optional().default(""),
+  OPENAI_COMPATIBLE_SMALL_MODEL: z.string().optional().default("")
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

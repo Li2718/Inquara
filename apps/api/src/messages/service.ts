@@ -8,6 +8,7 @@ import {
   createMessageFailedEvent,
   createMessageUpdatedEvent
 } from "../events/factory";
+import { createGeneratedTitleEvents, createInitialTitleFallback, type InitialTitleRequest } from "./titleService";
 
 type Tx = Prisma.TransactionClient;
 
@@ -31,6 +32,14 @@ export async function sendUserMessage(
 ): Promise<void> {
   const created = await client.$transaction(async tx => {
     await requireOwnedNode(tx, userId, command.canvasId, command.nodeId);
+    const initialTitle = await createInitialTitleFallback({
+      canvasId: command.canvasId,
+      clientMutationId: command.clientMutationId,
+      content: command.content,
+      tx,
+      userId,
+      nodeId: command.nodeId
+    });
 
     const userVersion = await incrementCanvasVersion(tx, command.canvasId);
     const userMessage = await tx.nodeMessage.create({
@@ -60,10 +69,15 @@ export async function sendUserMessage(
       userMessage: toNodeMessage(userMessage),
       userVersion,
       assistantMessage: toNodeMessage(assistantMessage),
-      assistantVersion
+      assistantVersion,
+      titleEvents: initialTitle.events,
+      titleRequest: initialTitle.titleRequest
     };
   });
 
+  for (const event of created.titleEvents) {
+    broadcast(event);
+  }
   broadcast(
     createMessageCreatedEvent({
       canvasId: command.canvasId,
@@ -82,6 +96,7 @@ export async function sendUserMessage(
   );
 
   try {
+    await generateInitialTitle({ broadcast, client, provider, titleRequest: created.titleRequest });
     const context = await loadContext(command.canvasId, command.nodeId, client);
     const result = await provider.streamReply(context, {
       onDelta: async delta => {
@@ -156,6 +171,28 @@ export async function sendUserMessage(
         message: failedMessage.message
       })
     );
+  }
+}
+
+async function generateInitialTitle({
+  broadcast,
+  client,
+  provider,
+  titleRequest
+}: {
+  broadcast: (event: CanvasEvent) => void;
+  client: PrismaClient;
+  provider: AIProvider;
+  titleRequest: InitialTitleRequest | null;
+}): Promise<void> {
+  if (!titleRequest) return;
+  const events = await createGeneratedTitleEvents({
+    client,
+    provider,
+    request: titleRequest
+  });
+  for (const event of events) {
+    broadcast(event);
   }
 }
 

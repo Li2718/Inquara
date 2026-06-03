@@ -39,4 +39,30 @@ describe("OpenAI-compatible provider", () => {
       })
     );
   });
+
+  it("uses the configured small model for one-shot small tasks", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: "A better title" } }] }), { status: 200 }));
+    const provider = createOpenAICompatibleProvider({
+      baseUrl: "https://provider.example/v1",
+      apiKey: "secret",
+      model: "model-a",
+      smallModel: "model-mini",
+      fetch: fetchMock
+    });
+
+    const result = await provider.completeSmallTask([{ role: "user", content: "Name this chat" }]);
+
+    expect(result).toEqual({ content: "A better title", model: "model-mini" });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "https://provider.example/v1/chat/completions",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          model: "model-mini",
+          messages: [{ role: "user", content: "Name this chat" }],
+          stream: false
+        })
+      })
+    );
+  });
 });

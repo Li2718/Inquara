@@ -60,6 +60,28 @@ const baseSnapshot: CanvasSnapshot = {
 };
 
 describe("applyCanvasEvent", () => {
+  it("updates the canvas title and version", () => {
+    const event: CanvasEvent = {
+      id: "event-canvas-updated",
+      type: "canvas.updated",
+      canvasId: "canvas-1",
+      version: 2,
+      clientMutationId: null,
+      createdAt: "2026-05-24T00:00:02.000Z",
+      canvas: {
+        ...baseSnapshot.canvas,
+        title: "Generated title",
+        version: 2,
+        updatedAt: "2026-05-24T00:00:02.000Z"
+      }
+    };
+
+    const next = applyCanvasEvent(baseSnapshot, event);
+
+    expect(next.canvas.title).toBe("Generated title");
+    expect(next.canvas.version).toBe(2);
+  });
+
   it("adds a created node and advances the canvas version", () => {
     const event: CanvasEvent = {
       id: "event-1",
@@ -191,6 +213,118 @@ describe("applyCanvasEvent", () => {
 
     expect(afterSecond.nodes.find(node => node.id === "node-1")?.hiddenAt).toBeNull();
     expect(afterSecond.nodes.find(node => node.id === "node-2")?.hiddenAt).toBeNull();
+  });
+
+  it("applies streamed message events after optimistic message creation", () => {
+    const snapshot: CanvasSnapshot = {
+      ...baseSnapshot,
+      canvas: {
+        ...baseSnapshot.canvas,
+        version: 2
+      },
+      messages: [
+        {
+          canvasId: "canvas-1",
+          id: "user-message-1",
+          nodeId: "node-1",
+          role: "user",
+          content: "First question",
+          status: "complete",
+          model: null,
+          errorMessage: null,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:03.000Z"
+        },
+        {
+          canvasId: "canvas-1",
+          id: "assistant-message-1",
+          nodeId: "node-1",
+          role: "assistant",
+          content: "",
+          status: "streaming",
+          model: null,
+          errorMessage: null,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:03.000Z"
+        }
+      ]
+    };
+    const deltaEvent: CanvasEvent = {
+      canvasId: "canvas-1",
+      id: "event-delta",
+      type: "canvas.message.delta",
+      version: 3,
+      clientMutationId: "mutation-message",
+      createdAt: "2026-05-24T00:00:04.000Z",
+      messageId: "assistant-message-1",
+      delta: "Hello"
+    };
+    const updateEvent: CanvasEvent = {
+      canvasId: "canvas-1",
+      id: "event-updated",
+      type: "canvas.message.updated",
+      version: 4,
+      clientMutationId: "mutation-message",
+      createdAt: "2026-05-24T00:00:05.000Z",
+      message: {
+        ...snapshot.messages[1]!,
+        content: "Hello there",
+        status: "complete",
+        model: "fake",
+        updatedAt: "2026-05-24T00:00:05.000Z"
+      }
+    };
+
+    const afterDelta = applyCanvasEvent(snapshot, deltaEvent);
+    const afterUpdate = applyCanvasEvent(afterDelta, updateEvent);
+
+    expect(afterDelta.messages.find(message => message.id === "assistant-message-1")?.content).toBe("Hello");
+    expect(afterUpdate.messages.find(message => message.id === "assistant-message-1")?.content).toBe("Hello there");
+    expect(afterUpdate.messages.find(message => message.id === "assistant-message-1")?.status).toBe("complete");
+  });
+
+  it("applies same-version message updates to optimistic messages", () => {
+    const snapshot: CanvasSnapshot = {
+      ...baseSnapshot,
+      canvas: {
+        ...baseSnapshot.canvas,
+        version: 4
+      },
+      messages: [
+        {
+          canvasId: "canvas-1",
+          id: "assistant-message-1",
+          nodeId: "node-1",
+          role: "assistant",
+          content: "Hello",
+          status: "streaming",
+          model: null,
+          errorMessage: null,
+          createdAt: "2026-05-24T00:00:03.000Z",
+          updatedAt: "2026-05-24T00:00:03.000Z"
+        }
+      ]
+    };
+    const event: CanvasEvent = {
+      canvasId: "canvas-1",
+      id: "event-updated",
+      type: "canvas.message.updated",
+      version: 4,
+      clientMutationId: "mutation-message",
+      createdAt: "2026-05-24T00:00:05.000Z",
+      message: {
+        ...snapshot.messages[0]!,
+        content: "Hello there",
+        status: "complete",
+        model: "fake",
+        updatedAt: "2026-05-24T00:00:05.000Z"
+      }
+    };
+
+    const next = applyCanvasEvent(snapshot, event);
+
+    expect(next.messages.find(message => message.id === "assistant-message-1")?.content).toBe("Hello there");
+    expect(next.messages.find(message => message.id === "assistant-message-1")?.status).toBe("complete");
   });
 
   it("ignores events that are not newer than the current snapshot", () => {

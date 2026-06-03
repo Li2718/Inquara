@@ -4,9 +4,10 @@ import { FormEvent, useEffect, useState } from "react";
 import { apiJson } from "../../shared/api";
 import { Button, Toast } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
+import { submitLoginForm } from "./loginSubmission";
 
 type LoginPageProps = {
-  onLoggedIn(): void;
+  onLoggedIn(): Promise<void> | void;
 };
 
 export function LoginPage({ onLoggedIn }: LoginPageProps) {
@@ -42,17 +43,23 @@ export function LoginPage({ onLoggedIn }: LoginPageProps) {
     event.preventDefault();
     setError("");
     setIsSubmitting(true);
-    try {
-      await apiJson(mode === "login" ? "/auth/login" : "/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ email, password, rememberMe, redemptionCode })
-      });
-      onLoggedIn();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.loginFailed);
-    } finally {
+    const result = await submitLoginForm({
+      authenticate: () =>
+        apiJson<void>(mode === "login" ? "/auth/login" : "/auth/register", {
+          method: "POST",
+          body: JSON.stringify({ email, password, rememberMe, redemptionCode })
+        }),
+      fallbackError: copy.loginFailed,
+      invalidCredentialsError: copy.invalidEmailOrPassword
+    });
+    if (result.error) {
+      setError(result.error);
       setIsSubmitting(false);
+      return;
     }
+
+    onLoggedIn();
+    setIsSubmitting(false);
   }
 
   return (

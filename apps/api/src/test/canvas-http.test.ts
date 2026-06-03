@@ -338,6 +338,7 @@ describe("canvas lease and http command routes", () => {
     const response = await app.inject({
       method: "POST",
       url: `/canvases/${canvasId}/messages/stream`,
+      headers: { origin: "http://localhost:3000" },
       cookies: { inquara_session: session },
       payload: {
         sessionId: "tab-a",
@@ -355,6 +356,8 @@ describe("canvas lease and http command routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:3000");
+    expect(response.headers["access-control-allow-credentials"]).toBe("true");
     const lines = response.body
       .trim()
       .split("\n")
@@ -362,10 +365,12 @@ describe("canvas lease and http command routes", () => {
       .map(line => JSON.parse(line) as { type: string; event: { type: string; clientMutationId: string | null } });
     expect(lines.length).toBeGreaterThanOrEqual(4);
     expect(lines[0]?.type).toBe("event");
-    expect(lines[0]?.event.type).toBe("canvas.message.created");
+    expect(lines.some(line => line.event.type === "canvas.node.updated")).toBe(true);
+    expect(lines.some(line => line.event.type === "canvas.updated")).toBe(true);
+    expect(lines.some(line => line.event.type === "canvas.message.created")).toBe(true);
     expect(lines.some(line => line.event.type === "canvas.message.delta")).toBe(true);
     expect(lines.at(-1)?.event.type).toBe("canvas.message.updated");
-    expect(lines[0]?.event.clientMutationId).toBe("mutation-http-message");
+    expect(lines.some(line => line.event.clientMutationId === "mutation-http-message")).toBe(true);
     await app.close();
   });
 });

@@ -13,6 +13,7 @@ import { canvasSessionStore, type CanvasSessionState } from "./store";
 type CanvasSessionContextValue = {
   state: CanvasSessionState;
   commands: ReturnType<typeof createCommands>;
+  refreshSnapshot(): Promise<void>;
   retryLease(): Promise<void>;
   sendCommand(command: CanvasCommand): Promise<void>;
 };
@@ -55,6 +56,7 @@ type LeaseStatusResponse =
 const CanvasSessionContext = createContext<CanvasSessionContextValue | null>(null);
 const canvasSnapshotCache = new Map<string, CanvasSnapshot>();
 const renewIntervalMs = 5_000;
+const streamingRefreshIntervalMs = 700;
 const stalePollMinMs = 8_000;
 const stalePollJitterMs = 2_000;
 const leaseReleaseDelayMs = 250;
@@ -62,10 +64,14 @@ const sessionStorageKeyPrefix = "inquara.canvas-session";
 
 export function CanvasSessionProvider({
   canvasId,
-  children
+  children,
+  initialStarterMessage,
+  onInitialStarterMessageSent
 }: {
   canvasId: string;
   children: ReactNode;
+  initialStarterMessage?: string | null;
+  onInitialStarterMessageSent?(canvasId: string): void;
 }) {
   const navigation = usePageTransitionNavigation();
   const { messages } = useLocale();
@@ -74,6 +80,7 @@ export function CanvasSessionProvider({
   const renewTimerRef = useRef<number | null>(null);
   const consecutiveRenewFailuresRef = useRef(0);
   const blockedPollTimerRef = useRef<number | null>(null);
+  const sentInitialStarterCanvasRef = useRef<string | null>(null);
   const releasedRef = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -115,19 +122,34 @@ export function CanvasSessionProvider({
     };
   }, [navigation, canvasId]);
 
+  useEffect(() => {
+    if (state.leaseState !== "active") return;
+    if (!state.snapshot || state.snapshot.canvas.id !== canvasId) return;
+    if (!state.snapshot.messages.some(message => message.status === "streaming")) return;
+    const timeout = window.setTimeout(() => {
+      void refreshCanvasSnapshot();
+    }, streamingRefreshIntervalMs);
+    return () => window.clearTimeout(timeout);
+  }, [state.leaseState, state.snapshot, canvasId]);
+
   const value = useMemo<CanvasSessionContextValue>(
     () => ({
       state,
       commands,
+      async refreshSnapshot() {
+        await refreshCanvasSnapshot();
+      },
       async retryLease() {
         await retryLeaseNow();
       },
       async sendCommand(command) {
+        stateRef.current = canvasSessionStore.getState();
         if (stateRef.current.leaseState !== "active") return;
         canvasSessionStore.getState().applyOptimisticCommand(command);
         try {
           if (command.type === "message.sendUserMessage") {
             await streamMessageCommand(command);
+            await refreshCanvasSnapshot();
           } else {
             const response = await apiJson<{ events: unknown[] }>(`/canvases/${canvasId}/commands`, {
               method: "POST",
@@ -176,11 +198,10 @@ export function CanvasSessionProvider({
           displacedSeq: null,
           expiresAt: acquire.lease.expiresAt
         });
-        const snapshot = await apiJson<CanvasSnapshot>(`/canvases/${canvasId}/snapshot`);
-        canvasSnapshotCache.set(canvasId, snapshot);
-        canvasSessionStore.getState().setSnapshot(snapshot);
+        const snapshot = await refreshCanvasSnapshot();
         canvasSessionStore.getState().setLeaseState("active");
         canvasSessionStore.getState().setErrorMessageKey(null);
+        sendInitialStarterMessage(snapshot);
         startRenewLoop();
         return;
       }
@@ -286,6 +307,40 @@ export function CanvasSessionProvider({
       expiresAt: null
     });
     startBlockedPollLoop();
+  }
+
+  async function refreshCanvasSnapshot(): Promise<CanvasSnapshot> {
+    const snapshot = await apiJson<CanvasSnapshot>(`/canvases/${canvasId}/snapshot`);
+    canvasSnapshotCache.set(canvasId, snapshot);
+    canvasSessionStore.getState().setSnapshot(snapshot);
+    return snapshot;
+  }
+
+  function sendInitialStarterMessage(snapshot: CanvasSnapshot): void {
+    const content = initialStarterMessage?.trim();
+    if (!content) return;
+    if (sentInitialStarterCanvasRef.current === canvasId) return;
+    if (snapshot.canvas.id !== canvasId) return;
+    const rootNode = snapshot.nodes.find(node => !node.parentNodeId && !node.hiddenAt && !node.deletedAt);
+    if (!rootNode) return;
+    if (
+      snapshot.messages.some(
+        message =>
+          message.canvasId === canvasId &&
+          message.nodeId === rootNode.id &&
+          message.role === "user" &&
+          message.status === "complete" &&
+          message.content === content
+      )
+    ) {
+      sentInitialStarterCanvasRef.current = canvasId;
+      onInitialStarterMessageSent?.(canvasId);
+      return;
+    }
+
+    sentInitialStarterCanvasRef.current = canvasId;
+    onInitialStarterMessageSent?.(canvasId);
+    void value.sendCommand(commands.sendUserMessage(rootNode.id, content));
   }
 
   function startBlockedPollLoop(): void {

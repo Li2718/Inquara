@@ -19,32 +19,63 @@ import {
 import { formatDate } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { interpolate, type AppMessages } from "../../shared/messages";
+import { getCanvasDeleteDialogOpeningState } from "./canvasDeleteDialogState";
+import { upsertCanvasList } from "./canvasListState";
 
 type CanvasSidebarProps = {
+  updatedCanvas: Canvas | null;
   currentCanvasId: string;
   isOpen: boolean;
+  onNewCanvasRequest(): void;
   onToggle(): void;
   onCanvasNavigate(targetCanvasId: string, options?: { replace?: boolean }): Promise<void>;
 };
 
 let canvasListCache: Canvas[] | null = null;
+const CANVAS_SIDEBAR_TRANSITION_MS = 220;
 
-export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavigate }: CanvasSidebarProps) {
+export function CanvasSidebar({
+  updatedCanvas,
+  currentCanvasId,
+  isOpen,
+  onNewCanvasRequest,
+  onToggle,
+  onCanvasNavigate
+}: CanvasSidebarProps) {
   const { locale, messages } = useLocale();
   const copy = messages.canvasSidebar;
   const [canvases, setCanvases] = useState<Canvas[]>(() => canvasListCache ?? []);
   const [isLoading, setIsLoading] = useState(canvasListCache === null);
-  const [isCreating, setIsCreating] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [deletingCanvas, setDeletingCanvas] = useState<Canvas | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsClosing(false);
+      return;
+    }
+    setIsClosing(true);
+    const timeout = window.setTimeout(() => setIsClosing(false), CANVAS_SIDEBAR_TRANSITION_MS);
+    return () => window.clearTimeout(timeout);
+  }, [isOpen]);
 
   useEffect(() => {
     void loadCanvases({ showLoading: canvasListCache === null });
   }, []);
+
+  useEffect(() => {
+    if (!updatedCanvas) return;
+    setCanvases(previous => {
+      const nextCanvases = upsertCanvasList(previous, updatedCanvas);
+      canvasListCache = nextCanvases;
+      return nextCanvases;
+    });
+  }, [updatedCanvas]);
 
   async function loadCanvases({ showLoading }: { showLoading: boolean }) {
     if (showLoading) setIsLoading(true);
@@ -60,25 +91,9 @@ export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavig
     }
   }
 
-  async function createCanvas() {
-    setIsCreating(true);
+  function createCanvas() {
     setError("");
-    try {
-      const canvas = await apiJson<Canvas>("/canvases", {
-        method: "POST",
-        body: JSON.stringify({ title: copy.untitledCanvas })
-      });
-      setCanvases(previous => {
-        const nextCanvases = [canvas, ...previous.filter(item => item.id !== canvas.id)];
-        canvasListCache = nextCanvases;
-        return nextCanvases;
-      });
-      await onCanvasNavigate(canvas.id);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.couldNotCreate);
-    } finally {
-      setIsCreating(false);
-    }
+    onNewCanvasRequest();
   }
 
   function startRenaming(canvas: Canvas) {
@@ -86,6 +101,13 @@ export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavig
     setRenamingId(canvas.id);
     setRenameTitle(canvas.title);
     setError("");
+  }
+
+  function openDeleteDialog(canvas: Canvas) {
+    const nextState = getCanvasDeleteDialogOpeningState(canvas);
+    setActiveMenuId(nextState.activeMenuId);
+    setIsDeleting(nextState.isDeleting);
+    setDeletingCanvas(nextState.deletingCanvas);
   }
 
   async function submitRename(event: FormEvent<HTMLFormElement>, canvas: Canvas) {
@@ -120,17 +142,12 @@ export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavig
       setCanvases(nextCanvases);
       setDeletingCanvas(null);
       if (deletingCanvas.id === currentCanvasId) {
-        const nextCanvas =
-          nextCanvases[0] ??
-          (await apiJson<Canvas>("/canvases", {
-            method: "POST",
-            body: JSON.stringify({ title: copy.untitledCanvas })
-          }));
-        if (nextCanvases.length === 0) {
-          canvasListCache = [nextCanvas];
-          setCanvases([nextCanvas]);
+        const nextCanvas = nextCanvases[0];
+        if (nextCanvas) {
+          await onCanvasNavigate(nextCanvas.id, { replace: true });
+        } else {
+          onNewCanvasRequest();
         }
-        await onCanvasNavigate(nextCanvas.id, { replace: true });
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : copy.couldNotDelete);
@@ -139,7 +156,7 @@ export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavig
   }
 
   return (
-    <aside className="canvas-sidebar" data-open={isOpen} aria-label={copy.canvasNavigation}>
+    <aside className="canvas-sidebar" data-open={isOpen} data-closing={isClosing} aria-label={copy.canvasNavigation}>
       <button
         type="button"
         className="canvas-sidebar-morph-button"
@@ -160,7 +177,6 @@ export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavig
             className="canvas-sidebar-create-button"
             onClick={createCanvas}
             aria-label={copy.newCanvas}
-            disabled={isCreating}
           >
             <PlusIcon />
           </button>
@@ -191,7 +207,7 @@ export function CanvasSidebar({ currentCanvasId, isOpen, onToggle, onCanvasNavig
               messages={messages}
               renamingId={renamingId}
               renameTitle={renameTitle}
-              setDeletingCanvas={setDeletingCanvas}
+              openDeleteDialog={openDeleteDialog}
               setRenameTitle={setRenameTitle}
               setRenamingId={setRenamingId}
               submitRename={submitRename}
@@ -224,9 +240,9 @@ function CanvasSidebarItem({
   onCanvasNavigate,
   locale,
   messages,
+  openDeleteDialog,
   renamingId,
   renameTitle,
-  setDeletingCanvas,
   setRenameTitle,
   setRenamingId,
   submitRename,
@@ -237,11 +253,11 @@ function CanvasSidebarItem({
   onMenuToggle(activeMenuId: string | null): void;
   onRename(canvas: Canvas): void;
   onCanvasNavigate(targetCanvasId: string, options?: { replace?: boolean }): Promise<void>;
+  openDeleteDialog(canvas: Canvas): void;
   locale: ReturnType<typeof useLocale>["locale"];
   messages: AppMessages;
   renamingId: string | null;
   renameTitle: string;
-  setDeletingCanvas(canvas: Canvas): void;
   setRenameTitle(title: string): void;
   setRenamingId(canvasId: string | null): void;
   submitRename(event: FormEvent<HTMLFormElement>, canvas: Canvas): Promise<void>;
@@ -305,8 +321,7 @@ function CanvasSidebarItem({
             <PopupMenuItem
               tone="danger"
               onClick={() => {
-                onMenuToggle(null);
-                setDeletingCanvas(canvas);
+                openDeleteDialog(canvas);
               }}
             >
               {messages.common.delete}

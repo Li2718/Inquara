@@ -108,6 +108,7 @@ describe("canvas command services", () => {
     });
 
     expect(childNode.parentNodeId).toBe(rootNodeId);
+    expect(childNode.title).toBe("which context matters");
     expect(childNode.sourceQuote).toBe("which context matters");
     expect(childNode.sourceRangeStart).toBe(18);
     expect(childNode.sourceRangeEnd).toBe(39);

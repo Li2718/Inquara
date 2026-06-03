@@ -6,7 +6,6 @@ export type RootViewportInput = {
   rootNode: Pick<CanvasNode, "x" | "y" | "width" | "height">;
   viewportWidth: number;
   viewportHeight: number;
-  reservedLeft?: number;
 };
 
 export function findFirstVisibleRootNode(nodes: CanvasNode[]): CanvasNode | null {
@@ -15,8 +14,8 @@ export function findFirstVisibleRootNode(nodes: CanvasNode[]): CanvasNode | null
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))[0] ?? null;
 }
 
-export function calculateRootViewport({ rootNode, viewportWidth, viewportHeight, reservedLeft = 0 }: RootViewportInput) {
-  const availableCenterX = reservedLeft + (viewportWidth - reservedLeft) / 2;
+export function calculateRootViewport({ rootNode, viewportWidth, viewportHeight }: RootViewportInput) {
+  const availableCenterX = viewportWidth / 2;
   const rootCenterX = rootNode.x + rootNode.width / 2;
   const rootCenterY = rootNode.y + rootNode.height / 2;
 
