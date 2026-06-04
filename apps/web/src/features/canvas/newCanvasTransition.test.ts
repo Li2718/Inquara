@@ -35,6 +35,21 @@ describe("new canvas transition", () => {
 
     expect(advanceNewCanvasTransition(morphing, { canvasId: "canvas-2", type: "starterMessageVisible" })).toBe(morphing);
     expect(advanceNewCanvasTransition(morphing, { canvasId: "canvas-1", type: "starterMessageVisible" })).toEqual({
+      canvasId: "canvas-1",
+      content: "First question",
+      status: "settling"
+    });
+  });
+
+  it("keeps the morph overlay mounted until the settle fade has finished", () => {
+    const settling = {
+      canvasId: "canvas-1",
+      content: "First question",
+      status: "settling" as const
+    };
+
+    expect(advanceNewCanvasTransition(settling, { canvasId: "canvas-2", type: "overlaySettled" })).toBe(settling);
+    expect(advanceNewCanvasTransition(settling, { canvasId: "canvas-1", type: "overlaySettled" })).toEqual({
       canvasId: null,
       content: "",
       status: "idle"
@@ -71,9 +86,12 @@ describe("new canvas transition", () => {
   });
 
   it("renders the morph send control with the normal send label", () => {
-    const markup = renderToStaticMarkup(createElement(NewCanvasMorphOverlay, { content: "First question", sendLabel: "Send" }));
+    const markup = renderToStaticMarkup(
+      createElement(NewCanvasMorphOverlay, { content: "First question", sendLabel: "Send", state: "morphing" })
+    );
 
     expect(markup).toContain("Send");
+    expect(markup).toContain('data-state="morphing"');
     expect(markup).toContain("node-composer-frame-submit");
     expect(markup).not.toContain("new-canvas-morph-send");
   });

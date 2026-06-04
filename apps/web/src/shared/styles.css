@@ -2176,6 +2176,9 @@ textarea.node-composer-frame-input {
   place-items: center;
   padding: 24px;
   pointer-events: none;
+}
+
+.new-canvas-morph-overlay[data-state="settling"] {
   animation: new-canvas-morph-overlay-exit 220ms ease 180ms both;
 }
 

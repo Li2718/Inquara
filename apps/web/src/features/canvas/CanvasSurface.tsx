@@ -137,8 +137,16 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
             isPreparingCanvasSwitch={isPreparingCanvasSwitch}
             pendingCanvasId={pendingCanvasId}
             resetViewportRequest={resetViewportRequest}
-            transitionCanvasId={newCanvasTransition.status === "morphing" ? newCanvasTransition.canvasId : null}
-            transitionContent={newCanvasTransition.status === "morphing" ? newCanvasTransition.content : ""}
+            transitionCanvasId={
+              newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
+                ? newCanvasTransition.canvasId
+                : null
+            }
+            transitionContent={
+              newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
+                ? newCanvasTransition.content
+                : ""
+            }
             onStarterTransitionReady={canvasId => {
               setNewCanvasTransition(state =>
                 advanceNewCanvasTransition(state, {
@@ -155,8 +163,20 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
           />
         </CanvasSessionProvider>
       )}
-      {newCanvasTransition.status === "morphing" ? (
-        <NewCanvasMorphOverlay content={newCanvasTransition.content} sendLabel={messages.chat.send} />
+      {newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling" ? (
+        <NewCanvasMorphOverlay
+          content={newCanvasTransition.content}
+          sendLabel={messages.chat.send}
+          state={newCanvasTransition.status}
+          onSettled={() => {
+            setNewCanvasTransition(state =>
+              advanceNewCanvasTransition(state, {
+                canvasId: newCanvasTransition.canvasId,
+                type: "overlaySettled"
+              })
+            );
+          }}
+        />
       ) : null}
     </main>
   );
@@ -237,8 +257,7 @@ function CanvasSurfaceContent({
       return () => window.clearTimeout(timeout);
     }
     clearPendingStarterMessage(transitionCanvasId);
-    const timeout = window.setTimeout(() => onStarterTransitionReady(transitionCanvasId), 220);
-    return () => window.clearTimeout(timeout);
+    onStarterTransitionReady(transitionCanvasId);
   }, [
     onStarterTransitionReady,
     refreshSnapshot,
@@ -279,9 +298,31 @@ function CanvasSurfaceContent({
   );
 }
 
-export function NewCanvasMorphOverlay({ content, sendLabel }: { content: string; sendLabel: string }) {
+export function NewCanvasMorphOverlay({
+  content,
+  onSettled,
+  sendLabel,
+  state
+}: {
+  content: string;
+  onSettled?: () => void;
+  sendLabel: string;
+  state: "morphing" | "settling";
+}) {
   return (
-    <div className="new-canvas-morph-overlay" aria-hidden="true">
+    <div
+      className="new-canvas-morph-overlay"
+      data-state={state}
+      aria-hidden="true"
+      onAnimationEnd={
+        state === "settling"
+          ? event => {
+              if (event.currentTarget !== event.target) return;
+              onSettled?.();
+            }
+          : undefined
+      }
+    >
       <div className="new-canvas-morph-node">
         <div className="new-canvas-morph-node-header" />
         <div className="new-canvas-morph-node-body" />

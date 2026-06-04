@@ -10,6 +10,11 @@ export type NewCanvasTransitionState =
       canvasId: string;
       content: string;
       status: "morphing";
+    }
+  | {
+      canvasId: string;
+      content: string;
+      status: "settling";
     };
 
 export type NewCanvasTransitionEvent =
@@ -21,6 +26,10 @@ export type NewCanvasTransitionEvent =
   | {
       canvasId: string;
       type: "starterMessageVisible";
+    }
+  | {
+      canvasId: string;
+      type: "overlaySettled";
     }
   | {
       type: "reset";
@@ -46,6 +55,15 @@ export function advanceNewCanvasTransition(
 
   if (event.type === "starterMessageVisible") {
     if (state.status !== "morphing" || state.canvasId !== event.canvasId) return state;
+    return {
+      canvasId: state.canvasId,
+      content: state.content,
+      status: "settling"
+    };
+  }
+
+  if (event.type === "overlaySettled") {
+    if (state.status !== "settling" || state.canvasId !== event.canvasId) return state;
     return initialNewCanvasTransitionState;
   }
 
