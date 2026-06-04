@@ -14,14 +14,44 @@ import { NewCanvasMorphOverlay } from "./CanvasSurface";
 describe("new canvas transition", () => {
   it("keeps the starter overlay while the created canvas is loading", () => {
     const morphing = advanceNewCanvasTransition(initialNewCanvasTransitionState, {
-      canvasId: "canvas-1",
       content: "First question",
+      submissionId: "submission-1",
       type: "submitted"
     });
 
     expect(morphing).toEqual({
+      canvasId: null,
+      content: "First question",
+      submissionId: "submission-1",
+      status: "morphing"
+    });
+  });
+
+  it("attaches the real canvas id to the active starter overlay after creation returns", () => {
+    const morphing = {
+      canvasId: null,
+      content: "First question",
+      submissionId: "submission-1",
+      status: "morphing" as const
+    };
+
+    expect(
+      advanceNewCanvasTransition(morphing, {
+        canvasId: "canvas-2",
+        submissionId: "submission-2",
+        type: "canvasCreated"
+      })
+    ).toBe(morphing);
+    expect(
+      advanceNewCanvasTransition(morphing, {
+        canvasId: "canvas-1",
+        submissionId: "submission-1",
+        type: "canvasCreated"
+      })
+    ).toEqual({
       canvasId: "canvas-1",
       content: "First question",
+      submissionId: "submission-1",
       status: "morphing"
     });
   });
@@ -30,11 +60,29 @@ describe("new canvas transition", () => {
     const morphing = {
       canvasId: "canvas-1",
       content: "First question",
+      submissionId: "submission-1",
       status: "morphing" as const
     };
 
     expect(advanceNewCanvasTransition(morphing, { canvasId: "canvas-2", type: "starterMessageVisible" })).toBe(morphing);
     expect(advanceNewCanvasTransition(morphing, { canvasId: "canvas-1", type: "starterMessageVisible" })).toEqual({
+      canvasId: "canvas-1",
+      content: "First question",
+      submissionId: "submission-1",
+      status: "settling"
+    });
+  });
+
+  it("keeps the morph overlay mounted until the settle fade has finished", () => {
+    const settling = {
+      canvasId: "canvas-1",
+      content: "First question",
+      submissionId: "submission-1",
+      status: "settling" as const
+    };
+
+    expect(advanceNewCanvasTransition(settling, { canvasId: "canvas-2", type: "overlaySettled" })).toBe(settling);
+    expect(advanceNewCanvasTransition(settling, { canvasId: "canvas-1", type: "overlaySettled" })).toEqual({
       canvasId: null,
       content: "",
       status: "idle"
@@ -45,22 +93,20 @@ describe("new canvas transition", () => {
     expect(hasVisibleStarterMessage(snapshotWithStarterMessage, { canvasId: "canvas-1", content: "First question" })).toBe(true);
   });
 
-  it("does not settle while the starter message is only a pending client mutation", () => {
+  it("can settle once the starter user message is visible, even while the assistant reply is still pending", () => {
     expect(
       canSettleStarterTransition({
-        pendingClientMutationCount: 1,
-        snapshot: snapshotWithStarterMessage,
-        starter: { canvasId: "canvas-1", content: "First question" }
-      })
-    ).toBe(false);
-
-    expect(
-      canSettleStarterTransition({
-        pendingClientMutationCount: 0,
         snapshot: snapshotWithStarterMessage,
         starter: { canvasId: "canvas-1", content: "First question" }
       })
     ).toBe(true);
+
+    expect(
+      canSettleStarterTransition({
+        snapshot: { ...snapshotWithStarterMessage, messages: [] },
+        starter: { canvasId: "canvas-1", content: "First question" }
+      })
+    ).toBe(false);
   });
 
   it("matches the starter message only after the real message bubble renders", () => {
@@ -71,11 +117,56 @@ describe("new canvas transition", () => {
   });
 
   it("renders the morph send control with the normal send label", () => {
-    const markup = renderToStaticMarkup(createElement(NewCanvasMorphOverlay, { content: "First question", sendLabel: "Send" }));
+    const markup = renderToStaticMarkup(
+      createElement(NewCanvasMorphOverlay, {
+        content: "First question",
+        placeholder: "Ask here",
+        sendLabel: "Send",
+        state: "morphing",
+        thinkingLabel: "Thinking..."
+      })
+    );
 
     expect(markup).toContain("Send");
+    expect(markup).toContain('data-state="morphing"');
     expect(markup).toContain("node-composer-frame-submit");
     expect(markup).not.toContain("new-canvas-morph-send");
+  });
+
+  it("renders the submitted question with the normal user message bubble", () => {
+    const markup = renderToStaticMarkup(
+      createElement(NewCanvasMorphOverlay, {
+        content: "First question",
+        placeholder: "Ask here",
+        sendLabel: "Send",
+        state: "morphing",
+        thinkingLabel: "Thinking..."
+      })
+    );
+
+    expect(markup).toContain('class="message-bubble message-user new-canvas-morph-user-message"');
+    expect(markup).toContain("<p><span");
+    expect(markup).toContain("First question");
+    expect(markup.match(/class="message-bubble message-user new-canvas-morph-user-message"/gu)?.length).toBe(1);
+  });
+
+  it("renders a title bar and thinking assistant bubble during the morph overlay", () => {
+    const markup = renderToStaticMarkup(
+      createElement(NewCanvasMorphOverlay, {
+        content: "First question",
+        placeholder: "Ask here",
+        sendLabel: "Send",
+        state: "morphing",
+        thinkingLabel: "Thinking..."
+      })
+    );
+
+    expect(markup).toContain('class="canvas-node-header');
+    expect(markup).toContain('class="canvas-node-title-row new-canvas-morph-title"');
+    expect(markup).toContain("<strong>First question</strong>");
+    expect(markup).toContain('class="message-bubble message-user new-canvas-morph-user-message"');
+    expect(markup).toContain('class="message-bubble message-assistant new-canvas-morph-thinking-message"');
+    expect(markup).toContain("Thinking...");
   });
 });
 

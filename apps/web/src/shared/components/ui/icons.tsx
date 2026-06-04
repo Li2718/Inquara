@@ -1,4 +1,4 @@
-import type { HTMLAttributes, SVGProps } from "react";
+import React, { type HTMLAttributes, type SVGProps } from "react";
 
 type IconProps = SVGProps<SVGSVGElement>;
 type SpanIconProps = HTMLAttributes<HTMLSpanElement>;

@@ -1,33 +1,23 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useLocale } from "../../locale/LocaleProvider";
 import { AppTopBar } from "../chrome";
-import { getAdminNavLinkState, shouldStartAdminNavPendingNavigation } from "./adminNavigation";
+import { getAdminNavLinkState } from "./adminNavigation";
+import type { AdminSection } from "./adminUrlState";
 
 type AdminShellProps = {
+  activeSection: AdminSection;
   children: ReactNode;
+  onSectionNavigate(section: AdminSection): void;
 };
 
-export function AdminShell({ children }: AdminShellProps) {
+export function AdminShell({ activeSection, children, onSectionNavigate }: AdminShellProps) {
   const { messages } = useLocale();
   const copy = messages.adminNav;
-  const pathname = usePathname();
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
-  useEffect(() => {
-    setPendingHref(null);
-  }, [pathname]);
-
-  function startPendingNavigation(event: MouseEvent<HTMLAnchorElement>, href: string) {
-    if (!shouldStartAdminNavPendingNavigation(event)) return;
-    setPendingHref(href);
-  }
-
-  const usersLinkState = getAdminNavLinkState({ href: "/admin/users", pathname, pendingHref });
-  const codesLinkState = getAdminNavLinkState({ href: "/admin/codes", pathname, pendingHref });
+  const usersLinkState = getAdminNavLinkState({ href: "/admin/users", activeSection });
+  const codesLinkState = getAdminNavLinkState({ href: "/admin/codes", activeSection });
 
   return (
     <main className="admin-page">
@@ -36,26 +26,26 @@ export function AdminShell({ children }: AdminShellProps) {
         <aside className="admin-sidebar" aria-label={copy.settings}>
           <p className="admin-sidebar-title">{copy.settings}</p>
           <nav className="admin-nav">
-            <Link
+            <button
+              type="button"
               className="admin-nav-link"
-              href="/admin/users"
               aria-current={usersLinkState.ariaCurrent}
               data-active={usersLinkState.isVisuallyActive}
               data-pending={usersLinkState.isPending}
-              onClick={event => startPendingNavigation(event, "/admin/users")}
+              onClick={() => onSectionNavigate("users")}
             >
               {copy.users}
-            </Link>
-            <Link
+            </button>
+            <button
+              type="button"
               className="admin-nav-link"
-              href="/admin/codes"
               aria-current={codesLinkState.ariaCurrent}
               data-active={codesLinkState.isVisuallyActive}
               data-pending={codesLinkState.isPending}
-              onClick={event => startPendingNavigation(event, "/admin/codes")}
+              onClick={() => onSectionNavigate("codes")}
             >
               {copy.codes}
-            </Link>
+            </button>
           </nav>
         </aside>
         <div className="admin-content">{children}</div>

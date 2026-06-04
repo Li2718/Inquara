@@ -42,6 +42,28 @@ describe("page transition navigation", () => {
     expect(push).toHaveBeenCalledWith("/admin/codes", undefined);
   });
 
+  it("uses plain navigation when page transition is skipped", async () => {
+    const push = vi.fn();
+    const startViewTransition = vi.fn(update => {
+      void update();
+      return undefined;
+    });
+
+    const wrapped = await navigateWithPageTransition(
+      { push, replace: vi.fn() },
+      "/admin",
+      {
+        document: { startViewTransition } as unknown as Document,
+        skipTransition: true,
+        window: { matchMedia: vi.fn(() => ({ matches: false })) } as unknown as Window
+      }
+    );
+
+    expect(wrapped).toBe(false);
+    expect(startViewTransition).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledWith("/admin", undefined);
+  });
+
   it("falls back to plain navigation when startViewTransition is unavailable", async () => {
     const replace = vi.fn();
 
@@ -92,5 +114,32 @@ describe("page transition navigation", () => {
     expect(started).toBe(true);
     expect(startViewTransition).toHaveBeenCalledTimes(1);
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles skipped view transition rejections as cancellation", async () => {
+    const skippedError = new DOMException("Transition was skipped", "AbortError");
+    const readyCatch = vi.fn();
+    const finishedCatch = vi.fn();
+    const updateCallbackDoneCatch = vi.fn();
+    const skippedTransition = {
+      ready: { catch: readyCatch },
+      finished: { catch: finishedCatch },
+      updateCallbackDone: { catch: updateCallbackDoneCatch }
+    };
+    const startViewTransition = vi.fn(update => {
+      void update();
+      return skippedTransition as unknown as ViewTransition;
+    });
+
+    const wrapped = runWithPageTransition(vi.fn(), {
+      document: { startViewTransition } as unknown as Document,
+      window: { matchMedia: vi.fn(() => ({ matches: false })) } as unknown as Window
+    });
+
+    expect(wrapped).toBe(true);
+    expect(readyCatch).toHaveBeenCalledTimes(1);
+    expect(finishedCatch).toHaveBeenCalledTimes(1);
+    expect(updateCallbackDoneCatch).toHaveBeenCalledTimes(1);
+    expect(readyCatch.mock.calls[0]?.[0](skippedError)).toBeUndefined();
   });
 });

@@ -2,16 +2,19 @@
 
 import type { Canvas } from "@inquara/domain";
 import React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { AppTopBar } from "../../shared/components/chrome";
 import { NodeComposerDisplay, NodeComposerFrame, NodeComposerSubmit } from "../../shared/components/domain";
+import { MoreVerticalIcon } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { CanvasLeaseBlocker } from "../canvas-session/CanvasLeaseBlocker";
 import { CanvasSessionProvider, useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasSidebar } from "../canvases/CanvasSidebar";
 import { NewCanvasEntry } from "../canvases/NewCanvasEntry";
+import type { CanvasListPlacement } from "../canvases/canvasListState";
 import { clearPendingStarterMessage, getPendingStarterMessage } from "../canvases/newCanvasDraft";
+import { MessageBubble } from "../node-chat/MessageList";
 import { CANVAS_SIDEBAR_OPEN_COOKIE, CANVAS_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
 import { CanvasView } from "./CanvasView";
 import { parseCanvasPathState, writeCanvasPathState, type CanvasPathState } from "./canvasUrlState";
@@ -38,9 +41,12 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
   const [isPreparingCanvasSwitch, setIsPreparingCanvasSwitch] = useState(false);
   const [pendingCanvasId, setPendingCanvasId] = useState<string | null>(null);
   const [pendingStarterSubmission, setPendingStarterSubmission] = useState<{ canvasId: string; content: string } | null>(null);
-  const [updatedCanvasForSidebar, setUpdatedCanvasForSidebar] = useState<Canvas | null>(null);
+  const [canvasListUpdate, setCanvasListUpdate] = useState<{ canvas: Canvas; placement: CanvasListPlacement } | null>(null);
   const [newCanvasTransition, setNewCanvasTransition] = useState<NewCanvasTransitionState>(initialNewCanvasTransitionState);
   const [resetViewportRequest, setResetViewportRequest] = useState(0);
+  const updateCanvasList = useCallback((canvas: Canvas, placement: CanvasListPlacement) => {
+    setCanvasListUpdate({ canvas, placement });
+  }, []);
 
   function toggleSidebar() {
     setIsSidebarOpen(value => {
@@ -95,7 +101,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
         onNewCanvasRequest={() => showNewCanvas()}
       />
       <CanvasSidebar
-        updatedCanvas={updatedCanvasForSidebar}
+        canvasListUpdate={canvasListUpdate}
         currentCanvasId={activeState.mode === "canvas" ? activeState.canvasId : "new"}
         isOpen={isSidebarOpen}
         onToggle={toggleSidebar}
@@ -105,16 +111,26 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
       {activeState.mode === "new" ? (
         <section className="canvas-stage new-canvas-stage" aria-label={messages.canvas.stage}>
           <NewCanvasEntry
-            onCreated={async ({ canvas, content }) => {
+            isOverlayVisible={newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"}
+            onSubmitted={({ content, submissionId }) => {
               setNewCanvasTransition(
                 advanceNewCanvasTransition(initialNewCanvasTransitionState, {
-                  canvasId: canvas.id,
                   content,
+                  submissionId,
                   type: "submitted"
                 })
               );
+            }}
+            onCreated={async ({ canvas, content, submissionId }) => {
+              setNewCanvasTransition(state =>
+                advanceNewCanvasTransition(state, {
+                  canvasId: canvas.id,
+                  submissionId,
+                  type: "canvasCreated"
+                })
+              );
               setPendingStarterSubmission({ canvasId: canvas.id, content });
-              setUpdatedCanvasForSidebar(canvas);
+              updateCanvasList(canvas, "top");
               await showCanvas(canvas.id, { replace: true });
             }}
           />
@@ -137,8 +153,21 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
             isPreparingCanvasSwitch={isPreparingCanvasSwitch}
             pendingCanvasId={pendingCanvasId}
             resetViewportRequest={resetViewportRequest}
-            transitionCanvasId={newCanvasTransition.status === "morphing" ? newCanvasTransition.canvasId : null}
-            transitionContent={newCanvasTransition.status === "morphing" ? newCanvasTransition.content : ""}
+            transitionCanvasId={
+              newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
+                ? newCanvasTransition.canvasId
+                : null
+            }
+            transitionStatus={
+              newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
+                ? newCanvasTransition.status
+                : "idle"
+            }
+            transitionContent={
+              newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
+                ? newCanvasTransition.content
+                : ""
+            }
             onStarterTransitionReady={canvasId => {
               setNewCanvasTransition(state =>
                 advanceNewCanvasTransition(state, {
@@ -151,12 +180,36 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
               setIsPreparingCanvasSwitch(false);
               setPendingCanvasId(null);
             }}
-            onCanvasSnapshotUpdated={setUpdatedCanvasForSidebar}
+            onCanvasSnapshotUpdated={updateCanvasList}
           />
         </CanvasSessionProvider>
       )}
-      {newCanvasTransition.status === "morphing" ? (
-        <NewCanvasMorphOverlay content={newCanvasTransition.content} sendLabel={messages.chat.send} />
+      {newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling" ? (
+        newCanvasTransition.status === "settling" ? (
+          <NewCanvasMorphOverlay
+            content={newCanvasTransition.content}
+            sendLabel={messages.chat.send}
+            state={newCanvasTransition.status}
+            placeholder={messages.chat.askPlaceholder}
+            thinkingLabel={messages.chat.thinking}
+            onSettled={() => {
+              setNewCanvasTransition(state =>
+                advanceNewCanvasTransition(state, {
+                  canvasId: newCanvasTransition.canvasId,
+                  type: "overlaySettled"
+                })
+              );
+            }}
+          />
+        ) : (
+          <NewCanvasMorphOverlay
+            content={newCanvasTransition.content}
+            sendLabel={messages.chat.send}
+            state={newCanvasTransition.status}
+            placeholder={messages.chat.askPlaceholder}
+            thinkingLabel={messages.chat.thinking}
+          />
+        )
       ) : null}
     </main>
   );
@@ -178,6 +231,7 @@ function CanvasSurfaceContent({
   pendingCanvasId,
   resetViewportRequest,
   transitionCanvasId,
+  transitionStatus,
   transitionContent,
   onStarterTransitionReady,
   onCanvasSwitchReady,
@@ -189,19 +243,25 @@ function CanvasSurfaceContent({
   pendingCanvasId: string | null;
   resetViewportRequest: number;
   transitionCanvasId: string | null;
+  transitionStatus: "idle" | "morphing" | "settling";
   transitionContent: string;
   onStarterTransitionReady(canvasId: string): void;
   onCanvasSwitchReady(): void;
-  onCanvasSnapshotUpdated(canvas: Canvas): void;
+  onCanvasSnapshotUpdated(canvas: Canvas, placement: CanvasListPlacement): void;
 }) {
   const { messages } = useLocale();
   const { refreshSnapshot, retryLease, state } = useCanvasSession();
   const [starterRenderWaitTick, setStarterRenderWaitTick] = useState(0);
+  const lastSidebarCanvasRef = useRef<Canvas | null>(null);
 
   useEffect(() => {
-    if (state.snapshot?.canvas) {
-      onCanvasSnapshotUpdated(state.snapshot.canvas);
-    }
+    const canvas = state.snapshot?.canvas;
+    if (!canvas) return;
+    const previousCanvas = lastSidebarCanvasRef.current;
+    lastSidebarCanvasRef.current = canvas;
+    if (previousCanvas?.id !== canvas.id) return;
+    if (previousCanvas.updatedAt >= canvas.updatedAt) return;
+    onCanvasSnapshotUpdated(canvas, "top");
   }, [onCanvasSnapshotUpdated, state.snapshot?.canvas]);
 
   useEffect(() => {
@@ -217,7 +277,6 @@ function CanvasSurfaceContent({
     const starter = { canvasId: transitionCanvasId, content: transitionContent };
     if (
       !canSettleStarterTransition({
-        pendingClientMutationCount: state.pendingClientMutationIds.length,
         snapshot: state.snapshot,
         starter
       })
@@ -227,7 +286,7 @@ function CanvasSurfaceContent({
       }, 500);
       return () => window.clearTimeout(timeout);
     }
-    const renderedMessages = Array.from(document.querySelectorAll<HTMLElement>(".message-bubble.message-user")).map(
+    const renderedMessages = Array.from(document.querySelectorAll<HTMLElement>(".canvas-node-content .message-bubble.message-user")).map(
       element => element.textContent ?? ""
     );
     if (!hasRenderedStarterMessage(renderedMessages, transitionContent)) {
@@ -237,13 +296,11 @@ function CanvasSurfaceContent({
       return () => window.clearTimeout(timeout);
     }
     clearPendingStarterMessage(transitionCanvasId);
-    const timeout = window.setTimeout(() => onStarterTransitionReady(transitionCanvasId), 220);
-    return () => window.clearTimeout(timeout);
+    onStarterTransitionReady(transitionCanvasId);
   }, [
     onStarterTransitionReady,
     refreshSnapshot,
     state.leaseState,
-    state.pendingClientMutationIds.length,
     state.snapshot,
     starterRenderWaitTick,
     transitionContent,
@@ -256,6 +313,7 @@ function CanvasSurfaceContent({
         <CanvasView
           isPreparingCanvasSwitch={isPreparingCanvasSwitch}
           isSidebarOpen={isSidebarOpen}
+          starterOverlayPhase={transitionCanvasId ? transitionStatus : "idle"}
           resetViewportRequest={resetViewportRequest}
           routeCanvasId={canvasId}
         />
@@ -279,18 +337,72 @@ function CanvasSurfaceContent({
   );
 }
 
-export function NewCanvasMorphOverlay({ content, sendLabel }: { content: string; sendLabel: string }) {
+export function NewCanvasMorphOverlay({
+  content,
+  onSettled,
+  placeholder,
+  sendLabel,
+  state,
+  thinkingLabel
+}: {
+  content: string;
+  onSettled?: () => void;
+  placeholder: string;
+  sendLabel: string;
+  state: "morphing" | "settling";
+  thinkingLabel: string;
+}) {
   return (
-    <div className="new-canvas-morph-overlay" aria-hidden="true">
+    <div
+      className="new-canvas-morph-overlay"
+      data-state={state}
+      aria-hidden="true"
+      onAnimationEnd={
+        state === "settling"
+          ? event => {
+              if (event.currentTarget !== event.target) return;
+              onSettled?.();
+            }
+          : undefined
+      }
+    >
       <div className="new-canvas-morph-node">
-        <div className="new-canvas-morph-node-header" />
-        <div className="new-canvas-morph-node-body" />
-        <NodeComposerFrame className="new-canvas-morph-composer">
-          <NodeComposerDisplay>{content}</NodeComposerDisplay>
-          <NodeComposerSubmit disabled tabIndex={-1}>
-            {sendLabel}
-          </NodeComposerSubmit>
-        </NodeComposerFrame>
+        <header className="canvas-node-header new-canvas-morph-node-header">
+          <div className="canvas-node-title-row new-canvas-morph-title">
+            <strong>{content}</strong>
+            <button
+              type="button"
+              className="icon-button node-menu-trigger nodrag new-canvas-morph-menu-trigger"
+              tabIndex={-1}
+              aria-hidden="true"
+              disabled
+            >
+              <MoreVerticalIcon />
+            </button>
+          </div>
+          <div className="canvas-node-actions" />
+        </header>
+        <div className="node-chat-panel nodrag new-canvas-morph-chat-panel">
+          <div className="message-list nodrag new-canvas-morph-node-body">
+            <MessageBubble className="new-canvas-morph-user-message" content={content} role="user" />
+            <MessageBubble className="new-canvas-morph-thinking-message" content={thinkingLabel} role="assistant" />
+          </div>
+          <NodeComposerFrame className="message-composer nodrag new-canvas-morph-composer">
+            <NodeComposerDisplay className="new-canvas-morph-composer-input">
+              {state === "settling" ? placeholder : ""}
+            </NodeComposerDisplay>
+            <NodeComposerSubmit disabled tabIndex={-1}>
+              {sendLabel}
+            </NodeComposerSubmit>
+          </NodeComposerFrame>
+        </div>
+        <button
+          type="button"
+          className="canvas-node-resize-handle nodrag nowheel new-canvas-morph-resize-handle"
+          aria-hidden="true"
+          tabIndex={-1}
+          disabled
+        />
       </div>
     </div>
   );

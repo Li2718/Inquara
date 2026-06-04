@@ -137,6 +137,132 @@ describe("canvas session store", () => {
     expect(store.getState().pendingClientMutationIds).toEqual(["mutation-organize"]);
   });
 
+  it("uses the first root question as the optimistic node and canvas title", () => {
+    const store = createCanvasSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyOptimisticCommand({
+      type: "message.sendUserMessage",
+      clientMutationId: "mutation-first-message",
+      canvasId: "canvas-1",
+      nodeId: "node-1",
+      userMessageId: "message-user-1",
+      assistantMessageId: "message-assistant-1",
+      content: "How should this canvas be titled?"
+    });
+
+    expect(store.getState().snapshot?.canvas.title).toBe("How should this canvas be titled?");
+    expect(store.getState().snapshot?.nodes[0]?.title).toBe("How should this canvas be titled?");
+    expect(store.getState().pendingClientMutationIds).toEqual(["mutation-first-message"]);
+  });
+
+  it("lets generated title events replace the optimistic first-question title", () => {
+    const store = createCanvasSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyOptimisticCommand({
+      type: "message.sendUserMessage",
+      clientMutationId: "mutation-first-message",
+      canvasId: "canvas-1",
+      nodeId: "node-1",
+      userMessageId: "message-user-1",
+      assistantMessageId: "message-assistant-1",
+      content: "How should this canvas be titled?"
+    });
+    store.getState().applyEvent({
+      id: "event-generated-node-title",
+      type: "canvas.node.updated",
+      canvasId: "canvas-1",
+      version: 2,
+      clientMutationId: null,
+      createdAt: "2026-05-24T00:02:00.000Z",
+      node: {
+        ...node,
+        title: "Generated concise title",
+        version: 1,
+        updatedAt: "2026-05-24T00:02:00.000Z"
+      }
+    });
+
+    expect(store.getState().snapshot?.nodes[0]?.title).toBe("Generated concise title");
+  });
+
+  it("keeps message submissions pending until the assistant message reaches a terminal state", () => {
+    const store = createCanvasSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyOptimisticCommand({
+      type: "message.sendUserMessage",
+      clientMutationId: "mutation-first-message",
+      canvasId: "canvas-1",
+      nodeId: "node-1",
+      userMessageId: "message-user-1",
+      assistantMessageId: "message-assistant-1",
+      content: "How should this canvas be titled?"
+    });
+    store.getState().applyEvent({
+      id: "event-fallback-title",
+      type: "canvas.node.updated",
+      canvasId: "canvas-1",
+      version: 2,
+      clientMutationId: "mutation-first-message",
+      createdAt: "2026-05-24T00:02:00.000Z",
+      node: {
+        ...node,
+        title: "How should this canvas be titled?",
+        version: 1,
+        updatedAt: "2026-05-24T00:02:00.000Z"
+      }
+    });
+
+    expect(store.getState().pendingClientMutationIds).toEqual(["mutation-first-message"]);
+
+    store.getState().applyEvent({
+      id: "event-message-complete",
+      type: "canvas.message.updated",
+      canvasId: "canvas-1",
+      version: 3,
+      clientMutationId: "mutation-first-message",
+      createdAt: "2026-05-24T00:03:00.000Z",
+      message: {
+        canvasId: "canvas-1",
+        id: "message-assistant-1",
+        nodeId: "node-1",
+        role: "assistant",
+        content: "Done",
+        status: "complete",
+        model: "fake",
+        errorMessage: null,
+        createdAt: "2026-05-24T00:01:00.000Z",
+        updatedAt: "2026-05-24T00:03:00.000Z"
+      }
+    });
+
+    expect(store.getState().pendingClientMutationIds).toEqual([]);
+  });
+
+  it("does not let stale snapshots erase a pending optimistic first message", () => {
+    const store = createCanvasSessionStore();
+    store.getState().setSnapshot(snapshot);
+
+    store.getState().applyOptimisticCommand({
+      type: "message.sendUserMessage",
+      clientMutationId: "mutation-first-message",
+      canvasId: "canvas-1",
+      nodeId: "node-1",
+      userMessageId: "message-user-1",
+      assistantMessageId: "message-assistant-1",
+      content: "How should this canvas be titled?"
+    });
+    store.getState().setSnapshot(snapshot);
+
+    expect(store.getState().snapshot?.nodes[0]?.title).toBe("How should this canvas be titled?");
+    expect(store.getState().snapshot?.messages.map(message => message.id)).toEqual([
+      "message-user-1",
+      "message-assistant-1"
+    ]);
+  });
+
   it("uses selected text as the optimistic follow-up node title", () => {
     const store = createCanvasSessionStore();
     store.getState().setSnapshot(snapshot);

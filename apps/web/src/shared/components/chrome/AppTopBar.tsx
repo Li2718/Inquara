@@ -9,6 +9,7 @@ import { interpolate } from "../../messages";
 import { usePageTransitionNavigation } from "./usePageTransitionNavigation";
 import { AppearanceMenu } from "./AppearanceMenu";
 import { LanguageMenu } from "./LanguageMenu";
+import { getLastCanvasPath, rememberLastCanvasPath } from "./lastCanvasPath";
 import { ConfirmDialog, FloatingCircleButton, InquaraBrandIcon, PopupMenu, PopupMenuItem } from "../ui";
 
 type CurrentUser = {
@@ -68,15 +69,38 @@ export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasReque
   }, [currentUser]);
   const isAdmin = currentUser?.role === "admin";
   const isAdminRoute = pathname.startsWith("/admin");
+  const shouldShowAdminMenuDestination = isAdminRoute || isAdmin;
   const isNewCanvasRoute = pathname === "/canvases/new";
   const isCanvasRoute = isCanvasSurface ?? (pathname.startsWith("/canvases/") && !isNewCanvasRoute);
+
+  useEffect(() => {
+    rememberLastCanvasPath();
+  }, [pathname]);
 
   async function handleBrandClick() {
     if (isCanvasRoute) {
       onCanvasLogoClick?.();
       return;
     }
-    onNewCanvasRequest?.();
+    if (onNewCanvasRequest) {
+      onNewCanvasRequest();
+      return;
+    }
+    await navigation.push(getLastCanvasPath(), { skipTransition: true });
+  }
+
+  async function openAdminMenuDestination() {
+    setIsAccountMenuOpen(false);
+    if (isAdminRoute) {
+      if (onNewCanvasRequest) {
+        onNewCanvasRequest();
+        return;
+      }
+      await navigation.push(getLastCanvasPath(), { skipTransition: true });
+      return;
+    }
+
+    await navigation.push("/admin", { skipTransition: true });
   }
 
   return (
@@ -117,15 +141,10 @@ export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasReque
           onClose={() => setIsAccountMenuOpen(false)}
           placement="bottom-end"
         >
-          {isAdmin ? (
+          {shouldShowAdminMenuDestination ? (
             <PopupMenuItem
-              onClick={async () => {
-                setIsAccountMenuOpen(false);
-                if (isAdminRoute) {
-                  onNewCanvasRequest?.();
-                } else {
-                  await navigation.push("/admin");
-                }
+              onClick={() => {
+                void openAdminMenuDestination();
               }}
             >
               {isAdminRoute ? copy.backToCanvas : copy.admin}

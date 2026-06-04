@@ -190,28 +190,20 @@ html {
 @keyframes inquara-page-exit {
   from {
     opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
   }
 
   to {
     opacity: 0;
-    transform: scale(0.996);
-    filter: blur(2px);
   }
 }
 
 @keyframes inquara-page-enter {
   from {
     opacity: 0;
-    transform: scale(1.004);
-    filter: blur(2px);
   }
 
   to {
     opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
   }
 }
 
@@ -686,8 +678,12 @@ h2 {
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
+  border: 0;
   border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
   color: var(--ink);
+  cursor: pointer;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
@@ -695,6 +691,10 @@ h2 {
     background 120ms ease,
     box-shadow 120ms ease,
     color 120ms ease;
+}
+
+.admin-nav-link:hover {
+  transform: none;
 }
 
 .admin-nav-link:hover,
@@ -2187,8 +2187,30 @@ html[data-appearance="dark"] .message-bubble a {
 
 .canvas-view[data-canvas-transition="leaving"] .react-flow__node,
 .canvas-view[data-canvas-transition="leaving"] .react-flow__edge {
+  opacity: 1;
+  filter: none;
+}
+
+.canvas-switch-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  pointer-events: auto;
+}
+
+.canvas-view[data-starter-overlay-phase="morphing"] :where(.react-flow__node, .react-flow__edge, .canvas-loading) {
   opacity: 0;
-  filter: blur(1px);
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] :where(.react-flow__node, .react-flow__edge) {
+  animation: none;
+  opacity: 1;
+  filter: none;
+  transition: none;
 }
 
 .canvas-view[data-canvas-transition="entering"] .react-flow__node,
@@ -2202,6 +2224,25 @@ html[data-appearance="dark"] .message-bubble a {
 
 .canvas-view[data-canvas-transition="idle"] .react-flow__edge.canvas-edge-appearing .react-flow__edge-path {
   animation: canvas-edge-path-appear 200ms ease-out both;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .canvas-node.canvas-node-appearing {
+  animation: none;
+  opacity: 1;
+  filter: none;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .react-flow__edge.canvas-edge-appearing .react-flow__edge-path {
+  animation: none;
+  stroke-opacity: 1;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .canvas-node-content {
+  box-shadow: none;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .canvas-node {
+  visibility: hidden;
 }
 
 .canvas-view[data-canvas-transition="idle"] .canvas-node.canvas-node-exiting {
@@ -2310,6 +2351,10 @@ html[data-appearance="dark"] .message-bubble a {
   padding: 0;
   border-color: rgb(215 232 238 / 86%);
   background: var(--canvas-node-background);
+}
+
+.new-canvas-starter[data-overlay-visible="true"] {
+  opacity: 0;
 }
 
 .new-canvas-starter[data-state="morphing"]::before {
@@ -2457,10 +2502,14 @@ textarea.node-composer-frame-input {
   place-items: center;
   padding: 24px;
   pointer-events: none;
-  animation: new-canvas-morph-overlay-exit 220ms ease 180ms both;
+}
+
+.new-canvas-morph-overlay[data-state="settling"] {
+  animation: new-canvas-morph-overlay-handoff 240ms linear both;
 }
 
 .new-canvas-morph-node {
+  position: relative;
   width: min(420px, calc(100vw - 48px));
   height: 520px;
   display: grid;
@@ -2478,19 +2527,63 @@ textarea.node-composer-frame-input {
   background: var(--canvas-node-header-background);
 }
 
+.new-canvas-morph-menu-trigger:disabled {
+  opacity: 1;
+  color: rgb(111 135 148 / 70%);
+}
+
+.new-canvas-morph-title,
+.new-canvas-morph-user-message,
+.new-canvas-morph-thinking-message {
+  opacity: 0;
+  animation: new-canvas-morph-step-enter 180ms ease-out forwards;
+}
+
+.new-canvas-morph-title {
+  animation-delay: 40ms;
+}
+
+.new-canvas-morph-user-message {
+  animation-delay: 180ms;
+}
+
+.new-canvas-morph-thinking-message {
+  animation-delay: 360ms;
+}
+
 .new-canvas-morph-node-body {
   background: var(--message-list-background);
 }
 
-@keyframes new-canvas-morph-overlay-exit {
+.new-canvas-morph-composer-input {
+  color: var(--muted);
+}
+
+.new-canvas-morph-resize-handle:disabled {
+  opacity: 1;
+}
+
+@keyframes new-canvas-morph-step-enter {
   from {
-    opacity: 1;
-    filter: blur(0);
+    opacity: 0;
+    transform: translateY(4px);
   }
 
   to {
-    opacity: 0;
-    filter: blur(1px);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes new-canvas-morph-overlay-handoff {
+  from {
+    opacity: 1;
+    filter: none;
+  }
+
+  to {
+    opacity: 1;
+    filter: none;
   }
 }
 

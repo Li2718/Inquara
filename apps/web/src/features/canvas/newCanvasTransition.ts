@@ -7,20 +7,36 @@ export type NewCanvasTransitionState =
       canvasId: null;
     }
   | {
+      canvasId: string | null;
+      content: string;
+      submissionId: string;
+      status: "morphing";
+    }
+  | {
       canvasId: string;
       content: string;
-      status: "morphing";
+      submissionId: string;
+      status: "settling";
     };
 
 export type NewCanvasTransitionEvent =
   | {
-      canvasId: string;
       content: string;
+      submissionId: string;
       type: "submitted";
     }
   | {
       canvasId: string;
+      submissionId: string;
+      type: "canvasCreated";
+    }
+  | {
+      canvasId: string;
       type: "starterMessageVisible";
+    }
+  | {
+      canvasId: string;
+      type: "overlaySettled";
     }
   | {
       type: "reset";
@@ -38,14 +54,35 @@ export function advanceNewCanvasTransition(
 ): NewCanvasTransitionState {
   if (event.type === "submitted") {
     return {
-      canvasId: event.canvasId,
+      canvasId: null,
       content: event.content,
+      submissionId: event.submissionId,
+      status: "morphing"
+    };
+  }
+
+  if (event.type === "canvasCreated") {
+    if (state.status !== "morphing" || state.submissionId !== event.submissionId) return state;
+    return {
+      canvasId: event.canvasId,
+      content: state.content,
+      submissionId: state.submissionId,
       status: "morphing"
     };
   }
 
   if (event.type === "starterMessageVisible") {
     if (state.status !== "morphing" || state.canvasId !== event.canvasId) return state;
+    return {
+      canvasId: state.canvasId,
+      content: state.content,
+      submissionId: state.submissionId,
+      status: "settling"
+    };
+  }
+
+  if (event.type === "overlaySettled") {
+    if (state.status !== "settling" || state.canvasId !== event.canvasId) return state;
     return initialNewCanvasTransitionState;
   }
 
@@ -70,15 +107,12 @@ export function hasVisibleStarterMessage(
 }
 
 export function canSettleStarterTransition({
-  pendingClientMutationCount,
   snapshot,
   starter
 }: {
-  pendingClientMutationCount: number;
   snapshot: CanvasSnapshot | null;
   starter: { canvasId: string | null; content: string };
 }): boolean {
-  if (pendingClientMutationCount > 0) return false;
   return hasVisibleStarterMessage(snapshot, starter);
 }
 

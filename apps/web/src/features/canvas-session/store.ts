@@ -29,11 +29,14 @@ export type CanvasSessionMessageKey =
 
 export type CanvasSessionState = {
   snapshot: CanvasSnapshot | null;
+  displaySnapshot: CanvasSnapshot | null;
   leaseState: CanvasLeaseState;
   lease: CanvasLeaseMeta;
   pendingClientMutationIds: string[];
+  pendingClientMutationTypes: Record<string, CanvasCommand["type"]>;
   errorMessageKey: CanvasSessionMessageKey | null;
   setSnapshot(snapshot: CanvasSnapshot | null): void;
+  setDisplaySnapshot(snapshot: CanvasSnapshot | null): void;
   setLeaseState(state: CanvasLeaseState): void;
   setLease(meta: Partial<CanvasLeaseMeta>): void;
   setErrorMessageKey(messageKey: CanvasSessionMessageKey | null): void;
@@ -54,12 +57,20 @@ const emptyLease: CanvasLeaseMeta = {
 export function createCanvasSessionStore() {
   return createStore<CanvasSessionState>((set, get) => ({
     snapshot: null,
+    displaySnapshot: null,
     leaseState: "idle",
     lease: emptyLease,
     pendingClientMutationIds: [],
+    pendingClientMutationTypes: {},
     errorMessageKey: null,
     setSnapshot(snapshot) {
-      set({ snapshot });
+      set(state => {
+        const nextSnapshot = preservePendingOptimisticState(snapshot, state.snapshot, state.pendingClientMutationIds);
+        return { snapshot: nextSnapshot };
+      });
+    },
+    setDisplaySnapshot(displaySnapshot) {
+      set({ displaySnapshot });
     },
     setLeaseState(leaseState) {
       set({ leaseState });
@@ -84,36 +95,56 @@ export function createCanvasSessionStore() {
     },
     clearPending(clientMutationId) {
       set(state => ({
-        pendingClientMutationIds: state.pendingClientMutationIds.filter(id => id !== clientMutationId)
+        pendingClientMutationIds: state.pendingClientMutationIds.filter(id => id !== clientMutationId),
+        pendingClientMutationTypes: omitMutationType(state.pendingClientMutationTypes, clientMutationId)
       }));
     },
     applyEvent(event) {
       const snapshot = get().snapshot;
       if (!snapshot) return;
-      set(state => ({
-        snapshot: applyCanvasEvent(snapshot, event),
-        pendingClientMutationIds: event.clientMutationId
-          ? state.pendingClientMutationIds.filter(id => id !== event.clientMutationId)
-          : state.pendingClientMutationIds
-      }));
+      set(state => {
+        const shouldClearPending = shouldClearPendingMutation(event, state.pendingClientMutationTypes);
+        const nextSnapshot = applyCanvasEvent(snapshot, event);
+        return {
+          displaySnapshot:
+            state.displaySnapshot?.canvas.id === nextSnapshot.canvas.id ? nextSnapshot : state.displaySnapshot,
+          snapshot: nextSnapshot,
+          pendingClientMutationIds:
+            event.clientMutationId && shouldClearPending
+              ? state.pendingClientMutationIds.filter(id => id !== event.clientMutationId)
+              : state.pendingClientMutationIds,
+          pendingClientMutationTypes:
+            event.clientMutationId && shouldClearPending
+              ? omitMutationType(state.pendingClientMutationTypes, event.clientMutationId)
+              : state.pendingClientMutationTypes
+        };
+      });
     },
     applyOptimisticCommand(command) {
       const snapshot = get().snapshot;
       if (!snapshot) return;
       const nextSnapshot = applyOptimisticCommand(snapshot, command);
       set(state => ({
+        displaySnapshot:
+          state.displaySnapshot?.canvas.id === nextSnapshot.canvas.id ? nextSnapshot : state.displaySnapshot,
         snapshot: nextSnapshot,
         pendingClientMutationIds: state.pendingClientMutationIds.includes(command.clientMutationId)
           ? state.pendingClientMutationIds
-          : [...state.pendingClientMutationIds, command.clientMutationId]
+          : [...state.pendingClientMutationIds, command.clientMutationId],
+        pendingClientMutationTypes: {
+          ...state.pendingClientMutationTypes,
+          [command.clientMutationId]: command.type
+        }
       }));
     },
     reset() {
       set({
         snapshot: null,
+        displaySnapshot: null,
         leaseState: "idle",
         lease: emptyLease,
         pendingClientMutationIds: [],
+        pendingClientMutationTypes: {},
         errorMessageKey: null
       });
     }
@@ -121,6 +152,60 @@ export function createCanvasSessionStore() {
 }
 
 export const canvasSessionStore = createCanvasSessionStore();
+
+function shouldClearPendingMutation(
+  event: CanvasEvent,
+  pendingTypes: Record<string, CanvasCommand["type"]>
+): boolean {
+  if (!event.clientMutationId) return false;
+  const pendingType = pendingTypes[event.clientMutationId];
+  if (pendingType !== "message.sendUserMessage") return true;
+  return event.type === "canvas.message.updated" || event.type === "canvas.message.failed";
+}
+
+function omitMutationType(
+  pendingTypes: Record<string, CanvasCommand["type"]>,
+  clientMutationId: string
+): Record<string, CanvasCommand["type"]> {
+  if (!(clientMutationId in pendingTypes)) return pendingTypes;
+  const { [clientMutationId]: _removed, ...rest } = pendingTypes;
+  return rest;
+}
+
+function preservePendingOptimisticState(
+  incomingSnapshot: CanvasSnapshot | null,
+  currentSnapshot: CanvasSnapshot | null,
+  pendingClientMutationIds: string[]
+): CanvasSnapshot | null {
+  if (!incomingSnapshot || !currentSnapshot) return incomingSnapshot;
+  if (incomingSnapshot.canvas.id !== currentSnapshot.canvas.id) return incomingSnapshot;
+  if (pendingClientMutationIds.length === 0) return incomingSnapshot;
+
+  const incomingMessageIds = new Set(incomingSnapshot.messages.map(message => message.id));
+  const preservedMessages = currentSnapshot.messages.filter(message => !incomingMessageIds.has(message.id));
+  if (preservedMessages.length === 0) return incomingSnapshot;
+  const nextSnapshot = {
+    ...incomingSnapshot,
+    messages: [...incomingSnapshot.messages, ...preservedMessages]
+  };
+
+  const pendingNodeIds = new Set(
+    currentSnapshot.messages
+      .filter(message => nextSnapshot.messages.some(candidate => candidate.id === message.id))
+      .map(message => message.nodeId)
+  );
+  if (pendingNodeIds.size === 0) return nextSnapshot;
+
+  return {
+    ...nextSnapshot,
+    canvas: currentSnapshot.canvas.updatedAt > nextSnapshot.canvas.updatedAt ? currentSnapshot.canvas : nextSnapshot.canvas,
+    nodes: nextSnapshot.nodes.map(node => {
+      if (!pendingNodeIds.has(node.id)) return node;
+      const currentNode = currentSnapshot.nodes.find(candidate => candidate.id === node.id);
+      return currentNode && currentNode.updatedAt > node.updatedAt ? currentNode : node;
+    })
+  };
+}
 
 function applyOptimisticCommand(snapshot: CanvasSnapshot, command: CanvasCommand): CanvasSnapshot {
   if (command.type === "node.createAtPosition") {
@@ -252,6 +337,19 @@ function applyOptimisticCommand(snapshot: CanvasSnapshot, command: CanvasCommand
 
   if (command.type === "message.sendUserMessage") {
     const now = new Date().toISOString();
+    const targetNode = snapshot.nodes.find(node => node.id === command.nodeId);
+    const existingUserMessageCount = snapshot.messages.filter(
+      message => message.nodeId === command.nodeId && message.role === "user"
+    ).length;
+    const shouldApplyInitialTitle =
+      Boolean(targetNode) &&
+      existingUserMessageCount === 0 &&
+      !targetNode?.parentNodeId &&
+      !targetNode?.sourceQuote;
+    const fallbackTitle = truncateTitle(command.content);
+    const rootNode = snapshot.nodes
+      .filter(node => !node.parentNodeId && !node.deletedAt)
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt))[0];
     const userMessage: NodeMessage = {
       id: command.userMessageId,
       canvasId: command.canvasId,
@@ -278,6 +376,25 @@ function applyOptimisticCommand(snapshot: CanvasSnapshot, command: CanvasCommand
     };
     return {
       ...snapshot,
+      canvas:
+        shouldApplyInitialTitle && rootNode?.id === command.nodeId
+          ? {
+              ...snapshot.canvas,
+              title: fallbackTitle,
+              updatedAt: now
+            }
+          : snapshot.canvas,
+      nodes: shouldApplyInitialTitle
+        ? snapshot.nodes.map(node =>
+            node.id === command.nodeId
+              ? {
+                  ...node,
+                  title: fallbackTitle,
+                  updatedAt: now
+                }
+              : node
+          )
+        : snapshot.nodes,
       messages: [...snapshot.messages, userMessage, assistantMessage]
     };
   }

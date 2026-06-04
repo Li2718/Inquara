@@ -22,6 +22,7 @@ export type PageTransitionNavigateOptions = PageTransitionRunOptions & {
   beforeNavigate?: () => void | Promise<void>;
   replace?: boolean;
   scroll?: boolean;
+  skipTransition?: boolean;
 };
 
 type ViewTransitionLike = {
@@ -71,7 +72,8 @@ export function runWithPageTransition(
   }
 
   try {
-    documentRef?.startViewTransition?.(update);
+    const transition = documentRef?.startViewTransition?.(update);
+    suppressSkippedViewTransitionRejections(transition);
     return true;
   } catch {
     void update();
@@ -86,15 +88,21 @@ export async function navigateWithPageTransition(
 ): Promise<boolean> {
   await options.beforeNavigate?.();
   const navigateOptions = options.scroll === undefined ? undefined : { scroll: options.scroll };
-
-  return runWithPageTransition(() => {
+  const navigate = () => {
     if (options.replace) {
       router.replace(href, navigateOptions);
       return;
     }
 
     router.push(href, navigateOptions);
-  }, options);
+  };
+
+  if (options.skipTransition) {
+    navigate();
+    return false;
+  }
+
+  return runWithPageTransition(navigate, options);
 }
 
 export function shouldHandlePageTransitionLinkClick(event: MouseEvent<HTMLAnchorElement>): boolean {
@@ -123,14 +131,32 @@ export function startHistoryPageTransition(
   }
 
   try {
-    nextDocument?.startViewTransition?.(
+    const transition = nextDocument?.startViewTransition?.(
       () =>
         new Promise<void>(resolve => {
           windowRef?.requestAnimationFrame(() => resolve());
         })
     );
+    suppressSkippedViewTransitionRejections(transition);
     return true;
   } catch {
     return false;
   }
+}
+
+function suppressSkippedViewTransitionRejections(transition: ViewTransitionLike | undefined): void {
+  void transition?.ready?.catch(error => {
+    if (!isSkippedViewTransitionError(error)) throw error;
+  });
+  void transition?.finished?.catch(error => {
+    if (!isSkippedViewTransitionError(error)) throw error;
+  });
+  void transition?.updateCallbackDone?.catch(error => {
+    if (!isSkippedViewTransitionError(error)) throw error;
+  });
+}
+
+function isSkippedViewTransitionError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) return false;
+  return error.name === "AbortError" && error.message === "Transition was skipped";
 }

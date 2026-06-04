@@ -12,7 +12,8 @@ export type BuildAppOptions = {
 };
 
 export async function buildApp(options: BuildAppOptions = {}) {
-  const config = loadConfig({ ...process.env, ...options.env });
+  const env = { ...process.env, ...options.env };
+  const config = loadConfig(env);
   const app = Fastify({ logger: false });
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {
@@ -27,8 +28,12 @@ export async function buildApp(options: BuildAppOptions = {}) {
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
   });
   await app.register(cookie);
+  if (env.NODE_ENV !== "production") {
+    const { registerDevelopmentApiDelay } = await import("./debug/developmentDelay.dev");
+    registerDevelopmentApiDelay(app, env);
+  }
   await registerRoutes(app, config, createCanvasLeaseStore(config));
-  if (options.env?.NODE_ENV !== "production" && process.env.NODE_ENV !== "production") {
+  if (env.NODE_ENV !== "production") {
     await registerDebugRoutes(app);
   }
 

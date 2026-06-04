@@ -23,6 +23,7 @@ import { interpolate } from "../../shared/messages";
 import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
+import { shouldHideCanvasUntilViewportReady } from "./canvasViewportReadiness";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
 import { compensateViewportForStageRect, type StageRect } from "./stageLayoutCompensation";
 import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
@@ -50,11 +51,13 @@ const CANVAS_ITEM_EXIT_MS = 150;
 export function CanvasView({
   isPreparingCanvasSwitch,
   isSidebarOpen,
+  starterOverlayPhase,
   resetViewportRequest,
   routeCanvasId
 }: {
   isPreparingCanvasSwitch: boolean;
   isSidebarOpen: boolean;
+  starterOverlayPhase: "idle" | "morphing" | "settling";
   resetViewportRequest: number;
   routeCanvasId: string;
 }) {
@@ -63,6 +66,7 @@ export function CanvasView({
       <CanvasFlow
         isPreparingCanvasSwitch={isPreparingCanvasSwitch}
         isSidebarOpen={isSidebarOpen}
+        starterOverlayPhase={starterOverlayPhase}
         resetViewportRequest={resetViewportRequest}
         routeCanvasId={routeCanvasId}
       />
@@ -73,19 +77,21 @@ export function CanvasView({
 function CanvasFlow({
   isPreparingCanvasSwitch,
   isSidebarOpen,
+  starterOverlayPhase,
   resetViewportRequest,
   routeCanvasId
 }: {
   isPreparingCanvasSwitch: boolean;
   isSidebarOpen: boolean;
+  starterOverlayPhase: "idle" | "morphing" | "settling";
   resetViewportRequest: number;
   routeCanvasId: string;
 }) {
   const { messages } = useLocale();
   const copy = messages.canvas;
   const { state, commands, sendCommand } = useCanvasSession();
-  const isBlocked = state.leaseState !== "active";
-  const isViewportBlocked = state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
+  const isBlocked = state.leaseState !== "active" || state.displaySnapshot?.canvas.id !== routeCanvasId;
+  const isViewportBlocked = isBlocked || state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
   const { screenToFlowPosition } = useReactFlow();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
@@ -94,7 +100,7 @@ function CanvasFlow({
     }),
     []
   );
-  const snapshot = state.snapshot;
+  const snapshot = state.displaySnapshot;
   const canvasId = snapshot?.canvas.id ?? null;
   const isShowingStaleSnapshot = Boolean(canvasId && canvasId !== routeCanvasId);
   const previousCanvasIdRef = useRef<string | null>(canvasId);
@@ -108,6 +114,12 @@ function CanvasFlow({
   const [exitingNodes, setExitingNodes] = useState<ChatFlowNode[]>([]);
   const [isSettlingCanvas, setIsSettlingCanvas] = useState(false);
   const [isViewportReady, setIsViewportReady] = useState(false);
+  const shouldHideFlowItems = shouldHideCanvasUntilViewportReady({
+    canvasId,
+    hasCachedSnapshot: Boolean(snapshot),
+    isViewportReady
+  });
+  const isLoadingTargetCanvas = isPreparingCanvasSwitch || isShowingStaleSnapshot;
   const contextMenuCreateTimerRef = useRef<number | null>(null);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
   const visibleNodes = useMemo(
@@ -345,8 +357,9 @@ function CanvasFlow({
   return (
     <div
       className="canvas-view"
+      data-starter-overlay-phase={starterOverlayPhase}
       data-canvas-transition={
-        isPreparingCanvasSwitch || isShowingStaleSnapshot
+        isLoadingTargetCanvas
           ? "leaving"
           : state.leaseState === "acquiring" || state.leaseState === "recovering" || isSettlingCanvas
             ? "entering"
@@ -355,8 +368,8 @@ function CanvasFlow({
     >
       <CanvasViewportProvider value={placementViewportContext}>
         <ReactFlow
-          nodes={isViewportReady ? nodes : []}
-          edges={isViewportReady ? renderedEdges : []}
+          nodes={shouldHideFlowItems ? [] : nodes}
+          edges={shouldHideFlowItems ? [] : renderedEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onNodeDragStop={onNodeDragStop}
@@ -381,12 +394,17 @@ function CanvasFlow({
           />
         </ReactFlow>
       </CanvasViewportProvider>
-      {!isViewportReady ? (
+      {shouldHideFlowItems ? (
         <div className="canvas-loading">
           <LoadingState variant="canvas" aria-label={copy.preparingCanvas} />
         </div>
       ) : null}
-      {isViewportReady ? (
+      {!shouldHideFlowItems && isLoadingTargetCanvas ? (
+        <div className="canvas-switch-loading">
+          <LoadingState variant="canvas" aria-label={copy.loadingCanvas} />
+        </div>
+      ) : null}
+      {!shouldHideFlowItems ? (
         <CanvasViewportControls
           firstRootNode={firstRootNode}
           isBlocked={isBlocked}
@@ -435,7 +453,13 @@ function CanvasInitialViewport({
   const stabilityRef = useRef<CanvasViewportStabilityState>(initialCanvasViewportStabilityState);
 
   useLayoutEffect(() => {
-    if (!canvasId || !firstRootNode) return;
+    if (!canvasId) return;
+    if (!firstRootNode) {
+      initializedCanvasIdRef.current = null;
+      stabilityRef.current = initialCanvasViewportStabilityState;
+      onReady();
+      return;
+    }
     if (initializedCanvasIdRef.current !== canvasId) {
       initializedCanvasIdRef.current = null;
       stabilityRef.current = initialCanvasViewportStabilityState;

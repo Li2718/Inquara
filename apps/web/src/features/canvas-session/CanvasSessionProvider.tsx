@@ -6,8 +6,10 @@ import { apiJson, apiRequest } from "../../shared/api";
 import { usePageTransitionNavigation } from "../../shared/components/chrome";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { createCommands } from "../commands/createCommands";
+import { selectCanvasDisplaySnapshot } from "../canvas/canvasDisplaySnapshot";
 import { cancelPendingCanvasLeaseRelease, scheduleCanvasLeaseRelease } from "./leaseReleaseScheduler";
 import { shouldEnterLeaseRecovery } from "./renewFailurePolicy";
+import { advanceSessionGeneration, createSessionGeneration, isCurrentSessionGeneration } from "./sessionGeneration";
 import { canvasSessionStore, type CanvasSessionState } from "./store";
 
 type CanvasSessionContextValue = {
@@ -82,6 +84,7 @@ export function CanvasSessionProvider({
   const blockedPollTimerRef = useRef<number | null>(null);
   const sentInitialStarterCanvasRef = useRef<string | null>(null);
   const releasedRef = useRef(false);
+  const generationRef = useRef(createSessionGeneration());
   const stateRef = useRef(state);
   stateRef.current = state;
   const commands = useMemo(
@@ -93,14 +96,18 @@ export function CanvasSessionProvider({
   );
 
   useEffect(() => {
+    const generation = advanceSessionGeneration(generationRef.current);
     cancelPendingCanvasLeaseRelease(canvasId);
-    sessionIdRef.current = getOrCreateSessionId(canvasId);
+    const sessionId = getOrCreateSessionId(canvasId);
+    sessionIdRef.current = sessionId;
     releasedRef.current = false;
     consecutiveRenewFailuresRef.current = 0;
     const cachedSnapshot = canvasSnapshotCache.get(canvasId);
-    if (cachedSnapshot) {
-      canvasSessionStore.getState().setSnapshot(cachedSnapshot);
-    }
+    const currentDisplaySnapshot = canvasSessionStore.getState().displaySnapshot;
+    canvasSessionStore
+      .getState()
+      .setDisplaySnapshot(selectCanvasDisplaySnapshot({ cachedSnapshot: cachedSnapshot ?? null, currentDisplaySnapshot, targetCanvasId: canvasId }));
+    if (cachedSnapshot) canvasSessionStore.getState().setSnapshot(cachedSnapshot);
     canvasSessionStore.getState().setLease({
       sessionId: sessionIdRef.current,
       leaseEpoch: null,
@@ -110,14 +117,14 @@ export function CanvasSessionProvider({
     canvasSessionStore.getState().setLeaseState("acquiring");
     canvasSessionStore.getState().setErrorMessageKey(null);
 
-    void acquireAndLoadCanvas({ mode: "initial" });
+    void acquireAndLoadCanvas({ generation, mode: "initial" });
 
     return () => {
       clearRenewTimer();
       clearBlockedPollTimer();
       if (!releasedRef.current) {
         releasedRef.current = true;
-        scheduleCanvasLeaseRelease(canvasId, releaseLease, leaseReleaseDelayMs);
+        scheduleCanvasLeaseRelease(canvasId, () => releaseLease(sessionId), leaseReleaseDelayMs);
       }
     };
   }, [navigation, canvasId]);
@@ -125,19 +132,20 @@ export function CanvasSessionProvider({
   useEffect(() => {
     if (state.leaseState !== "active") return;
     if (!state.snapshot || state.snapshot.canvas.id !== canvasId) return;
+    if (state.pendingClientMutationIds.length > 0) return;
     if (!state.snapshot.messages.some(message => message.status === "streaming")) return;
     const timeout = window.setTimeout(() => {
-      void refreshCanvasSnapshot();
+      void refreshCanvasSnapshot(generationRef.current.current);
     }, streamingRefreshIntervalMs);
     return () => window.clearTimeout(timeout);
-  }, [state.leaseState, state.snapshot, canvasId]);
+  }, [state.leaseState, state.pendingClientMutationIds.length, state.snapshot, canvasId]);
 
   const value = useMemo<CanvasSessionContextValue>(
     () => ({
       state,
       commands,
       async refreshSnapshot() {
-        await refreshCanvasSnapshot();
+        await refreshCanvasSnapshot(generationRef.current.current);
       },
       async retryLease() {
         await retryLeaseNow();
@@ -149,7 +157,7 @@ export function CanvasSessionProvider({
         try {
           if (command.type === "message.sendUserMessage") {
             await streamMessageCommand(command);
-            await refreshCanvasSnapshot();
+            await refreshCanvasSnapshot(generationRef.current.current);
           } else {
             const response = await apiJson<{ events: unknown[] }>(`/canvases/${canvasId}/commands`, {
               method: "POST",
@@ -182,7 +190,7 @@ export function CanvasSessionProvider({
 
   return <CanvasSessionContext.Provider value={value}>{children}</CanvasSessionContext.Provider>;
 
-  async function acquireAndLoadCanvas({ mode }: { mode: "initial" | "retry" }): Promise<void> {
+  async function acquireAndLoadCanvas({ generation, mode }: { generation: number; mode: "initial" | "retry" }): Promise<void> {
     try {
       const sessionId = sessionIdRef.current;
       if (!sessionId) throw new Error("Canvas session is unavailable.");
@@ -191,6 +199,7 @@ export function CanvasSessionProvider({
         method: "POST",
         body: JSON.stringify({ sessionId })
       });
+      if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
 
       if (acquire.status === "active") {
         canvasSessionStore.getState().setLease({
@@ -198,7 +207,8 @@ export function CanvasSessionProvider({
           displacedSeq: null,
           expiresAt: acquire.lease.expiresAt
         });
-        const snapshot = await refreshCanvasSnapshot();
+        const snapshot = await refreshCanvasSnapshot(generation);
+        if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
         canvasSessionStore.getState().setLeaseState("active");
         canvasSessionStore.getState().setErrorMessageKey(null);
         sendInitialStarterMessage(snapshot);
@@ -213,6 +223,7 @@ export function CanvasSessionProvider({
       canvasSessionStore.getState().setLeaseState("blocked-stale");
       startBlockedPollLoop();
     } catch {
+      if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
       if (mode === "initial") {
         canvasSessionStore.getState().setLeaseState("blocked-stale");
         canvasSessionStore.getState().setErrorMessageKey("acquireFailedMessage");
@@ -226,12 +237,13 @@ export function CanvasSessionProvider({
   }
 
   async function retryLeaseNow(): Promise<void> {
+    const generation = generationRef.current.current;
     consecutiveRenewFailuresRef.current = 0;
     clearBlockedPollTimer();
     if (stateRef.current.leaseState === "recovering") {
-      await pollLeaseAvailability();
+      await pollLeaseAvailability(generation);
     } else {
-      await acquireAndLoadCanvas({ mode: "retry" });
+      await acquireAndLoadCanvas({ generation, mode: "retry" });
     }
     if (stateRef.current.leaseState === "blocked-stale" || stateRef.current.leaseState === "recovering") {
       startBlockedPollLoop();
@@ -253,6 +265,7 @@ export function CanvasSessionProvider({
   }
 
   async function renewLease(): Promise<void> {
+    const generation = generationRef.current.current;
     const sessionId = sessionIdRef.current;
     const leaseEpoch = stateRef.current.lease.leaseEpoch;
     if (!sessionId || !leaseEpoch) return;
@@ -278,6 +291,7 @@ export function CanvasSessionProvider({
       handleRenewFailure();
       return;
     }
+    if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
 
     consecutiveRenewFailuresRef.current = 0;
     const renewed = (await response.json()) as { status: "active"; lease: { leaseEpoch: number; expiresAt: string } };
@@ -309,10 +323,12 @@ export function CanvasSessionProvider({
     startBlockedPollLoop();
   }
 
-  async function refreshCanvasSnapshot(): Promise<CanvasSnapshot> {
+  async function refreshCanvasSnapshot(generation: number): Promise<CanvasSnapshot> {
     const snapshot = await apiJson<CanvasSnapshot>(`/canvases/${canvasId}/snapshot`);
+    if (!isCurrentSessionGeneration(generationRef.current, generation)) return snapshot;
     canvasSnapshotCache.set(canvasId, snapshot);
     canvasSessionStore.getState().setSnapshot(snapshot);
+    canvasSessionStore.getState().setDisplaySnapshot(snapshot);
     return snapshot;
   }
 
@@ -346,7 +362,7 @@ export function CanvasSessionProvider({
   function startBlockedPollLoop(): void {
     clearBlockedPollTimer();
     const run = async () => {
-      await pollLeaseAvailability();
+      await pollLeaseAvailability(generationRef.current.current);
       if (stateRef.current.leaseState === "blocked-stale" || stateRef.current.leaseState === "recovering") {
         blockedPollTimerRef.current = window.setTimeout(run, nextBlockedPollDelay());
       }
@@ -361,7 +377,7 @@ export function CanvasSessionProvider({
     }
   }
 
-  async function pollLeaseAvailability(): Promise<void> {
+  async function pollLeaseAvailability(generation: number): Promise<void> {
     const sessionId = sessionIdRef.current;
     if (!sessionId) return;
 
@@ -369,6 +385,7 @@ export function CanvasSessionProvider({
       const status = await apiJson<LeaseStatusResponse>(
         `/canvases/${canvasId}/lease/status?sessionId=${encodeURIComponent(sessionId)}`
       );
+      if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
 
       if (status.status === "active") {
         canvasSessionStore.getState().setLease({
@@ -385,7 +402,7 @@ export function CanvasSessionProvider({
       if (status.status === "available") {
         canvasSessionStore.getState().setLeaseState("recovering");
         clearBlockedPollTimer();
-        await acquireAndLoadCanvas({ mode: "retry" });
+        await acquireAndLoadCanvas({ generation, mode: "retry" });
         return;
       }
 
@@ -402,8 +419,7 @@ export function CanvasSessionProvider({
     }
   }
 
-  async function releaseLease(): Promise<void> {
-    const sessionId = sessionIdRef.current;
+  async function releaseLease(sessionId: string | null): Promise<void> {
     if (!sessionId) return;
     try {
       await apiRequest(`/canvases/${canvasId}/lease/release`, {
@@ -416,6 +432,7 @@ export function CanvasSessionProvider({
   }
 
   async function streamMessageCommand(command: Extract<CanvasCommand, { type: "message.sendUserMessage" }>): Promise<void> {
+    const generation = generationRef.current.current;
     const response = await apiRequest(`/canvases/${canvasId}/messages/stream`, {
       method: "POST",
       body: JSON.stringify({
@@ -426,6 +443,7 @@ export function CanvasSessionProvider({
     });
 
     if (response.status === 409) {
+      if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
       await enterBlockedState("activeElsewhereMessage");
       return;
     }
@@ -445,6 +463,7 @@ export function CanvasSessionProvider({
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
+        if (!isCurrentSessionGeneration(generationRef.current, generation)) return;
         const trimmed = line.trim();
         if (!trimmed) continue;
         const payload = JSON.parse(trimmed) as

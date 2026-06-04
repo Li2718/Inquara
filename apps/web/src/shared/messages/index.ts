@@ -82,6 +82,7 @@ export const messages = {
       openSidebar: "Open sidebar",
       rename: "Rename",
       save: "Save",
+      saving: "Saving...",
       untitledCanvas: "Untitled canvas",
       canvasNavigation: "Canvas navigation"
     },
@@ -311,6 +312,7 @@ export const messages = {
       openSidebar: "打开侧边栏",
       rename: "重命名",
       save: "保存",
+      saving: "保存中...",
       untitledCanvas: "未命名画布",
       canvasNavigation: "画布导航"
     },

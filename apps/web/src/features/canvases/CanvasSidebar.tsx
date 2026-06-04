@@ -20,10 +20,11 @@ import { formatDate } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { interpolate, type AppMessages } from "../../shared/messages";
 import { getCanvasDeleteDialogOpeningState } from "./canvasDeleteDialogState";
-import { upsertCanvasList } from "./canvasListState";
+import { upsertCanvasList, type CanvasListPlacement } from "./canvasListState";
+import { getCanvasRenameFormState } from "./canvasRenameFormState";
 
 type CanvasSidebarProps = {
-  updatedCanvas: Canvas | null;
+  canvasListUpdate: { canvas: Canvas; placement: CanvasListPlacement } | null;
   currentCanvasId: string;
   isOpen: boolean;
   onNewCanvasRequest(): void;
@@ -35,7 +36,7 @@ let canvasListCache: Canvas[] | null = null;
 const CANVAS_SIDEBAR_TRANSITION_MS = 220;
 
 export function CanvasSidebar({
-  updatedCanvas,
+  canvasListUpdate,
   currentCanvasId,
   isOpen,
   onNewCanvasRequest,
@@ -48,6 +49,7 @@ export function CanvasSidebar({
   const [isLoading, setIsLoading] = useState(canvasListCache === null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [savingRenameId, setSavingRenameId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const [deletingCanvas, setDeletingCanvas] = useState<Canvas | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,13 +71,13 @@ export function CanvasSidebar({
   }, []);
 
   useEffect(() => {
-    if (!updatedCanvas) return;
+    if (!canvasListUpdate) return;
     setCanvases(previous => {
-      const nextCanvases = upsertCanvasList(previous, updatedCanvas);
+      const nextCanvases = upsertCanvasList(previous, canvasListUpdate.canvas, { placement: canvasListUpdate.placement });
       canvasListCache = nextCanvases;
       return nextCanvases;
     });
-  }, [updatedCanvas]);
+  }, [canvasListUpdate]);
 
   async function loadCanvases({ showLoading }: { showLoading: boolean }) {
     if (showLoading) setIsLoading(true);
@@ -115,6 +117,7 @@ export function CanvasSidebar({
     const title = renameTitle.trim();
     if (!title) return;
     setError("");
+    setSavingRenameId(canvas.id);
     try {
       const updated = await apiJson<Canvas>(`/canvases/${canvas.id}`, {
         method: "PATCH",
@@ -128,6 +131,8 @@ export function CanvasSidebar({
       setRenamingId(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : copy.couldNotRename);
+    } finally {
+      setSavingRenameId(null);
     }
   }
 
@@ -208,6 +213,7 @@ export function CanvasSidebar({
               renamingId={renamingId}
               renameTitle={renameTitle}
               openDeleteDialog={openDeleteDialog}
+              savingRenameId={savingRenameId}
               setRenameTitle={setRenameTitle}
               setRenamingId={setRenamingId}
               submitRename={submitRename}
@@ -243,6 +249,7 @@ function CanvasSidebarItem({
   openDeleteDialog,
   renamingId,
   renameTitle,
+  savingRenameId,
   setRenameTitle,
   setRenamingId,
   submitRename,
@@ -258,6 +265,7 @@ function CanvasSidebarItem({
   messages: AppMessages;
   renamingId: string | null;
   renameTitle: string;
+  savingRenameId: string | null;
   setRenameTitle(title: string): void;
   setRenamingId(canvasId: string | null): void;
   submitRename(event: FormEvent<HTMLFormElement>, canvas: Canvas): Promise<void>;
@@ -266,6 +274,7 @@ function CanvasSidebarItem({
   const isMenuOpen = activeMenuId === canvas.id;
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const copy = messages.canvasSidebar;
+  const renameFormState = getCanvasRenameFormState({ canvasId: canvas.id, savingCanvasId: savingRenameId });
 
   return (
     <div className="canvas-sidebar-item-shell">
@@ -280,8 +289,11 @@ function CanvasSidebarItem({
             maxLength={120}
             autoFocus
             required
+            disabled={renameFormState.isDisabled}
           />
-          <Button type="submit">{copy.save}</Button>
+          <Button type="submit" disabled={renameFormState.isDisabled} aria-busy={renameFormState.isSaving}>
+            {renameFormState.isSaving ? copy.saving : copy.save}
+          </Button>
         </form>
       ) : (
         <>
@@ -290,7 +302,10 @@ function CanvasSidebarItem({
             data-active={canvas.id === currentCanvasId}
             href={`/canvases/${canvas.id}`}
             onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-              if (canvas.id === currentCanvasId) return;
+              if (canvas.id === currentCanvasId) {
+                event.preventDefault();
+                return;
+              }
               event.preventDefault();
               void onCanvasNavigate(canvas.id);
             }}
