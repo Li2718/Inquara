@@ -29,13 +29,14 @@ export type CanvasSessionMessageKey =
 
 export type CanvasSessionState = {
   snapshot: CanvasSnapshot | null;
-  isSnapshotFromCache: boolean;
+  displaySnapshot: CanvasSnapshot | null;
   leaseState: CanvasLeaseState;
   lease: CanvasLeaseMeta;
   pendingClientMutationIds: string[];
   pendingClientMutationTypes: Record<string, CanvasCommand["type"]>;
   errorMessageKey: CanvasSessionMessageKey | null;
-  setSnapshot(snapshot: CanvasSnapshot | null, options?: { source?: "cache" | "network" }): void;
+  setSnapshot(snapshot: CanvasSnapshot | null): void;
+  setDisplaySnapshot(snapshot: CanvasSnapshot | null): void;
   setLeaseState(state: CanvasLeaseState): void;
   setLease(meta: Partial<CanvasLeaseMeta>): void;
   setErrorMessageKey(messageKey: CanvasSessionMessageKey | null): void;
@@ -56,17 +57,20 @@ const emptyLease: CanvasLeaseMeta = {
 export function createCanvasSessionStore() {
   return createStore<CanvasSessionState>((set, get) => ({
     snapshot: null,
-    isSnapshotFromCache: false,
+    displaySnapshot: null,
     leaseState: "idle",
     lease: emptyLease,
     pendingClientMutationIds: [],
     pendingClientMutationTypes: {},
     errorMessageKey: null,
-    setSnapshot(snapshot, options) {
+    setSnapshot(snapshot) {
       set(state => {
         const nextSnapshot = preservePendingOptimisticState(snapshot, state.snapshot, state.pendingClientMutationIds);
-        return { isSnapshotFromCache: options?.source === "cache" && Boolean(nextSnapshot), snapshot: nextSnapshot };
+        return { snapshot: nextSnapshot };
       });
+    },
+    setDisplaySnapshot(displaySnapshot) {
+      set({ displaySnapshot });
     },
     setLeaseState(leaseState) {
       set({ leaseState });
@@ -102,6 +106,8 @@ export function createCanvasSessionStore() {
         const shouldClearPending = shouldClearPendingMutation(event, state.pendingClientMutationTypes);
         const nextSnapshot = applyCanvasEvent(snapshot, event);
         return {
+          displaySnapshot:
+            state.displaySnapshot?.canvas.id === nextSnapshot.canvas.id ? nextSnapshot : state.displaySnapshot,
           snapshot: nextSnapshot,
           pendingClientMutationIds:
             event.clientMutationId && shouldClearPending
@@ -119,6 +125,8 @@ export function createCanvasSessionStore() {
       if (!snapshot) return;
       const nextSnapshot = applyOptimisticCommand(snapshot, command);
       set(state => ({
+        displaySnapshot:
+          state.displaySnapshot?.canvas.id === nextSnapshot.canvas.id ? nextSnapshot : state.displaySnapshot,
         snapshot: nextSnapshot,
         pendingClientMutationIds: state.pendingClientMutationIds.includes(command.clientMutationId)
           ? state.pendingClientMutationIds
@@ -132,7 +140,7 @@ export function createCanvasSessionStore() {
     reset() {
       set({
         snapshot: null,
-        isSnapshotFromCache: false,
+        displaySnapshot: null,
         leaseState: "idle",
         lease: emptyLease,
         pendingClientMutationIds: [],

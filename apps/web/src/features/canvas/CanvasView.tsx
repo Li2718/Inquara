@@ -90,8 +90,8 @@ function CanvasFlow({
   const { messages } = useLocale();
   const copy = messages.canvas;
   const { state, commands, sendCommand } = useCanvasSession();
-  const isBlocked = state.leaseState !== "active";
-  const isViewportBlocked = state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
+  const isBlocked = state.leaseState !== "active" || state.displaySnapshot?.canvas.id !== routeCanvasId;
+  const isViewportBlocked = isBlocked || state.leaseState === "acquiring" || state.leaseState === "blocked-stale";
   const { screenToFlowPosition } = useReactFlow();
   const placementViewportRef = useRef<ReturnType<typeof calculatePlacementViewport> | undefined>(undefined);
   const placementViewportContext = useMemo(
@@ -100,7 +100,7 @@ function CanvasFlow({
     }),
     []
   );
-  const snapshot = state.snapshot;
+  const snapshot = state.displaySnapshot;
   const canvasId = snapshot?.canvas.id ?? null;
   const isShowingStaleSnapshot = Boolean(canvasId && canvasId !== routeCanvasId);
   const previousCanvasIdRef = useRef<string | null>(canvasId);
@@ -116,10 +116,10 @@ function CanvasFlow({
   const [isViewportReady, setIsViewportReady] = useState(false);
   const shouldHideFlowItems = shouldHideCanvasUntilViewportReady({
     canvasId,
-    hasCachedSnapshot: state.isSnapshotFromCache,
-    isViewportReady,
-    routeCanvasId
+    hasCachedSnapshot: Boolean(snapshot),
+    isViewportReady
   });
+  const isLoadingTargetCanvas = isPreparingCanvasSwitch || isShowingStaleSnapshot;
   const contextMenuCreateTimerRef = useRef<number | null>(null);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
   const visibleNodes = useMemo(
@@ -359,7 +359,7 @@ function CanvasFlow({
       className="canvas-view"
       data-starter-overlay-phase={starterOverlayPhase}
       data-canvas-transition={
-        isPreparingCanvasSwitch || isShowingStaleSnapshot
+        isLoadingTargetCanvas
           ? "leaving"
           : state.leaseState === "acquiring" || state.leaseState === "recovering" || isSettlingCanvas
             ? "entering"
@@ -397,6 +397,11 @@ function CanvasFlow({
       {shouldHideFlowItems ? (
         <div className="canvas-loading">
           <LoadingState variant="canvas" aria-label={copy.preparingCanvas} />
+        </div>
+      ) : null}
+      {!shouldHideFlowItems && isLoadingTargetCanvas ? (
+        <div className="canvas-switch-loading">
+          <LoadingState variant="canvas" aria-label={copy.loadingCanvas} />
         </div>
       ) : null}
       {!shouldHideFlowItems ? (

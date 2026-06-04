@@ -290,7 +290,10 @@ function CanvasSidebarItem({
             data-active={canvas.id === currentCanvasId}
             href={`/canvases/${canvas.id}`}
             onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-              if (canvas.id === currentCanvasId) return;
+              if (canvas.id === currentCanvasId) {
+                event.preventDefault();
+                return;
+              }
               event.preventDefault();
               void onCanvasNavigate(canvas.id);
             }}

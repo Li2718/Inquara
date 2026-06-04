@@ -22,6 +22,7 @@ export type PageTransitionNavigateOptions = PageTransitionRunOptions & {
   beforeNavigate?: () => void | Promise<void>;
   replace?: boolean;
   scroll?: boolean;
+  skipTransition?: boolean;
 };
 
 type ViewTransitionLike = {
@@ -87,15 +88,21 @@ export async function navigateWithPageTransition(
 ): Promise<boolean> {
   await options.beforeNavigate?.();
   const navigateOptions = options.scroll === undefined ? undefined : { scroll: options.scroll };
-
-  return runWithPageTransition(() => {
+  const navigate = () => {
     if (options.replace) {
       router.replace(href, navigateOptions);
       return;
     }
 
     router.push(href, navigateOptions);
-  }, options);
+  };
+
+  if (options.skipTransition) {
+    navigate();
+    return false;
+  }
+
+  return runWithPageTransition(navigate, options);
 }
 
 export function shouldHandlePageTransitionLinkClick(event: MouseEvent<HTMLAnchorElement>): boolean {
