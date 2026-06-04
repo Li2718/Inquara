@@ -552,8 +552,12 @@ h2 {
   align-items: center;
   justify-content: space-between;
   padding: 0 12px;
+  border: 0;
   border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
   color: var(--ink);
+  cursor: pointer;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
@@ -561,6 +565,10 @@ h2 {
     background 120ms ease,
     box-shadow 120ms ease,
     color 120ms ease;
+}
+
+.admin-nav-link:hover {
+  transform: none;
 }
 
 .admin-nav-link:hover,

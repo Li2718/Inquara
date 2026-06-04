@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiJson } from "../../shared/api";
 import { AdminShell } from "../../shared/components/admin";
+import type { AdminSection } from "../../shared/components/admin/adminUrlState";
 import { Button, CheckIcon, ChevronDownIcon, ConfirmDialog, CopyIcon, EditIcon, IconButton, InlineIconButton, LoadingState, SkeletonBlock, Toast, TrashIcon } from "../../shared/components/ui";
 import { formatDateTime } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
@@ -26,7 +27,13 @@ type RedemptionCode = {
 
 type CodeStatus = "active" | "disabled" | "expired" | "exhausted" | "used";
 
-export function RedemptionCodesAdminPage() {
+export function RedemptionCodesAdminPage({
+  activeSection,
+  onSectionNavigate
+}: {
+  activeSection: AdminSection;
+  onSectionNavigate(section: AdminSection): void;
+}) {
   const { locale, messages } = useLocale();
   const copy = messages.adminCodes;
   const [codes, setCodes] = useState<RedemptionCode[]>([]);
@@ -186,17 +193,17 @@ export function RedemptionCodesAdminPage() {
 
   if (isLoading) {
     return (
-      <AdminShell>
+      <AdminShell activeSection={activeSection} onSectionNavigate={onSectionNavigate}>
         <section className="admin-panel">
           <LoadingState variant="panel" aria-label={copy.loading} />
-          <SkeletonBlock variant="panel" rows={4} />
+          <SkeletonBlock variant="panel" rows={5} />
         </section>
       </AdminShell>
     );
   }
 
   return (
-    <AdminShell>
+    <AdminShell activeSection={activeSection} onSectionNavigate={onSectionNavigate}>
       <section className="admin-panel">
         <Toast message={error || null} onDismiss={() => setError("")} />
         <div className="admin-header">

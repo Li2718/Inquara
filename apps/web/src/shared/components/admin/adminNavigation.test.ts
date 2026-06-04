@@ -2,45 +2,29 @@ import { describe, expect, it } from "vitest";
 import { getAdminNavLinkState, shouldStartAdminNavPendingNavigation } from "./adminNavigation";
 
 describe("admin navigation state", () => {
-  it("shows the clicked admin tab as pending while the route is still loading", () => {
+  it("marks the active local admin section", () => {
     expect(
       getAdminNavLinkState({
-        href: "/admin/codes",
-        pathname: "/admin/users",
-        pendingHref: "/admin/codes"
+        activeSection: "codes",
+        href: "/admin/codes"
+      })
+    ).toEqual({
+      ariaCurrent: "page",
+      isPending: false,
+      isVisuallyActive: true
+    });
+  });
+
+  it("keeps inactive local admin sections visually quiet", () => {
+    expect(
+      getAdminNavLinkState({
+        activeSection: "codes",
+        href: "/admin/users"
       })
     ).toEqual({
       ariaCurrent: undefined,
-      isPending: true,
-      isVisuallyActive: true
-    });
-  });
-
-  it("keeps aria-current tied to the committed pathname while moving visual focus to the pending tab", () => {
-    expect(
-      getAdminNavLinkState({
-        href: "/admin/users",
-        pathname: "/admin/users",
-        pendingHref: "/admin/codes"
-      })
-    ).toEqual({
-      ariaCurrent: "page",
       isPending: false,
       isVisuallyActive: false
-    });
-  });
-
-  it("keeps the current tab visually active when it is clicked again", () => {
-    expect(
-      getAdminNavLinkState({
-        href: "/admin/users",
-        pathname: "/admin/users",
-        pendingHref: "/admin/users"
-      })
-    ).toEqual({
-      ariaCurrent: "page",
-      isPending: false,
-      isVisuallyActive: true
     });
   });
 

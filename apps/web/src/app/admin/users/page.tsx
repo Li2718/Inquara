@@ -1,5 +1,5 @@
-import { UserListAdminPage } from "../../../features/admin/UserListAdminPage";
+import { AdminSurface } from "../../../features/admin/AdminSurface";
 
 export default function Page() {
-  return <UserListAdminPage />;
+  return <AdminSurface initialSection="users" />;
 }

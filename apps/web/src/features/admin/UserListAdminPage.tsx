@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiJson } from "../../shared/api";
 import { AdminShell } from "../../shared/components/admin";
+import type { AdminSection } from "../../shared/components/admin/adminUrlState";
 import { LoadingState, SkeletonBlock, Toast } from "../../shared/components/ui";
 import { formatCount, formatDate, formatDateTime } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
@@ -25,7 +26,13 @@ type AdminUser = {
   role: string;
 };
 
-export function UserListAdminPage() {
+export function UserListAdminPage({
+  activeSection,
+  onSectionNavigate
+}: {
+  activeSection: AdminSection;
+  onSectionNavigate(section: AdminSection): void;
+}) {
   const { locale, messages } = useLocale();
   const copy = messages.adminUsers;
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -58,8 +65,8 @@ export function UserListAdminPage() {
 
   if (isLoading) {
     return (
-      <AdminShell>
-        <section className="admin-panel admin-users-panel">
+      <AdminShell activeSection={activeSection} onSectionNavigate={onSectionNavigate}>
+        <section className="admin-panel">
           <LoadingState variant="panel" aria-label={copy.loading} />
           <SkeletonBlock variant="panel" rows={5} />
         </section>
@@ -68,7 +75,7 @@ export function UserListAdminPage() {
   }
 
   return (
-    <AdminShell>
+    <AdminShell activeSection={activeSection} onSectionNavigate={onSectionNavigate}>
       <section className="admin-panel admin-users-panel">
         <Toast message={error || null} onDismiss={() => setError("")} />
         <div className="admin-header admin-users-header">

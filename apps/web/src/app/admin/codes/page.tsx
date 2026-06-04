@@ -1,5 +1,5 @@
-import { RedemptionCodesAdminPage } from "../../../features/admin/RedemptionCodesAdminPage";
+import { AdminSurface } from "../../../features/admin/AdminSurface";
 
 export default function Page() {
-  return <RedemptionCodesAdminPage />;
+  return <AdminSurface initialSection="codes" />;
 }

@@ -1,3 +1,5 @@
+import type { AdminSection } from "./adminUrlState";
+
 export type AdminNavLinkState = {
   ariaCurrent: "page" | undefined;
   isPending: boolean;
@@ -5,17 +7,18 @@ export type AdminNavLinkState = {
 };
 
 export function getAdminNavLinkState({
+  activeSection,
   href,
-  pathname,
-  pendingHref
+  pendingHref = null
 }: {
+  activeSection?: AdminSection;
   href: string;
-  pathname: string;
-  pendingHref: string | null;
+  pathname?: string;
+  pendingHref?: string | null;
 }): AdminNavLinkState {
-  const isCurrent = isAdminNavHrefActive(pathname, href);
+  const isCurrent = activeSection ? adminSectionMatchesHref(activeSection, href) : false;
   const isPending = pendingHref === href && !isCurrent;
-  const hasPendingNavigation = pendingHref !== null && !isAdminNavHrefActive(pathname, pendingHref);
+  const hasPendingNavigation = pendingHref !== null && !isCurrent;
 
   return {
     ariaCurrent: isCurrent ? "page" : undefined,
@@ -24,8 +27,8 @@ export function getAdminNavLinkState({
   };
 }
 
-export function isAdminNavHrefActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
+export function adminSectionMatchesHref(section: AdminSection, href: string): boolean {
+  return href === (section === "codes" ? "/admin/codes" : "/admin/users");
 }
 
 export function shouldStartAdminNavPendingNavigation(event: {

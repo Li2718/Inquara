@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { AdminSurface } from "../../features/admin/AdminSurface";
 
 export default function Page() {
-  redirect("/admin/users");
+  return <AdminSurface initialSection="users" />;
 }
