@@ -93,4 +93,31 @@ describe("page transition navigation", () => {
     expect(startViewTransition).toHaveBeenCalledTimes(1);
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
   });
+
+  it("handles skipped view transition rejections as cancellation", async () => {
+    const skippedError = new DOMException("Transition was skipped", "AbortError");
+    const readyCatch = vi.fn();
+    const finishedCatch = vi.fn();
+    const updateCallbackDoneCatch = vi.fn();
+    const skippedTransition = {
+      ready: { catch: readyCatch },
+      finished: { catch: finishedCatch },
+      updateCallbackDone: { catch: updateCallbackDoneCatch }
+    };
+    const startViewTransition = vi.fn(update => {
+      void update();
+      return skippedTransition as unknown as ViewTransition;
+    });
+
+    const wrapped = runWithPageTransition(vi.fn(), {
+      document: { startViewTransition } as unknown as Document,
+      window: { matchMedia: vi.fn(() => ({ matches: false })) } as unknown as Window
+    });
+
+    expect(wrapped).toBe(true);
+    expect(readyCatch).toHaveBeenCalledTimes(1);
+    expect(finishedCatch).toHaveBeenCalledTimes(1);
+    expect(updateCallbackDoneCatch).toHaveBeenCalledTimes(1);
+    expect(readyCatch.mock.calls[0]?.[0](skippedError)).toBeUndefined();
+  });
 });

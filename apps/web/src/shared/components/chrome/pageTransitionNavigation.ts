@@ -71,7 +71,8 @@ export function runWithPageTransition(
   }
 
   try {
-    documentRef?.startViewTransition?.(update);
+    const transition = documentRef?.startViewTransition?.(update);
+    suppressSkippedViewTransitionRejections(transition);
     return true;
   } catch {
     void update();
@@ -123,14 +124,32 @@ export function startHistoryPageTransition(
   }
 
   try {
-    nextDocument?.startViewTransition?.(
+    const transition = nextDocument?.startViewTransition?.(
       () =>
         new Promise<void>(resolve => {
           windowRef?.requestAnimationFrame(() => resolve());
         })
     );
+    suppressSkippedViewTransitionRejections(transition);
     return true;
   } catch {
     return false;
   }
+}
+
+function suppressSkippedViewTransitionRejections(transition: ViewTransitionLike | undefined): void {
+  void transition?.ready?.catch(error => {
+    if (!isSkippedViewTransitionError(error)) throw error;
+  });
+  void transition?.finished?.catch(error => {
+    if (!isSkippedViewTransitionError(error)) throw error;
+  });
+  void transition?.updateCallbackDone?.catch(error => {
+    if (!isSkippedViewTransitionError(error)) throw error;
+  });
+}
+
+function isSkippedViewTransitionError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) return false;
+  return error.name === "AbortError" && error.message === "Transition was skipped";
 }
