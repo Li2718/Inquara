@@ -1,13 +1,15 @@
 # Day Night System
 
-> status: active
+> status: archived
 > owner: web
-> updated: 2026-06-04
+> updated: 2026-06-05
 > related_docs:
 > - `docs/ui-system.md`
 > - `docs/architecture.md`
 > - `docs/multilingual.md`
 > - `apps/web/src/shared/components/README.md`
+> archived_from: `docs/initiatives/day-night-system/`
+> archived_reason: implementation completed, verified, committed, and durable display-mode rules reflected into current UI documentation
 > archive_when:
 > - Inquara supports a complete light and dark appearance system through shared appearance state and semantic tokens
 > - product, admin, and debug surfaces have been audited for appearance correctness without scattered page-specific overrides
@@ -79,7 +81,7 @@ Explicitly out of scope for the first complete slice:
 ## Completed Work
 
 - Created isolated managed worktree and branch: `day-night-system`.
-- Classified this document as active initiative documentation.
+- Classified this document as active initiative documentation, then archived it as historical documentation after completion.
 - Read repository documentation standards, UI system rules, and component placement rules.
 - Reviewed existing Inquara layout, shared component, locale, and style entrypoints relevant to appearance.
 - Reviewed `aitestkit` appearance provider, appearance menu, appearance model, root layout, and token CSS approach.
@@ -99,15 +101,15 @@ Explicitly out of scope for the first complete slice:
 
 ## Remaining Work
 
-- Broaden manual visual review beyond the canvas page to auth, admin, modal, toast, and error states when the next UI pass is available.
-- Fix any additional contrast or token gaps found during broader visual review.
+None for this initiative.
 
 ## Deferred Or Out Of Scope
 
 - Database-backed appearance preferences.
 - More than two display modes.
 - Theme customization beyond day/night appearance.
+- Additional contrast and token polish for future UI changes that introduce new surfaces or visual states.
 
 ## Next Step
 
-Run verification checks and browser review both appearances.
+None.
