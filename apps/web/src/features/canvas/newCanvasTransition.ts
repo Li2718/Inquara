@@ -7,21 +7,28 @@ export type NewCanvasTransitionState =
       canvasId: null;
     }
   | {
-      canvasId: string;
+      canvasId: string | null;
       content: string;
+      submissionId: string;
       status: "morphing";
     }
   | {
       canvasId: string;
       content: string;
+      submissionId: string;
       status: "settling";
     };
 
 export type NewCanvasTransitionEvent =
   | {
-      canvasId: string;
       content: string;
+      submissionId: string;
       type: "submitted";
+    }
+  | {
+      canvasId: string;
+      submissionId: string;
+      type: "canvasCreated";
     }
   | {
       canvasId: string;
@@ -47,8 +54,19 @@ export function advanceNewCanvasTransition(
 ): NewCanvasTransitionState {
   if (event.type === "submitted") {
     return {
-      canvasId: event.canvasId,
+      canvasId: null,
       content: event.content,
+      submissionId: event.submissionId,
+      status: "morphing"
+    };
+  }
+
+  if (event.type === "canvasCreated") {
+    if (state.status !== "morphing" || state.submissionId !== event.submissionId) return state;
+    return {
+      canvasId: event.canvasId,
+      content: state.content,
+      submissionId: state.submissionId,
       status: "morphing"
     };
   }
@@ -58,6 +76,7 @@ export function advanceNewCanvasTransition(
     return {
       canvasId: state.canvasId,
       content: state.content,
+      submissionId: state.submissionId,
       status: "settling"
     };
   }
@@ -88,15 +107,12 @@ export function hasVisibleStarterMessage(
 }
 
 export function canSettleStarterTransition({
-  pendingClientMutationCount,
   snapshot,
   starter
 }: {
-  pendingClientMutationCount: number;
   snapshot: CanvasSnapshot | null;
   starter: { canvasId: string | null; content: string };
 }): boolean {
-  if (pendingClientMutationCount > 0) return false;
   return hasVisibleStarterMessage(snapshot, starter);
 }
 

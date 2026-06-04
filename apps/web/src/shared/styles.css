@@ -1910,6 +1910,17 @@ h2 {
   filter: blur(1px);
 }
 
+.canvas-view[data-starter-overlay-phase="morphing"] :where(.react-flow__node, .react-flow__edge, .canvas-loading) {
+  opacity: 0;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] :where(.react-flow__node, .react-flow__edge) {
+  animation: none;
+  opacity: 1;
+  filter: none;
+  transition: none;
+}
+
 .canvas-view[data-canvas-transition="entering"] .react-flow__node,
 .canvas-view[data-canvas-transition="entering"] .react-flow__edge {
   animation: canvas-content-enter 110ms ease-out both;
@@ -1921,6 +1932,25 @@ h2 {
 
 .canvas-view[data-canvas-transition="idle"] .react-flow__edge.canvas-edge-appearing .react-flow__edge-path {
   animation: canvas-edge-path-appear 200ms ease-out both;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .canvas-node.canvas-node-appearing {
+  animation: none;
+  opacity: 1;
+  filter: none;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .react-flow__edge.canvas-edge-appearing .react-flow__edge-path {
+  animation: none;
+  stroke-opacity: 1;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .canvas-node-content {
+  box-shadow: none;
+}
+
+.canvas-view[data-starter-overlay-phase="settling"] .canvas-node {
+  visibility: hidden;
 }
 
 .canvas-view[data-canvas-transition="idle"] .canvas-node.canvas-node-exiting {
@@ -2029,6 +2059,10 @@ h2 {
   padding: 0;
   border-color: rgb(215 232 238 / 86%);
   background: rgb(255 255 255 / 86%);
+}
+
+.new-canvas-starter[data-overlay-visible="true"] {
+  opacity: 0;
 }
 
 .new-canvas-starter[data-state="morphing"]::before {
@@ -2179,10 +2213,11 @@ textarea.node-composer-frame-input {
 }
 
 .new-canvas-morph-overlay[data-state="settling"] {
-  animation: new-canvas-morph-overlay-exit 220ms ease 180ms both;
+  animation: new-canvas-morph-overlay-handoff 240ms linear both;
 }
 
 .new-canvas-morph-node {
+  position: relative;
   width: min(420px, calc(100vw - 48px));
   height: 520px;
   display: grid;
@@ -2200,19 +2235,63 @@ textarea.node-composer-frame-input {
   background: linear-gradient(180deg, rgb(255 255 255 / 86%), rgb(247 252 253 / 72%));
 }
 
+.new-canvas-morph-menu-trigger:disabled {
+  opacity: 1;
+  color: rgb(111 135 148 / 70%);
+}
+
+.new-canvas-morph-title,
+.new-canvas-morph-user-message,
+.new-canvas-morph-thinking-message {
+  opacity: 0;
+  animation: new-canvas-morph-step-enter 180ms ease-out forwards;
+}
+
+.new-canvas-morph-title {
+  animation-delay: 40ms;
+}
+
+.new-canvas-morph-user-message {
+  animation-delay: 180ms;
+}
+
+.new-canvas-morph-thinking-message {
+  animation-delay: 360ms;
+}
+
 .new-canvas-morph-node-body {
   background: linear-gradient(180deg, rgb(250 254 255 / 62%), rgb(255 255 255 / 34%));
 }
 
-@keyframes new-canvas-morph-overlay-exit {
+.new-canvas-morph-composer-input {
+  color: var(--muted);
+}
+
+.new-canvas-morph-resize-handle:disabled {
+  opacity: 1;
+}
+
+@keyframes new-canvas-morph-step-enter {
   from {
-    opacity: 1;
-    filter: blur(0);
+    opacity: 0;
+    transform: translateY(4px);
   }
 
   to {
-    opacity: 0;
-    filter: blur(1px);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes new-canvas-morph-overlay-handoff {
+  from {
+    opacity: 1;
+    filter: none;
+  }
+
+  to {
+    opacity: 1;
+    filter: none;
   }
 }
 

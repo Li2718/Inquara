@@ -50,11 +50,13 @@ const CANVAS_ITEM_EXIT_MS = 150;
 export function CanvasView({
   isPreparingCanvasSwitch,
   isSidebarOpen,
+  starterOverlayPhase,
   resetViewportRequest,
   routeCanvasId
 }: {
   isPreparingCanvasSwitch: boolean;
   isSidebarOpen: boolean;
+  starterOverlayPhase: "idle" | "morphing" | "settling";
   resetViewportRequest: number;
   routeCanvasId: string;
 }) {
@@ -63,6 +65,7 @@ export function CanvasView({
       <CanvasFlow
         isPreparingCanvasSwitch={isPreparingCanvasSwitch}
         isSidebarOpen={isSidebarOpen}
+        starterOverlayPhase={starterOverlayPhase}
         resetViewportRequest={resetViewportRequest}
         routeCanvasId={routeCanvasId}
       />
@@ -73,11 +76,13 @@ export function CanvasView({
 function CanvasFlow({
   isPreparingCanvasSwitch,
   isSidebarOpen,
+  starterOverlayPhase,
   resetViewportRequest,
   routeCanvasId
 }: {
   isPreparingCanvasSwitch: boolean;
   isSidebarOpen: boolean;
+  starterOverlayPhase: "idle" | "morphing" | "settling";
   resetViewportRequest: number;
   routeCanvasId: string;
 }) {
@@ -345,6 +350,7 @@ function CanvasFlow({
   return (
     <div
       className="canvas-view"
+      data-starter-overlay-phase={starterOverlayPhase}
       data-canvas-transition={
         isPreparingCanvasSwitch || isShowingStaleSnapshot
           ? "leaving"

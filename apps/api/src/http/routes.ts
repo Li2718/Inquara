@@ -47,6 +47,7 @@ import {
 const sessionCookieName = "inquara_session";
 const rememberedSessionMaxAgeSeconds = 30 * 24 * 60 * 60;
 const canvasLeaseTtlSeconds = 15;
+const slowNewCanvasMockDelayMs = parseDevelopmentDelay(process.env.INQUARA_SLOW_NEW_CANVAS_MS);
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -279,6 +280,7 @@ export async function registerRoutes(
   });
 
   app.post("/canvases", async (request, reply) => {
+    await waitForSlowNewCanvasMock();
     const userId = await requireUserId(request, reply);
     if (!userId) return;
     const body = CreateCanvasSchema.parse(request.body);
@@ -318,6 +320,7 @@ export async function registerRoutes(
   });
 
   app.get("/canvases/:canvasId/snapshot", async (request, reply) => {
+    await waitForSlowNewCanvasMock();
     const userId = await requireUserId(request, reply);
     if (!userId) return;
     const params = request.params as { canvasId: string };
@@ -333,6 +336,7 @@ export async function registerRoutes(
   });
 
   app.post("/canvases/:canvasId/lease/acquire", async (request, reply) => {
+    await waitForSlowNewCanvasMock();
     const userId = await requireUserId(request, reply);
     if (!userId) return;
     const params = request.params as { canvasId: string };
@@ -446,6 +450,7 @@ export async function registerRoutes(
   });
 
   app.post("/canvases/:canvasId/messages/stream", async (request, reply) => {
+    await waitForSlowNewCanvasMock();
     const userId = await requireUserId(request, reply);
     if (!userId) return;
     if (!aiProvider) {
@@ -504,6 +509,20 @@ export async function registerRoutes(
       }
       return handleCanvasCommandError(error, reply);
     }
+  });
+}
+
+function parseDevelopmentDelay(value: string | undefined): number {
+  if (process.env.NODE_ENV === "production") return 0;
+  const delayMs = Number(value);
+  if (!Number.isFinite(delayMs) || delayMs <= 0) return 0;
+  return Math.min(Math.round(delayMs), 10_000);
+}
+
+async function waitForSlowNewCanvasMock(): Promise<void> {
+  if (slowNewCanvasMockDelayMs <= 0) return;
+  await new Promise(resolve => {
+    setTimeout(resolve, slowNewCanvasMockDelayMs);
   });
 }
 

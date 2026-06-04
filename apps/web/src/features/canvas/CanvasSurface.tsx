@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { AppTopBar } from "../../shared/components/chrome";
 import { NodeComposerDisplay, NodeComposerFrame, NodeComposerSubmit } from "../../shared/components/domain";
+import { MoreVerticalIcon } from "../../shared/components/ui";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { CanvasLeaseBlocker } from "../canvas-session/CanvasLeaseBlocker";
 import { CanvasSessionProvider, useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasSidebar } from "../canvases/CanvasSidebar";
 import { NewCanvasEntry } from "../canvases/NewCanvasEntry";
 import { clearPendingStarterMessage, getPendingStarterMessage } from "../canvases/newCanvasDraft";
+import { MessageBubble } from "../node-chat/MessageList";
 import { CANVAS_SIDEBAR_OPEN_COOKIE, CANVAS_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
 import { CanvasView } from "./CanvasView";
 import { parseCanvasPathState, writeCanvasPathState, type CanvasPathState } from "./canvasUrlState";
@@ -105,12 +107,22 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
       {activeState.mode === "new" ? (
         <section className="canvas-stage new-canvas-stage" aria-label={messages.canvas.stage}>
           <NewCanvasEntry
-            onCreated={async ({ canvas, content }) => {
+            isOverlayVisible={newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"}
+            onSubmitted={({ content, submissionId }) => {
               setNewCanvasTransition(
                 advanceNewCanvasTransition(initialNewCanvasTransitionState, {
-                  canvasId: canvas.id,
                   content,
+                  submissionId,
                   type: "submitted"
+                })
+              );
+            }}
+            onCreated={async ({ canvas, content, submissionId }) => {
+              setNewCanvasTransition(state =>
+                advanceNewCanvasTransition(state, {
+                  canvasId: canvas.id,
+                  submissionId,
+                  type: "canvasCreated"
                 })
               );
               setPendingStarterSubmission({ canvasId: canvas.id, content });
@@ -142,6 +154,11 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
                 ? newCanvasTransition.canvasId
                 : null
             }
+            transitionStatus={
+              newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
+                ? newCanvasTransition.status
+                : "idle"
+            }
             transitionContent={
               newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling"
                 ? newCanvasTransition.content
@@ -164,19 +181,31 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
         </CanvasSessionProvider>
       )}
       {newCanvasTransition.status === "morphing" || newCanvasTransition.status === "settling" ? (
-        <NewCanvasMorphOverlay
-          content={newCanvasTransition.content}
-          sendLabel={messages.chat.send}
-          state={newCanvasTransition.status}
-          onSettled={() => {
-            setNewCanvasTransition(state =>
-              advanceNewCanvasTransition(state, {
-                canvasId: newCanvasTransition.canvasId,
-                type: "overlaySettled"
-              })
-            );
-          }}
-        />
+        newCanvasTransition.status === "settling" ? (
+          <NewCanvasMorphOverlay
+            content={newCanvasTransition.content}
+            sendLabel={messages.chat.send}
+            state={newCanvasTransition.status}
+            placeholder={messages.chat.askPlaceholder}
+            thinkingLabel={messages.chat.thinking}
+            onSettled={() => {
+              setNewCanvasTransition(state =>
+                advanceNewCanvasTransition(state, {
+                  canvasId: newCanvasTransition.canvasId,
+                  type: "overlaySettled"
+                })
+              );
+            }}
+          />
+        ) : (
+          <NewCanvasMorphOverlay
+            content={newCanvasTransition.content}
+            sendLabel={messages.chat.send}
+            state={newCanvasTransition.status}
+            placeholder={messages.chat.askPlaceholder}
+            thinkingLabel={messages.chat.thinking}
+          />
+        )
       ) : null}
     </main>
   );
@@ -198,6 +227,7 @@ function CanvasSurfaceContent({
   pendingCanvasId,
   resetViewportRequest,
   transitionCanvasId,
+  transitionStatus,
   transitionContent,
   onStarterTransitionReady,
   onCanvasSwitchReady,
@@ -209,6 +239,7 @@ function CanvasSurfaceContent({
   pendingCanvasId: string | null;
   resetViewportRequest: number;
   transitionCanvasId: string | null;
+  transitionStatus: "idle" | "morphing" | "settling";
   transitionContent: string;
   onStarterTransitionReady(canvasId: string): void;
   onCanvasSwitchReady(): void;
@@ -237,7 +268,6 @@ function CanvasSurfaceContent({
     const starter = { canvasId: transitionCanvasId, content: transitionContent };
     if (
       !canSettleStarterTransition({
-        pendingClientMutationCount: state.pendingClientMutationIds.length,
         snapshot: state.snapshot,
         starter
       })
@@ -247,7 +277,7 @@ function CanvasSurfaceContent({
       }, 500);
       return () => window.clearTimeout(timeout);
     }
-    const renderedMessages = Array.from(document.querySelectorAll<HTMLElement>(".message-bubble.message-user")).map(
+    const renderedMessages = Array.from(document.querySelectorAll<HTMLElement>(".canvas-node-content .message-bubble.message-user")).map(
       element => element.textContent ?? ""
     );
     if (!hasRenderedStarterMessage(renderedMessages, transitionContent)) {
@@ -262,7 +292,6 @@ function CanvasSurfaceContent({
     onStarterTransitionReady,
     refreshSnapshot,
     state.leaseState,
-    state.pendingClientMutationIds.length,
     state.snapshot,
     starterRenderWaitTick,
     transitionContent,
@@ -275,6 +304,7 @@ function CanvasSurfaceContent({
         <CanvasView
           isPreparingCanvasSwitch={isPreparingCanvasSwitch}
           isSidebarOpen={isSidebarOpen}
+          starterOverlayPhase={transitionCanvasId ? transitionStatus : "idle"}
           resetViewportRequest={resetViewportRequest}
           routeCanvasId={canvasId}
         />
@@ -301,13 +331,17 @@ function CanvasSurfaceContent({
 export function NewCanvasMorphOverlay({
   content,
   onSettled,
+  placeholder,
   sendLabel,
-  state
+  state,
+  thinkingLabel
 }: {
   content: string;
   onSettled?: () => void;
+  placeholder: string;
   sendLabel: string;
   state: "morphing" | "settling";
+  thinkingLabel: string;
 }) {
   return (
     <div
@@ -324,14 +358,42 @@ export function NewCanvasMorphOverlay({
       }
     >
       <div className="new-canvas-morph-node">
-        <div className="new-canvas-morph-node-header" />
-        <div className="new-canvas-morph-node-body" />
-        <NodeComposerFrame className="new-canvas-morph-composer">
-          <NodeComposerDisplay>{content}</NodeComposerDisplay>
-          <NodeComposerSubmit disabled tabIndex={-1}>
-            {sendLabel}
-          </NodeComposerSubmit>
-        </NodeComposerFrame>
+        <header className="canvas-node-header new-canvas-morph-node-header">
+          <div className="canvas-node-title-row new-canvas-morph-title">
+            <strong>{content}</strong>
+            <button
+              type="button"
+              className="icon-button node-menu-trigger nodrag new-canvas-morph-menu-trigger"
+              tabIndex={-1}
+              aria-hidden="true"
+              disabled
+            >
+              <MoreVerticalIcon />
+            </button>
+          </div>
+          <div className="canvas-node-actions" />
+        </header>
+        <div className="node-chat-panel nodrag new-canvas-morph-chat-panel">
+          <div className="message-list nodrag new-canvas-morph-node-body">
+            <MessageBubble className="new-canvas-morph-user-message" content={content} role="user" />
+            <MessageBubble className="new-canvas-morph-thinking-message" content={thinkingLabel} role="assistant" />
+          </div>
+          <NodeComposerFrame className="message-composer nodrag new-canvas-morph-composer">
+            <NodeComposerDisplay className="new-canvas-morph-composer-input">
+              {state === "settling" ? placeholder : ""}
+            </NodeComposerDisplay>
+            <NodeComposerSubmit disabled tabIndex={-1}>
+              {sendLabel}
+            </NodeComposerSubmit>
+          </NodeComposerFrame>
+        </div>
+        <button
+          type="button"
+          className="canvas-node-resize-handle nodrag nowheel new-canvas-morph-resize-handle"
+          aria-hidden="true"
+          tabIndex={-1}
+          disabled
+        />
       </div>
     </div>
   );

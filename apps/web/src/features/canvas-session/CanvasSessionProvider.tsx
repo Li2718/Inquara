@@ -125,12 +125,13 @@ export function CanvasSessionProvider({
   useEffect(() => {
     if (state.leaseState !== "active") return;
     if (!state.snapshot || state.snapshot.canvas.id !== canvasId) return;
+    if (state.pendingClientMutationIds.length > 0) return;
     if (!state.snapshot.messages.some(message => message.status === "streaming")) return;
     const timeout = window.setTimeout(() => {
       void refreshCanvasSnapshot();
     }, streamingRefreshIntervalMs);
     return () => window.clearTimeout(timeout);
-  }, [state.leaseState, state.snapshot, canvasId]);
+  }, [state.leaseState, state.pendingClientMutationIds.length, state.snapshot, canvasId]);
 
   const value = useMemo<CanvasSessionContextValue>(
     () => ({

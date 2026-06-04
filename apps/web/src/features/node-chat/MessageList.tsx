@@ -1,7 +1,7 @@
 "use client";
 
 import type { CanvasNode, NodeMessage } from "@inquara/domain";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import React, { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { useCanvasPlacementViewportGetter } from "../canvas/CanvasViewportContext";
 import { SelectionFollowupToolbar } from "../canvas/SelectionFollowupToolbar";
@@ -20,6 +20,49 @@ type SelectionState = {
   toolbarX: number;
   toolbarY: number;
 };
+
+export type MessageBubbleRole = "assistant" | "system" | "user";
+
+export function getMessageBubbleClassName(role: MessageBubbleRole): string {
+  return `message-bubble message-${role}`;
+}
+
+export function MessageBubble({
+  branchNodes = [],
+  className,
+  content,
+  onMouseUp,
+  onToggleBranch = noopToggleBranch,
+  role,
+  status,
+  streamingLabel
+}: {
+  branchNodes?: CanvasNode[];
+  className?: string;
+  content: string;
+  onMouseUp?: () => void;
+  onToggleBranch?: (node: CanvasNode) => void;
+  role: MessageBubbleRole;
+  status?: string;
+  streamingLabel?: string;
+}) {
+  return (
+    <article
+      className={[getMessageBubbleClassName(role), className].filter(Boolean).join(" ")}
+      onMouseUp={onMouseUp}
+      data-message-content
+    >
+      <MessageContent
+        content={content}
+        branchNodes={branchNodes}
+        onToggleBranch={onToggleBranch}
+        status={status ?? "complete"}
+        streamingLabel={streamingLabel ?? ""}
+      />
+      {status && status !== "complete" ? <small>{status}</small> : null}
+    </article>
+  );
+}
 
 export function MessageList({ node }: { node: CanvasNode }) {
   const { messages: appMessages } = useLocale();
@@ -210,20 +253,16 @@ export function MessageList({ node }: { node: CanvasNode }) {
       onScroll={updateStickiness}
     >
       {messages.map(message => (
-        <article
+        <MessageBubble
           key={message.id}
-          className={`message-bubble message-${message.role}`}
+          branchNodes={(state.snapshot?.nodes ?? []).filter(node => node.sourceMessageId === message.id && !node.deletedAt)}
+          content={message.content}
           onMouseUp={() => captureSelection(message)}
-          data-message-content
-        >
-          <MessageContent
-            message={message}
-            branchNodes={(state.snapshot?.nodes ?? []).filter(node => node.sourceMessageId === message.id && !node.deletedAt)}
-            onToggleBranch={toggleBranch}
-            streamingLabel={appMessages.chat.thinking}
-          />
-          {message.status !== "complete" ? <small>{message.status}</small> : null}
-        </article>
+          onToggleBranch={toggleBranch}
+          role={message.role}
+          status={message.status}
+          streamingLabel={appMessages.chat.thinking}
+        />
       ))}
       {selection ? (
         <SelectionFollowupToolbar
@@ -241,16 +280,20 @@ function normalizeSelectionText(value: string): string {
 }
 
 function MessageContent({
-  message,
   branchNodes,
+  content,
   onToggleBranch,
+  status,
   streamingLabel
 }: {
-  message: NodeMessage;
   branchNodes: CanvasNode[];
+  content: string;
   onToggleBranch(node: CanvasNode): void;
+  status: string;
   streamingLabel: string;
 }) {
-  const content = message.content || (message.status === "streaming" ? streamingLabel : "");
-  return <MessageMarkdown content={content} branches={branchNodes} onToggleBranch={onToggleBranch} />;
+  const renderedContent = content || (status === "streaming" ? streamingLabel : "");
+  return <MessageMarkdown content={renderedContent} branches={branchNodes} onToggleBranch={onToggleBranch} />;
 }
+
+function noopToggleBranch() {}

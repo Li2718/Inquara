@@ -16,9 +16,13 @@ import { shouldSubmitNewCanvasStarter } from "./newCanvasKeyboard";
 const newCanvasMorphMinimumMs = 320;
 
 export function NewCanvasEntry({
-  onCreated
+  onCreated,
+  isOverlayVisible,
+  onSubmitted
 }: {
-  onCreated(input: { canvas: Canvas; content: string }): Promise<void>;
+  onCreated(input: { canvas: Canvas; content: string; submissionId: string }): Promise<void>;
+  isOverlayVisible?: boolean;
+  onSubmitted(input: { content: string; submissionId: string }): void;
 }) {
   const { messages } = useLocale();
   const [content, setContent] = useState("");
@@ -45,16 +49,19 @@ export function NewCanvasEntry({
 
     setIsSubmitting(true);
     setError("");
+    const submissionId = crypto.randomUUID();
     try {
       const morphDelay = new Promise(resolve => window.setTimeout(resolve, newCanvasMorphMinimumMs));
-      const canvas = await apiJson<Canvas>("/canvases", {
+      const canvasRequest = apiJson<Canvas>("/canvases", {
         method: "POST",
         body: JSON.stringify({ title: messages.canvasSidebar.untitledCanvas })
       });
+      await morphDelay;
+      onSubmitted({ content: trimmed, submissionId });
+      const canvas = await canvasRequest;
       savePendingStarterMessage(canvas.id, trimmed);
       clearNewCanvasDraft();
-      await morphDelay;
-      await onCreated({ canvas, content: trimmed });
+      await onCreated({ canvas, content: trimmed, submissionId });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : messages.canvasSidebar.couldNotCreate);
       setIsSubmitting(false);
@@ -68,7 +75,7 @@ export function NewCanvasEntry({
   }
 
   return (
-    <div className="new-canvas-starter" data-state={isSubmitting ? "morphing" : "ready"}>
+    <div className="new-canvas-starter" data-state={isSubmitting ? "morphing" : "ready"} data-overlay-visible={isOverlayVisible}>
       <NodeComposerFrame className="new-canvas-starter-inner" mode="starter" onSubmit={submit}>
         <NodeComposerTextarea
           value={content}
