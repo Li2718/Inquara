@@ -42,6 +42,33 @@ export function CheckIcon({ className = "ui-check-icon", ...props }: IconProps) 
   );
 }
 
+export function SystemAppearanceIcon({ className = "ui-system-appearance-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <rect x="4" y="5" width="16" height="11" rx="2" />
+      <path d="M9 20h6" />
+      <path d="M12 16v4" />
+    </svg>
+  );
+}
+
+export function SunIcon({ className = "ui-sun-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+    </svg>
+  );
+}
+
+export function MoonIcon({ className = "ui-moon-icon", ...props }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path d="M19 14.2A7.4 7.4 0 0 1 9.8 5 7.4 7.4 0 1 0 19 14.2Z" />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon({ className = "ui-chevron-down-icon", ...props }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>

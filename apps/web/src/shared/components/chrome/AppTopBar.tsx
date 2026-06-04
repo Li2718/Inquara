@@ -7,6 +7,7 @@ import { apiJson } from "../../api";
 import { useLocale } from "../../locale/LocaleProvider";
 import { interpolate } from "../../messages";
 import { usePageTransitionNavigation } from "./usePageTransitionNavigation";
+import { AppearanceMenu } from "./AppearanceMenu";
 import { LanguageMenu } from "./LanguageMenu";
 import { ConfirmDialog, FloatingCircleButton, InquaraBrandIcon, PopupMenu, PopupMenuItem } from "../ui";
 
@@ -94,6 +95,7 @@ export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasReque
         </span>
       </button>
       <div className="app-top-account">
+        <AppearanceMenu />
         <LanguageMenu />
         <FloatingCircleButton
           ref={accountMenuTriggerRef}

@@ -113,27 +113,29 @@ Current project conventions:
 
 Inquara currently supports:
 
-- `appearance`: `light`
+- `appearance`: `light | dark`
+- `appearance preference`: `system | light | dark`
 
-Dark mode is not part of the current product baseline. If dark mode is added later, it must be added as a display-mode feature with tokens, component variants, and verification, not as scattered page-specific overrides.
+The active appearance is document-level state, not page-local state. The `system` preference resolves to the browser's current `prefers-color-scheme` value on the client and uses `light` as the server fallback until the client can read the browser preference.
 
-### 4.2 Future State Model
+### 4.2 State Model
 
-If a second display mode is introduced, use a single-dimensional model:
+Use a single-dimensional display mode model:
 
 ```ts
 type Appearance = "light" | "dark";
+type AppearancePreference = "system" | Appearance;
 ```
 
 ### 4.3 DOM Mounting
 
-If display-mode state exists, mount it at the top-level document:
+Mount display-mode state at the top-level document:
 
 ```html
 <html data-appearance="light">
 ```
 
-Do not scatter display-mode state across individual components.
+Do not scatter display-mode state across individual components. Components must consume semantic tokens that resolve under `html[data-appearance="light"]` and `html[data-appearance="dark"]`.
 
 ## 5. Surface Model
 

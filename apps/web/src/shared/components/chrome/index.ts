@@ -1,3 +1,4 @@
+export { AppearanceMenu } from "./AppearanceMenu";
 export { AppTopBar } from "./AppTopBar";
 export { LanguageMenu } from "./LanguageMenu";
 export { PageTransitionLink } from "./PageTransitionLink";

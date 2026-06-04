@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "katex/dist/katex.min.css";
 import { DebugRoot } from "../debug/DebugRoot";
+import { AppearanceProvider } from "../shared/appearance/AppearanceProvider";
+import { getRequestAppearanceMode, getRequestAppearancePreference } from "../shared/appearance/request";
 import { PageTransitionRoot } from "../shared/components/chrome";
 import { getClientFatalErrorFallbackScript } from "../shared/components/product/clientFatalErrorFallback";
 import { LocaleProvider } from "../shared/locale/LocaleProvider";
@@ -19,9 +21,11 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getRequestLocale();
+  const appearancePreference = await getRequestAppearancePreference();
+  const appearanceMode = await getRequestAppearanceMode();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} data-appearance={appearanceMode} suppressHydrationWarning>
       <body>
         <Script
           id="client-fatal-error-fallback"
@@ -30,8 +34,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         />
         <PageTransitionRoot />
         <LocaleProvider initialLocale={locale}>
-          {children}
-          <DebugRoot page="global" />
+          <AppearanceProvider initialPreference={appearancePreference}>
+            {children}
+            <DebugRoot page="global" />
+          </AppearanceProvider>
         </LocaleProvider>
       </body>
     </html>

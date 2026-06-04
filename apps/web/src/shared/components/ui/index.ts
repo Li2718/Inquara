@@ -11,12 +11,15 @@ export {
   CopyIcon,
   EditIcon,
   InquaraBrandIcon,
+  MoonIcon,
   MoreVerticalIcon,
   OrganizeLayoutIcon,
   PlusIcon,
   ResetViewIcon,
   SidebarCollapseIcon,
   SidebarPanelIcon,
+  SunIcon,
+  SystemAppearanceIcon,
   TrashIcon
 } from "./icons";
 export { PopupMenu, PopupMenuItem } from "./PopupMenu";

@@ -31,6 +31,18 @@ describe("shared messages", () => {
     expect(getMessages("zh-CN").canvas.askFollowUp).toBe("继续追问");
   });
 
+  it("includes localized appearance menu copy", () => {
+    expect(getMessages("en").appearance.ariaLabel).toBe("Appearance");
+    expect(getMessages("en").appearance.system).toBe("System");
+    expect(getMessages("en").appearance.light).toBe("Light");
+    expect(getMessages("en").appearance.dark).toBe("Dark");
+
+    expect(getMessages("zh-CN").appearance.ariaLabel).toBe("外观");
+    expect(getMessages("zh-CN").appearance.system).toBe("跟随系统");
+    expect(getMessages("zh-CN").appearance.light).toBe("白天");
+    expect(getMessages("zh-CN").appearance.dark).toBe("黑夜");
+  });
+
   it("puts unstable network recovery copy in the expected hierarchy", () => {
     expect(getMessages("zh-CN").lease.recoveringEyebrow).toBe("正在恢复连接");
     expect(getMessages("zh-CN").lease.recoveringTitle).toBe("网络连接不稳定");

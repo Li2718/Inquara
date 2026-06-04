@@ -22,6 +22,13 @@ export const messages = {
       ariaLabel: "Language",
       menuLabel: "Language menu"
     },
+    appearance: {
+      ariaLabel: "Appearance",
+      dark: "Dark",
+      light: "Light",
+      menuLabel: "Appearance menu",
+      system: "System"
+    },
     auth: {
       authMode: "Auth mode",
       createAccount: "Create account",
@@ -243,6 +250,13 @@ export const messages = {
     language: {
       ariaLabel: "语言",
       menuLabel: "语言菜单"
+    },
+    appearance: {
+      ariaLabel: "外观",
+      dark: "黑夜",
+      light: "白天",
+      menuLabel: "外观菜单",
+      system: "跟随系统"
     },
     auth: {
       authMode: "认证模式",
