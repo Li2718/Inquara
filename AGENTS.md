@@ -57,6 +57,10 @@ If the repository uses `docs/archive/`:
 4. If a real absolute path must exist at runtime, it must be supplied by the user's local environment and kept out of committed source files.
 5. New tests or examples must not use fake local absolute paths as fixtures; model paths with relative test data unless the behavior specifically requires path-format parsing.
 
+## Git Hook Rules
+
+When Codex runs Git commands that trigger Husky hooks, run them in an environment where the Git Bash hook shell can resolve `npm`; if the default sandbox cannot access the user's Node/npm installation, use an approved elevated command with a temporary PATH entry instead of bypassing hooks.
+
 ## Debug Rules
 
 Debug implementation work must follow the hard rules in [docs/architecture.md](docs/architecture.md).
