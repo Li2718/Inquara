@@ -2529,7 +2529,7 @@ textarea.node-composer-frame-input {
 
 .new-canvas-morph-menu-trigger:disabled {
   opacity: 1;
-  color: rgb(111 135 148 / 70%);
+  color: var(--muted);
 }
 
 .new-canvas-morph-title,
