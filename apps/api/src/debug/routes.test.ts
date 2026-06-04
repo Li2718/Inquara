@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app";
+import { developmentDelay } from "./developmentDelay";
 
 const baseEnv = {
   DATABASE_URL: "postgresql://debug:debug@localhost:1/inquara_debug_test?schema=public",
@@ -12,6 +13,12 @@ const baseEnv = {
 };
 
 describe("debug routes", () => {
+  afterEach(() => {
+    developmentDelay.wait = async function () {
+      return;
+    };
+  });
+
   it("registers /debug/health outside production", async () => {
     const app = await buildApp({ env: { ...baseEnv, NODE_ENV: "development" } });
 
@@ -23,11 +30,24 @@ describe("debug routes", () => {
   });
 
   it("does not register /debug/health in production", async () => {
-    const app = await buildApp({ env: { ...baseEnv, NODE_ENV: "production" } });
+    const originalWait = developmentDelay.wait;
+    const app = await buildApp({ env: { ...baseEnv, INQUARA_DEV_API_DELAY_MS: "1", NODE_ENV: "production" } });
 
     const response = await app.inject({ method: "GET", url: "/debug/health" });
 
     expect(response.statusCode).toBe(404);
+    expect(developmentDelay.wait).toBe(originalWait);
+    await app.close();
+  });
+
+  it("enables development-only API delay for every API route outside production", async () => {
+    const app = await buildApp({ env: { ...baseEnv, INQUARA_DEV_API_DELAY_MS: "40", NODE_ENV: "development" } });
+    const startedAt = Date.now();
+
+    const response = await app.inject({ method: "GET", url: "/healthz" });
+
+    expect(response.statusCode).toBe(200);
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(35);
     await app.close();
   });
 
@@ -37,5 +57,11 @@ describe("debug routes", () => {
 
     expect(routePaths.length).toBeGreaterThan(0);
     expect(routePaths.every(path => path?.startsWith("/debug/"))).toBe(true);
+  });
+
+  it("removes API development-only modules from the production image", () => {
+    const source = readFileSync("apps/api/Dockerfile", "utf8");
+
+    expect(source).toContain("find apps/api/src -name '*.dev.ts' -delete");
   });
 });

@@ -2,7 +2,7 @@
 
 import type { Canvas } from "@inquara/domain";
 import React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DebugCanvasSource } from "../../debug/DebugCanvasSource";
 import { AppTopBar } from "../../shared/components/chrome";
 import { NodeComposerDisplay, NodeComposerFrame, NodeComposerSubmit } from "../../shared/components/domain";
@@ -12,6 +12,7 @@ import { CanvasLeaseBlocker } from "../canvas-session/CanvasLeaseBlocker";
 import { CanvasSessionProvider, useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasSidebar } from "../canvases/CanvasSidebar";
 import { NewCanvasEntry } from "../canvases/NewCanvasEntry";
+import type { CanvasListPlacement } from "../canvases/canvasListState";
 import { clearPendingStarterMessage, getPendingStarterMessage } from "../canvases/newCanvasDraft";
 import { MessageBubble } from "../node-chat/MessageList";
 import { CANVAS_SIDEBAR_OPEN_COOKIE, CANVAS_SIDEBAR_OPEN_STORAGE_KEY } from "./sidebarPreference";
@@ -40,9 +41,12 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
   const [isPreparingCanvasSwitch, setIsPreparingCanvasSwitch] = useState(false);
   const [pendingCanvasId, setPendingCanvasId] = useState<string | null>(null);
   const [pendingStarterSubmission, setPendingStarterSubmission] = useState<{ canvasId: string; content: string } | null>(null);
-  const [updatedCanvasForSidebar, setUpdatedCanvasForSidebar] = useState<Canvas | null>(null);
+  const [canvasListUpdate, setCanvasListUpdate] = useState<{ canvas: Canvas; placement: CanvasListPlacement } | null>(null);
   const [newCanvasTransition, setNewCanvasTransition] = useState<NewCanvasTransitionState>(initialNewCanvasTransitionState);
   const [resetViewportRequest, setResetViewportRequest] = useState(0);
+  const updateCanvasList = useCallback((canvas: Canvas, placement: CanvasListPlacement) => {
+    setCanvasListUpdate({ canvas, placement });
+  }, []);
 
   function toggleSidebar() {
     setIsSidebarOpen(value => {
@@ -97,7 +101,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
         onNewCanvasRequest={() => showNewCanvas()}
       />
       <CanvasSidebar
-        updatedCanvas={updatedCanvasForSidebar}
+        canvasListUpdate={canvasListUpdate}
         currentCanvasId={activeState.mode === "canvas" ? activeState.canvasId : "new"}
         isOpen={isSidebarOpen}
         onToggle={toggleSidebar}
@@ -126,7 +130,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
                 })
               );
               setPendingStarterSubmission({ canvasId: canvas.id, content });
-              setUpdatedCanvasForSidebar(canvas);
+              updateCanvasList(canvas, "top");
               await showCanvas(canvas.id, { replace: true });
             }}
           />
@@ -176,7 +180,7 @@ export function CanvasSurface({ initialSidebarOpen, canvasId }: { initialSidebar
               setIsPreparingCanvasSwitch(false);
               setPendingCanvasId(null);
             }}
-            onCanvasSnapshotUpdated={setUpdatedCanvasForSidebar}
+            onCanvasSnapshotUpdated={updateCanvasList}
           />
         </CanvasSessionProvider>
       )}
@@ -243,16 +247,21 @@ function CanvasSurfaceContent({
   transitionContent: string;
   onStarterTransitionReady(canvasId: string): void;
   onCanvasSwitchReady(): void;
-  onCanvasSnapshotUpdated(canvas: Canvas): void;
+  onCanvasSnapshotUpdated(canvas: Canvas, placement: CanvasListPlacement): void;
 }) {
   const { messages } = useLocale();
   const { refreshSnapshot, retryLease, state } = useCanvasSession();
   const [starterRenderWaitTick, setStarterRenderWaitTick] = useState(0);
+  const lastSidebarCanvasRef = useRef<Canvas | null>(null);
 
   useEffect(() => {
-    if (state.snapshot?.canvas) {
-      onCanvasSnapshotUpdated(state.snapshot.canvas);
-    }
+    const canvas = state.snapshot?.canvas;
+    if (!canvas) return;
+    const previousCanvas = lastSidebarCanvasRef.current;
+    lastSidebarCanvasRef.current = canvas;
+    if (previousCanvas?.id !== canvas.id) return;
+    if (previousCanvas.updatedAt >= canvas.updatedAt) return;
+    onCanvasSnapshotUpdated(canvas, "top");
   }, [onCanvasSnapshotUpdated, state.snapshot?.canvas]);
 
   useEffect(() => {

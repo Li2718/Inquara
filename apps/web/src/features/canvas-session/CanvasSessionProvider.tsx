@@ -99,7 +99,7 @@ export function CanvasSessionProvider({
     consecutiveRenewFailuresRef.current = 0;
     const cachedSnapshot = canvasSnapshotCache.get(canvasId);
     if (cachedSnapshot) {
-      canvasSessionStore.getState().setSnapshot(cachedSnapshot);
+      canvasSessionStore.getState().setSnapshot(cachedSnapshot, { source: "cache" });
     }
     canvasSessionStore.getState().setLease({
       sessionId: sessionIdRef.current,
@@ -313,7 +313,7 @@ export function CanvasSessionProvider({
   async function refreshCanvasSnapshot(): Promise<CanvasSnapshot> {
     const snapshot = await apiJson<CanvasSnapshot>(`/canvases/${canvasId}/snapshot`);
     canvasSnapshotCache.set(canvasId, snapshot);
-    canvasSessionStore.getState().setSnapshot(snapshot);
+    canvasSessionStore.getState().setSnapshot(snapshot, { source: "network" });
     return snapshot;
   }
 

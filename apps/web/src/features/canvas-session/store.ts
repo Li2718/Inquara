@@ -29,12 +29,13 @@ export type CanvasSessionMessageKey =
 
 export type CanvasSessionState = {
   snapshot: CanvasSnapshot | null;
+  isSnapshotFromCache: boolean;
   leaseState: CanvasLeaseState;
   lease: CanvasLeaseMeta;
   pendingClientMutationIds: string[];
   pendingClientMutationTypes: Record<string, CanvasCommand["type"]>;
   errorMessageKey: CanvasSessionMessageKey | null;
-  setSnapshot(snapshot: CanvasSnapshot | null): void;
+  setSnapshot(snapshot: CanvasSnapshot | null, options?: { source?: "cache" | "network" }): void;
   setLeaseState(state: CanvasLeaseState): void;
   setLease(meta: Partial<CanvasLeaseMeta>): void;
   setErrorMessageKey(messageKey: CanvasSessionMessageKey | null): void;
@@ -55,15 +56,16 @@ const emptyLease: CanvasLeaseMeta = {
 export function createCanvasSessionStore() {
   return createStore<CanvasSessionState>((set, get) => ({
     snapshot: null,
+    isSnapshotFromCache: false,
     leaseState: "idle",
     lease: emptyLease,
     pendingClientMutationIds: [],
     pendingClientMutationTypes: {},
     errorMessageKey: null,
-    setSnapshot(snapshot) {
+    setSnapshot(snapshot, options) {
       set(state => {
         const nextSnapshot = preservePendingOptimisticState(snapshot, state.snapshot, state.pendingClientMutationIds);
-        return { snapshot: nextSnapshot };
+        return { isSnapshotFromCache: options?.source === "cache" && Boolean(nextSnapshot), snapshot: nextSnapshot };
       });
     },
     setLeaseState(leaseState) {
@@ -130,6 +132,7 @@ export function createCanvasSessionStore() {
     reset() {
       set({
         snapshot: null,
+        isSnapshotFromCache: false,
         leaseState: "idle",
         lease: emptyLease,
         pendingClientMutationIds: [],

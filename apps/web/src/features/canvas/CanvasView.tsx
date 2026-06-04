@@ -23,6 +23,7 @@ import { interpolate } from "../../shared/messages";
 import { useCanvasSession } from "../canvas-session/CanvasSessionProvider";
 import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
+import { shouldHideCanvasUntilViewportReady } from "./canvasViewportReadiness";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
 import { compensateViewportForStageRect, type StageRect } from "./stageLayoutCompensation";
 import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
@@ -113,6 +114,12 @@ function CanvasFlow({
   const [exitingNodes, setExitingNodes] = useState<ChatFlowNode[]>([]);
   const [isSettlingCanvas, setIsSettlingCanvas] = useState(false);
   const [isViewportReady, setIsViewportReady] = useState(false);
+  const shouldHideFlowItems = shouldHideCanvasUntilViewportReady({
+    canvasId,
+    hasCachedSnapshot: state.isSnapshotFromCache,
+    isViewportReady,
+    routeCanvasId
+  });
   const contextMenuCreateTimerRef = useRef<number | null>(null);
   const firstRootNode = useMemo(() => findFirstVisibleRootNode(snapshot?.nodes ?? []), [snapshot?.nodes]);
   const visibleNodes = useMemo(
@@ -361,8 +368,8 @@ function CanvasFlow({
     >
       <CanvasViewportProvider value={placementViewportContext}>
         <ReactFlow
-          nodes={isViewportReady ? nodes : []}
-          edges={isViewportReady ? renderedEdges : []}
+          nodes={shouldHideFlowItems ? [] : nodes}
+          edges={shouldHideFlowItems ? [] : renderedEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onNodeDragStop={onNodeDragStop}
@@ -387,12 +394,12 @@ function CanvasFlow({
           />
         </ReactFlow>
       </CanvasViewportProvider>
-      {!isViewportReady ? (
+      {shouldHideFlowItems ? (
         <div className="canvas-loading">
           <LoadingState variant="canvas" aria-label={copy.preparingCanvas} />
         </div>
       ) : null}
-      {isViewportReady ? (
+      {!shouldHideFlowItems ? (
         <CanvasViewportControls
           firstRootNode={firstRootNode}
           isBlocked={isBlocked}

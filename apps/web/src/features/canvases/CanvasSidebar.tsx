@@ -20,10 +20,10 @@ import { formatDate } from "../../shared/format";
 import { useLocale } from "../../shared/locale/LocaleProvider";
 import { interpolate, type AppMessages } from "../../shared/messages";
 import { getCanvasDeleteDialogOpeningState } from "./canvasDeleteDialogState";
-import { upsertCanvasList } from "./canvasListState";
+import { upsertCanvasList, type CanvasListPlacement } from "./canvasListState";
 
 type CanvasSidebarProps = {
-  updatedCanvas: Canvas | null;
+  canvasListUpdate: { canvas: Canvas; placement: CanvasListPlacement } | null;
   currentCanvasId: string;
   isOpen: boolean;
   onNewCanvasRequest(): void;
@@ -35,7 +35,7 @@ let canvasListCache: Canvas[] | null = null;
 const CANVAS_SIDEBAR_TRANSITION_MS = 220;
 
 export function CanvasSidebar({
-  updatedCanvas,
+  canvasListUpdate,
   currentCanvasId,
   isOpen,
   onNewCanvasRequest,
@@ -69,13 +69,13 @@ export function CanvasSidebar({
   }, []);
 
   useEffect(() => {
-    if (!updatedCanvas) return;
+    if (!canvasListUpdate) return;
     setCanvases(previous => {
-      const nextCanvases = upsertCanvasList(previous, updatedCanvas);
+      const nextCanvases = upsertCanvasList(previous, canvasListUpdate.canvas, { placement: canvasListUpdate.placement });
       canvasListCache = nextCanvases;
       return nextCanvases;
     });
-  }, [updatedCanvas]);
+  }, [canvasListUpdate]);
 
   async function loadCanvases({ showLoading }: { showLoading: boolean }) {
     if (showLoading) setIsLoading(true);

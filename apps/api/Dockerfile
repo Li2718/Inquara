@@ -17,6 +17,7 @@ RUN HUSKY=0 npm ci
 
 COPY . .
 
+RUN find apps/api/src -name '*.dev.ts' -delete
 RUN npm run db:generate
 
 ENV NODE_ENV=production
