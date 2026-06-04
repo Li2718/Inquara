@@ -435,7 +435,13 @@ function CanvasInitialViewport({
   const stabilityRef = useRef<CanvasViewportStabilityState>(initialCanvasViewportStabilityState);
 
   useLayoutEffect(() => {
-    if (!canvasId || !firstRootNode) return;
+    if (!canvasId) return;
+    if (!firstRootNode) {
+      initializedCanvasIdRef.current = null;
+      stabilityRef.current = initialCanvasViewportStabilityState;
+      onReady();
+      return;
+    }
     if (initializedCanvasIdRef.current !== canvasId) {
       initializedCanvasIdRef.current = null;
       stabilityRef.current = initialCanvasViewportStabilityState;
