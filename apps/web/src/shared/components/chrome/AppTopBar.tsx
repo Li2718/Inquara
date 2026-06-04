@@ -68,6 +68,7 @@ export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasReque
   }, [currentUser]);
   const isAdmin = currentUser?.role === "admin";
   const isAdminRoute = pathname.startsWith("/admin");
+  const shouldShowAdminMenuDestination = isAdminRoute || isAdmin;
   const isNewCanvasRoute = pathname === "/canvases/new";
   const isCanvasRoute = isCanvasSurface ?? (pathname.startsWith("/canvases/") && !isNewCanvasRoute);
 
@@ -138,7 +139,7 @@ export function AppTopBar({ isCanvasSurface, onCanvasLogoClick, onNewCanvasReque
           onClose={() => setIsAccountMenuOpen(false)}
           placement="bottom-end"
         >
-          {isAdmin ? (
+          {shouldShowAdminMenuDestination ? (
             <PopupMenuItem
               onClick={() => {
                 void openAdminMenuDestination();
