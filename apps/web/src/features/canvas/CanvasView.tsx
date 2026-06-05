@@ -25,7 +25,7 @@ import { CanvasNodeView } from "./CanvasNodeView";
 import { CanvasViewportProvider } from "./CanvasViewportContext";
 import { shouldHideCanvasUntilViewportReady } from "./canvasViewportReadiness";
 import { calculateRootViewport, findFirstVisibleRootNode } from "./rootNodeFocus";
-import { compensateViewportForStageRect, type StageRect } from "./stageLayoutCompensation";
+import { compensateViewportForStageRect, getVisibleStageRectForSidebar, type SidebarRect, type StageRect } from "./stageLayoutCompensation";
 import { useCanvasVisibilityMotion } from "./useCanvasVisibilityMotion";
 import {
   advanceCanvasViewportStability,
@@ -382,7 +382,7 @@ function CanvasFlow({
           proOptions={{ hideAttribution: true }}
         >
           <Background gap={28} size={1} />
-          <CanvasPlacementViewportTracker placementViewportRef={placementViewportRef} />
+          <CanvasPlacementViewportTracker placementViewportRef={placementViewportRef} isSidebarOpen={isSidebarOpen} />
           <CanvasInitialViewport
             firstRootNode={firstRootNode}
             isSidebarOpen={isSidebarOpen}
@@ -408,6 +408,7 @@ function CanvasFlow({
         <CanvasViewportControls
           firstRootNode={firstRootNode}
           isBlocked={isBlocked}
+          isSidebarOpen={isSidebarOpen}
           onOrganize={organizeCanvas}
           resetViewportRequest={resetViewportRequest}
         />
@@ -491,7 +492,8 @@ function CanvasInitialViewport({
         calculateRootViewport({
           rootNode: firstRootNode,
           viewportWidth: measurement.viewportWidth,
-          viewportHeight: measurement.viewportHeight
+          viewportHeight: measurement.viewportHeight,
+          viewportInsetLeft: getCanvasVisibleSidebarInset(isSidebarOpen)
         }),
         { duration: 0 }
       );
@@ -521,41 +523,88 @@ function getCanvasViewportMeasurement(): CanvasViewportMeasurement | null {
 }
 
 function CanvasPlacementViewportTracker({
+  isSidebarOpen,
   placementViewportRef
 }: {
+  isSidebarOpen: boolean;
   placementViewportRef: MutableRefObject<ReturnType<typeof calculatePlacementViewport> | undefined>;
 }) {
   const viewport = useViewport();
 
   useLayoutEffect(() => {
-    placementViewportRef.current = calculatePlacementViewport(viewport);
-  }, [placementViewportRef, viewport]);
+    placementViewportRef.current = calculatePlacementViewport(viewport, isSidebarOpen);
+  }, [isSidebarOpen, placementViewportRef, viewport]);
 
   return null;
 }
 
-function calculatePlacementViewport(viewport: { x: number; y: number; zoom: number }) {
+function calculatePlacementViewport(viewport: { x: number; y: number; zoom: number }, isSidebarOpen: boolean) {
   const stage = document.querySelector(".canvas-stage");
   const stageRect = stage instanceof HTMLElement ? stage.getBoundingClientRect() : null;
+  const sidebarInset = getCanvasVisibleSidebarInset(isSidebarOpen);
   const width = stageRect?.width ?? window.innerWidth;
   const height = stageRect?.height ?? window.innerHeight;
 
   return {
     height: height / viewport.zoom,
-    width: width / viewport.zoom,
-    x: -viewport.x / viewport.zoom,
+    width: Math.max(0, width - sidebarInset) / viewport.zoom,
+    x: (sidebarInset - viewport.x) / viewport.zoom,
     y: -viewport.y / viewport.zoom
+  };
+}
+
+function getCanvasSidebarOverlayWidth() {
+  const sidebar = document.querySelector(".canvas-sidebar");
+  if (sidebar instanceof HTMLElement) {
+    const rect = sidebar.getBoundingClientRect();
+    if (rect.width > 0) return rect.right;
+  }
+  const canvasPage = document.querySelector(".canvas-page");
+  if (!(canvasPage instanceof HTMLElement)) return 0;
+  const styles = getComputedStyle(canvasPage);
+  const sidebarLeft = Number.parseFloat(styles.getPropertyValue("--canvas-sidebar-left")) || 0;
+  const sidebarWidth = Number.parseFloat(styles.getPropertyValue("--canvas-sidebar-expanded-width")) || 0;
+  return sidebarLeft + sidebarWidth;
+}
+
+function getCanvasVisibleSidebarInset(isSidebarOpen: boolean) {
+  if (!isSidebarOpen) return 0;
+  return getCanvasSidebarOverlayWidth();
+}
+
+function getCanvasSidebarRectForVisibleStage(stageLeft: number): SidebarRect | null {
+  const sidebar = document.querySelector(".canvas-sidebar");
+  const canvasPage = document.querySelector(".canvas-page");
+  if (!(sidebar instanceof HTMLElement) || !(canvasPage instanceof HTMLElement)) return null;
+
+  const sidebarRect = sidebar.getBoundingClientRect();
+  if (sidebarRect.width <= 0) return null;
+
+  const pageStyles = getComputedStyle(canvasPage);
+  const sidebarStyles = getComputedStyle(sidebar);
+  const collapsedWidth = Number.parseFloat(pageStyles.getPropertyValue("--canvas-sidebar-collapsed-width")) || 38;
+  const targetExpandedWidth = Number.parseFloat(pageStyles.getPropertyValue("--canvas-sidebar-expanded-width")) || sidebarRect.width;
+  const maxExpandedWidth = Number.parseFloat(sidebarStyles.maxWidth) || targetExpandedWidth;
+  const expandedWidth = Math.min(targetExpandedWidth, maxExpandedWidth);
+
+  return {
+    collapsedWidth,
+    expandedWidth,
+    left: Math.max(0, sidebarRect.left - stageLeft),
+    width: sidebarRect.width
   };
 }
 
 function CanvasViewportControls({
   firstRootNode,
   isBlocked,
+  isSidebarOpen,
   onOrganize,
   resetViewportRequest
 }: {
   firstRootNode: CanvasNode | null;
   isBlocked: boolean;
+  isSidebarOpen: boolean;
   onOrganize(): void;
   resetViewportRequest: number;
 }) {
@@ -572,11 +621,12 @@ function CanvasViewportControls({
       calculateRootViewport({
         rootNode: firstRootNode,
         viewportWidth: stageRect?.width ?? window.innerWidth,
-        viewportHeight: stageRect?.height ?? window.innerHeight
+        viewportHeight: stageRect?.height ?? window.innerHeight,
+        viewportInsetLeft: getCanvasVisibleSidebarInset(isSidebarOpen)
       }),
       { duration: 300 }
     );
-  }, [firstRootNode, setViewport]);
+  }, [firstRootNode, isSidebarOpen, setViewport]);
 
   useEffect(() => {
     if (resetViewportRequest === 0) return;
@@ -652,7 +702,7 @@ function CanvasStageLayoutCompensator({
       const stage = document.querySelector(".canvas-stage");
       if (!(stage instanceof HTMLElement)) return;
       observeStage(stage);
-      const stageRect = stage.getBoundingClientRect();
+      const stageRect = getVisibleCanvasStageRect(stage.getBoundingClientRect());
       const currentStage = {
         height: stageRect.height,
         left: stageRect.left,
@@ -697,6 +747,17 @@ function CanvasStageLayoutCompensator({
   }, [store]);
 
   return null;
+}
+
+function getVisibleCanvasStageRect(stageRect: DOMRect): StageRect {
+  const stage = {
+    height: stageRect.height,
+    left: stageRect.left,
+    top: stageRect.top,
+    width: stageRect.width
+  };
+  const sidebar = getCanvasSidebarRectForVisibleStage(stage.left);
+  return sidebar ? getVisibleStageRectForSidebar(stage, sidebar) : stage;
 }
 
 function applyViewportTransformToDom(viewport: { x: number; y: number; zoom: number }) {

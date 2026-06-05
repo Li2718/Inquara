@@ -16,4 +16,18 @@ describe("appearance styles", () => {
     expect(styles).toContain("--message-list-background: rgb(13 18 25 / 42%);");
     expect(styles).not.toContain("--message-list-background: linear-gradient(180deg, rgb(9 13 19 / 34%), rgb(17 23 31 / 24%));");
   });
+
+  it("keeps the canvas stage full width when the sidebar is open", () => {
+    expect(styles).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(styles).toContain("grid-column: 1;");
+    expect(styles).not.toContain("grid-template-columns: var(--canvas-stage-sidebar-offset) minmax(0, 1fr);");
+    expect(styles).not.toContain("grid-column: 2;");
+  });
+
+  it("animates canvas sidebar width on the sidebar element", () => {
+    expect(styles).toContain(".canvas-sidebar {\n  position: absolute;");
+    expect(styles).toContain("width: var(--canvas-sidebar-collapsed-width);");
+    expect(styles).toContain('.canvas-sidebar[data-open="true"] {\n  width: var(--canvas-sidebar-expanded-width);');
+    expect(styles).not.toContain("width: var(--canvas-sidebar-panel-width);");
+  });
 });

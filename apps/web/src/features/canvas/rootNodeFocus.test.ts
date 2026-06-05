@@ -67,15 +67,16 @@ describe("calculateRootViewport", () => {
     });
   });
 
-  it("centers the root in the pushed canvas stage when the sidebar is open", () => {
+  it("centers the root in the visible workspace when the sidebar overlays the canvas", () => {
     expect(
       calculateRootViewport({
         rootNode: node({ x: 100, y: 160, width: 400, height: 300 }),
-        viewportWidth: 720,
-        viewportHeight: 800
+        viewportWidth: 1000,
+        viewportHeight: 800,
+        viewportInsetLeft: 280
       })
     ).toEqual({
-      x: 60,
+      x: 340,
       y: 90,
       zoom: 1
     });
