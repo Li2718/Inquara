@@ -17,6 +17,13 @@ describe("appearance styles", () => {
     expect(styles).not.toContain("--message-list-background: linear-gradient(180deg, rgb(9 13 19 / 34%), rgb(17 23 31 / 24%));");
   });
 
+  it("uses dark canvas node shadows instead of light tinted shadows", () => {
+    expect(styles).toContain("--canvas-node-shadow: 0 24px 70px rgb(51 118 145 / 16%);");
+    expect(styles).toContain("--canvas-node-shadow: 0 28px 86px rgb(0 0 0 / 38%);");
+    expect(styles).toContain("box-shadow: var(--canvas-node-shadow);");
+    expect(styles).not.toContain("box-shadow: 0 24px 70px rgb(51 118 145 / 16%);");
+  });
+
   it("keeps the canvas stage full width when the sidebar is open", () => {
     expect(styles).toContain("grid-template-columns: minmax(0, 1fr);");
     expect(styles).toContain("grid-column: 1;");

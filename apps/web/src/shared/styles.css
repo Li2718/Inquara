@@ -50,6 +50,7 @@ html[data-appearance="system"] {
   --canvas-node-background: rgb(255 255 255 / 86%);
   --canvas-node-border: rgb(215 232 238 / 86%);
   --canvas-node-header-background: linear-gradient(180deg, rgb(255 255 255 / 86%), rgb(247 252 253 / 72%));
+  --canvas-node-shadow: 0 24px 70px rgb(51 118 145 / 16%);
   --canvas-node-resize-handle-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%235b7f8b' stroke-opacity='0.32' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%235b7f8b' stroke-opacity='0.22' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
   --canvas-node-resize-handle-hover-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%23176b5c' stroke-opacity='0.52' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%23176b5c' stroke-opacity='0.4' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
   --message-list-background: linear-gradient(180deg, rgb(250 254 255 / 62%), rgb(255 255 255 / 34%));
@@ -122,6 +123,7 @@ html[data-appearance="dark"] {
   --canvas-node-background: rgb(18 24 32 / 94%);
   --canvas-node-border: rgb(160 174 194 / 20%);
   --canvas-node-header-background: rgb(18 24 32 / 88%);
+  --canvas-node-shadow: 0 28px 86px rgb(0 0 0 / 38%);
   --canvas-node-resize-handle-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%23a0aec2' stroke-opacity='0.34' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%23a0aec2' stroke-opacity='0.24' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
   --canvas-node-resize-handle-hover-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%2363d6c5' stroke-opacity='0.5' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%2363d6c5' stroke-opacity='0.38' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
   --message-list-background: rgb(13 18 25 / 42%);
@@ -194,6 +196,7 @@ html[data-appearance="dark"] {
     --canvas-node-background: rgb(18 24 32 / 94%);
     --canvas-node-border: rgb(160 174 194 / 20%);
     --canvas-node-header-background: rgb(18 24 32 / 88%);
+    --canvas-node-shadow: 0 28px 86px rgb(0 0 0 / 38%);
     --canvas-node-resize-handle-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%23a0aec2' stroke-opacity='0.34' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%23a0aec2' stroke-opacity='0.24' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
     --canvas-node-resize-handle-hover-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%2363d6c5' stroke-opacity='0.5' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%2363d6c5' stroke-opacity='0.38' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
     --message-list-background: rgb(13 18 25 / 42%);
@@ -2610,7 +2613,7 @@ html[data-appearance="dark"] .message-bubble a {
   border: 1px solid rgb(159 192 204 / 48%);
   border-radius: 22px;
   background: var(--new-canvas-starter-background);
-  box-shadow: 0 24px 70px rgb(51 118 145 / 16%);
+  box-shadow: var(--canvas-node-shadow);
   backdrop-filter: blur(18px);
   transition:
     width 260ms cubic-bezier(0.2, 0.9, 0.2, 1),
@@ -2795,7 +2798,7 @@ textarea.node-composer-frame-input {
   border: 1px solid rgb(215 232 238 / 86%);
   border-radius: 22px;
   background: var(--canvas-node-background);
-  box-shadow: 0 24px 70px rgb(51 118 145 / 16%);
+  box-shadow: var(--canvas-node-shadow);
   backdrop-filter: blur(18px);
 }
 
@@ -3399,7 +3402,7 @@ textarea.node-composer-frame-input {
   border: 1px solid var(--canvas-node-border);
   border-radius: 22px;
   background: var(--canvas-node-background);
-  box-shadow: 0 24px 70px rgb(51 118 145 / 16%);
+  box-shadow: var(--canvas-node-shadow);
   backdrop-filter: blur(18px);
   transform-origin: top left;
 }
