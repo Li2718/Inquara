@@ -9,4 +9,19 @@ describe("next config", () => {
 
     expect(nextConfig.outputFileTracingRoot).toBe(path.resolve("."));
   });
+
+  it("aliases debug targets from the web app directory during monorepo builds", async () => {
+    const configModuleUrl = pathToFileURL(path.resolve("apps/web/next.config.ts")).href;
+    const { default: nextConfig } = await import(configModuleUrl);
+    const config = { resolve: { alias: {} as Record<string, string> } };
+
+    nextConfig.webpack?.(config, { dev: false });
+
+    expect(config.resolve.alias[path.resolve("apps/web/src/debug/DebugRoot.target.tsx")]).toBe(
+      path.resolve("apps/web/src/debug/DebugRoot.production.tsx")
+    );
+    expect(config.resolve.alias[path.resolve("apps/web/src/debug/DebugCanvasSource.target.tsx")]).toBe(
+      path.resolve("apps/web/src/debug/DebugCanvasSource.production.tsx")
+    );
+  });
 });

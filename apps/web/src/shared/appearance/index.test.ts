@@ -39,6 +39,14 @@ describe("shared appearance", () => {
     expect(resolveAppearanceMode("light", "dark")).toBe("light");
   });
 
+  it("keeps system as the initial document appearance so CSS can resolve it before scripts run", async () => {
+    const { resolveInitialDocumentAppearance } = await import("./index");
+
+    expect(resolveInitialDocumentAppearance("system")).toBe("system");
+    expect(resolveInitialDocumentAppearance("dark")).toBe("dark");
+    expect(resolveInitialDocumentAppearance("light")).toBe("light");
+  });
+
   it("uses Inquara-scoped persistence keys", () => {
     expect(APPEARANCE_STORAGE_KEY).toBe("inquara.appearance");
     expect(APPEARANCE_COOKIE_NAME).toBe("inquara_appearance");

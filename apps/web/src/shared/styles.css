@@ -3,7 +3,8 @@
   --page-transition-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html[data-appearance="light"] {
+html[data-appearance="light"],
+html[data-appearance="system"] {
   color-scheme: light;
   --bg: #f7fbff;
   --surface: #ffffff;
@@ -146,6 +147,80 @@ html[data-appearance="dark"] {
     0 1px 2px rgb(7 10 14 / 92%),
     0 8px 20px rgb(0 0 0 / 22%);
 }
+@media (prefers-color-scheme: dark) {
+  html[data-appearance="system"] {
+    color-scheme: dark;
+    --bg: #090d12;
+    --surface: #141922;
+    --surface-soft: #1b222c;
+    --surface-mist: #10151c;
+    --ink: #f4f7fb;
+    --muted: #9daab8;
+    --line: rgb(160 174 194 / 22%);
+    --line-soft: rgb(160 174 194 / 13%);
+    --accent: #63d6c5;
+    --accent-dark: #a4e8df;
+    --accent-soft: rgb(99 214 197 / 14%);
+    --sky: #7ea7ff;
+    --danger: #ff8f83;
+    --shadow: 0 28px 86px rgb(0 0 0 / 38%);
+    --app-background:
+      radial-gradient(circle at 14% 10%, rgb(99 214 197 / 10%), transparent 30%),
+      radial-gradient(circle at 86% 18%, rgb(126 167 255 / 8%), transparent 30%),
+      linear-gradient(135deg, #080c11 0%, #11151d 48%, #0a1117 100%);
+    --canvas-background:
+      radial-gradient(circle at 8% 9%, rgb(99 214 197 / 8%), transparent 25%),
+      radial-gradient(circle at 92% 16%, rgb(126 167 255 / 7%), transparent 29%),
+      linear-gradient(135deg, #080c11 0%, #0f151d 54%, #0a1117 100%);
+    --button-primary-bg: linear-gradient(135deg, #49cdbb, #7ea7ff);
+    --button-primary-hover-bg: linear-gradient(135deg, #5bdcc9, #93b7ff);
+    --button-primary-fg: #071015;
+    --button-shadow: 0 12px 30px rgb(73 205 187 / 14%);
+    --button-hover-shadow: 0 16px 38px rgb(73 205 187 / 20%);
+    --input-background: rgb(19 25 34 / 86%);
+    --input-focus-background: rgb(24 31 41 / 98%);
+    --panel-background: rgb(17 23 31 / 78%);
+    --panel-background-strong: rgb(21 28 37 / 96%);
+    --floating-control-background: rgb(18 24 32 / 84%);
+    --floating-control-hover-background: rgb(27 35 46 / 96%);
+    --menu-background: rgb(19 25 34 / 98%);
+    --toast-background: rgb(19 25 34 / 98%);
+    --dialog-backdrop: rgb(5 8 12 / 58%);
+    --dialog-background: rgb(21 28 37 / 98%);
+    --canvas-sidebar-background: rgb(16 22 30 / 80%);
+    --canvas-sidebar-closed-background: rgb(18 24 32 / 90%);
+    --canvas-sidebar-item-background: rgb(255 255 255 / 5%);
+    --canvas-sidebar-item-active-background: rgb(99 214 197 / 12%);
+    --canvas-node-background: rgb(18 24 32 / 94%);
+    --canvas-node-border: rgb(160 174 194 / 20%);
+    --canvas-node-header-background: rgb(18 24 32 / 88%);
+    --canvas-node-resize-handle-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%23a0aec2' stroke-opacity='0.34' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%23a0aec2' stroke-opacity='0.24' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+    --canvas-node-resize-handle-hover-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%2363d6c5' stroke-opacity='0.5' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%2363d6c5' stroke-opacity='0.38' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
+    --message-list-background: linear-gradient(180deg, rgb(9 13 19 / 34%), rgb(17 23 31 / 24%));
+    --message-user-background: linear-gradient(135deg, rgb(72 184 172 / 92%), rgb(88 129 206 / 92%));
+    --message-user-fg: #f6fbff;
+    --message-user-shadow: 0 12px 28px rgb(0 0 0 / 18%);
+    --admin-row-background: rgb(255 255 255 / 4%);
+    --admin-row-active-background: linear-gradient(180deg, rgb(99 214 197 / 11%), rgb(126 167 255 / 7%));
+    --status-neutral-background: rgb(255 255 255 / 7%);
+    --decorative-node-background: rgb(20 27 36 / 90%);
+    --new-canvas-starter-background: rgb(19 25 34 / 92%);
+    --composer-background: rgb(12 17 24 / 76%);
+    --composer-input-background: rgb(20 27 36 / 88%);
+    --composer-starter-input-background: rgb(20 27 36 / 80%);
+    --lease-blocker-background:
+      radial-gradient(circle at top, rgb(99 214 197 / 9%), rgb(7 11 16 / 76%)),
+      linear-gradient(180deg, rgb(8 12 18 / 58%), rgb(11 17 24 / 82%));
+    --lease-blocker-card-background: rgb(21 28 37 / 97%);
+    --message-table-background: rgb(255 255 255 / 5%);
+    --message-checkbox-background: rgb(20 27 36 / 88%);
+    --brand-text-stroke: rgb(7 10 14 / 88%);
+    --brand-text-shadow:
+      0 1px 2px rgb(7 10 14 / 92%),
+      0 8px 20px rgb(0 0 0 / 22%);
+  }
+}
+
 
 * {
   box-sizing: border-box;
@@ -1952,6 +2027,138 @@ html[data-appearance="dark"] .message-bubble :not(pre) > code {
 
 html[data-appearance="dark"] .message-bubble a {
   color: rgb(147 183 255 / 94%);
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-appearance="system"] .app-top-brand-badge {
+    border-color: rgb(160 174 194 / 18%);
+    background: rgb(255 255 255 / 7%);
+    color: rgb(157 170 184 / 88%);
+    box-shadow: none;
+    font-weight: 760;
+  }
+
+  html[data-appearance="system"] .admin-setting-row[data-enabled="true"] {
+    border-color: rgb(99 214 197 / 22%);
+    background: rgb(99 214 197 / 9%);
+    box-shadow: none;
+  }
+
+  html[data-appearance="system"] .admin-switch[aria-checked="true"] {
+    border-color: rgb(99 214 197 / 24%);
+  }
+
+  html[data-appearance="system"] .admin-code-row[data-status="disabled"] {
+    opacity: 0.76;
+  }
+
+  html[data-appearance="system"] .admin-code-row[data-status="disabled"][data-used="true"],
+  html[data-appearance="system"] .admin-code-row[data-status="exhausted"],
+  html[data-appearance="system"] .admin-code-row[data-status="expired"] {
+    border-color: var(--line-soft);
+    background: rgb(255 255 255 / 4%);
+    opacity: 0.82;
+  }
+
+  html[data-appearance="system"] .admin-code-copy-button strong,
+  html[data-appearance="system"] .admin-code-row strong,
+  html[data-appearance="system"] .admin-user-name-line,
+  html[data-appearance="system"] .admin-user-name-text,
+  html[data-appearance="system"] .admin-users-table td {
+    color: rgb(216 224 233 / 88%);
+  }
+
+  html[data-appearance="system"] .admin-users-table tbody tr:hover {
+    background: rgb(255 255 255 / 5%);
+  }
+
+  html[data-appearance="system"] .admin-code-row .admin-code-status[data-status],
+  html[data-appearance="system"] .admin-user-role {
+    border-color: rgb(160 174 194 / 18%);
+    background: rgb(255 255 255 / 7%);
+    color: rgb(216 224 233 / 86%);
+  }
+
+  html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="active"],
+  html[data-appearance="system"] .admin-user-role {
+    border-color: rgb(99 214 197 / 22%);
+    background: rgb(99 214 197 / 11%);
+    color: rgb(180 238 229 / 92%);
+  }
+
+  html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="expired"] {
+    border-color: rgb(255 143 131 / 20%);
+    background: rgb(255 143 131 / 9%);
+    color: rgb(255 194 186 / 88%);
+  }
+
+  html[data-appearance="system"] .admin-user-avatar {
+    border-color: rgb(160 174 194 / 18%);
+    background: linear-gradient(135deg, rgb(99 214 197 / 15%), rgb(126 167 255 / 12%));
+    color: rgb(180 238 229 / 92%);
+    box-shadow: none;
+  }
+
+  html[data-appearance="system"] .error-code,
+  html[data-appearance="system"] .not-found-code {
+    color: rgb(244 247 251 / 88%);
+  }
+
+  html[data-appearance="system"] .canvas-lease-blocker-eyebrow {
+    color: rgb(157 170 184 / 88%);
+  }
+
+  html[data-appearance="system"] .canvas-lease-blocker-card h2 {
+    color: var(--ink);
+  }
+
+  html[data-appearance="system"] .canvas-lease-blocker-card p:last-of-type {
+    color: rgb(202 213 224 / 88%);
+  }
+
+  html[data-appearance="system"] .canvas-context-menu {
+    background: var(--menu-background);
+  }
+
+  html[data-appearance="system"] .canvas-edge .react-flow__edge-path {
+    stroke: rgb(160 174 194 / 38%);
+  }
+
+  html[data-appearance="system"] .canvas-viewport-zoom-label,
+  html[data-appearance="system"] .empty-message {
+    color: rgb(157 170 184 / 88%);
+  }
+
+  html[data-appearance="system"] .canvas-sidebar-header h2,
+  html[data-appearance="system"] .canvas-sidebar-item strong,
+  html[data-appearance="system"] .canvas-node-title-row strong {
+    color: var(--ink);
+  }
+
+  html[data-appearance="system"] .canvas-sidebar-item span,
+  html[data-appearance="system"] .canvas-sidebar-note {
+    color: rgb(157 170 184 / 88%);
+  }
+
+  html[data-appearance="system"] .message-bubble h1,
+  html[data-appearance="system"] .message-bubble h2,
+  html[data-appearance="system"] .message-bubble h3,
+  html[data-appearance="system"] .message-bubble h4,
+  html[data-appearance="system"] .message-bubble h5,
+  html[data-appearance="system"] .message-bubble h6,
+  html[data-appearance="system"] .message-assistant,
+  html[data-appearance="system"] .message-system {
+    color: var(--ink);
+  }
+
+  html[data-appearance="system"] .message-bubble :not(pre) > code {
+    background: rgb(99 214 197 / 13%);
+    color: rgb(180 238 229 / 94%);
+  }
+
+  html[data-appearance="system"] .message-bubble a {
+    color: rgb(147 183 255 / 94%);
+  }
 }
 
 .app-top-account {

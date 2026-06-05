@@ -22,3 +22,7 @@ export function parseAppearancePreference(rawValue: string | null | undefined): 
 export function resolveAppearanceMode(preference: AppearancePreference, systemMode: AppearanceMode): AppearanceMode {
   return preference === "system" ? systemMode : preference;
 }
+
+export function resolveInitialDocumentAppearance(preference: AppearancePreference): AppearancePreference {
+  return preference;
+}
