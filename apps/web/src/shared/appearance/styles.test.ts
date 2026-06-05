@@ -11,4 +11,9 @@ describe("appearance styles", () => {
     expect(styles).toContain("--app-background:");
     expect(styles).toContain("linear-gradient(135deg, #080c11 0%, #11151d 48%, #0a1117 100%)");
   });
+
+  it("keeps dark message list backgrounds visually continuous", () => {
+    expect(styles).toContain("--message-list-background: rgb(13 18 25 / 42%);");
+    expect(styles).not.toContain("--message-list-background: linear-gradient(180deg, rgb(9 13 19 / 34%), rgb(17 23 31 / 24%));");
+  });
 });

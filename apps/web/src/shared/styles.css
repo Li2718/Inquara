@@ -124,7 +124,7 @@ html[data-appearance="dark"] {
   --canvas-node-header-background: rgb(18 24 32 / 88%);
   --canvas-node-resize-handle-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%23a0aec2' stroke-opacity='0.34' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%23a0aec2' stroke-opacity='0.24' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
   --canvas-node-resize-handle-hover-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%2363d6c5' stroke-opacity='0.5' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%2363d6c5' stroke-opacity='0.38' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
-  --message-list-background: linear-gradient(180deg, rgb(9 13 19 / 34%), rgb(17 23 31 / 24%));
+  --message-list-background: rgb(13 18 25 / 42%);
   --message-user-background: linear-gradient(135deg, rgb(72 184 172 / 92%), rgb(88 129 206 / 92%));
   --message-user-fg: #f6fbff;
   --message-user-shadow: 0 12px 28px rgb(0 0 0 / 18%);
@@ -196,7 +196,7 @@ html[data-appearance="dark"] {
     --canvas-node-header-background: rgb(18 24 32 / 88%);
     --canvas-node-resize-handle-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%23a0aec2' stroke-opacity='0.34' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%23a0aec2' stroke-opacity='0.24' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
     --canvas-node-resize-handle-hover-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 12L12 4' stroke='%2363d6c5' stroke-opacity='0.5' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M4 9L9 4' stroke='%2363d6c5' stroke-opacity='0.38' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E");
-    --message-list-background: linear-gradient(180deg, rgb(9 13 19 / 34%), rgb(17 23 31 / 24%));
+    --message-list-background: rgb(13 18 25 / 42%);
     --message-user-background: linear-gradient(135deg, rgb(72 184 172 / 92%), rgb(88 129 206 / 92%));
     --message-user-fg: #f6fbff;
     --message-user-shadow: 0 12px 28px rgb(0 0 0 / 18%);
