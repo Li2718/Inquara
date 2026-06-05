@@ -1,5 +1,15 @@
 # Project AGENTS.md
 
+## Production Product Rules
+
+Inquara is a production-grade product. All design and architecture work must consider the complete, durable product shape rather than simplified or throwaway versions.
+
+1. Do not design intentionally simplified, temporary, or MVP-only solutions that will need to be discarded once the product matures.
+2. It is acceptable and expected to deliver large capabilities incrementally, but each increment must fit into the complete production architecture.
+3. When proposing phased work, clearly separate the final target design from the implementation sequence.
+4. Prefer robust domain boundaries, persistence, auditability, error handling, observability, security, migration paths, and testability from the start.
+5. If a short-term implementation cannot include every production capability yet, explicitly preserve the extension points and data contracts needed for the full design.
+
 ## Documentation Rules
 
 All documentation work in this repository must follow:
