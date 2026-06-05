@@ -30,4 +30,23 @@ describe("appearance styles", () => {
     expect(styles).toContain('.canvas-sidebar[data-open="true"] {\n  width: var(--canvas-sidebar-expanded-width);');
     expect(styles).not.toContain("width: var(--canvas-sidebar-panel-width);");
   });
+
+  it("keeps dark invitation code states visually distinct", () => {
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row[data-status="used"],');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row[data-status="disabled"][data-used="true"] {');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row[data-status="exhausted"] {');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row[data-status="expired"] {');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="used"] {');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="disabled"] {');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="exhausted"] {');
+    expect(styles).toContain('html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="expired"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row[data-status="used"],');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row[data-status="disabled"][data-used="true"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row[data-status="exhausted"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row[data-status="expired"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="used"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="disabled"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="exhausted"] {');
+    expect(styles).toContain('html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="expired"] {');
+  });
 });

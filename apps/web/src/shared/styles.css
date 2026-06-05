@@ -1916,15 +1916,33 @@ html[data-appearance="dark"] .admin-switch[aria-checked="true"] {
 }
 
 html[data-appearance="dark"] .admin-code-row[data-status="disabled"] {
-  opacity: 0.76;
+  border-color: rgb(160 174 194 / 12%);
+  background: rgb(255 255 255 / 3%);
+  opacity: 0.62;
 }
 
-html[data-appearance="dark"] .admin-code-row[data-status="disabled"][data-used="true"],
-html[data-appearance="dark"] .admin-code-row[data-status="exhausted"],
+html[data-appearance="dark"] .admin-code-row[data-status="used"],
+html[data-appearance="dark"] .admin-code-row[data-used="true"] {
+  border-color: rgb(126 167 255 / 18%);
+  background: linear-gradient(180deg, rgb(126 167 255 / 8%), rgb(99 214 197 / 5%));
+}
+
+html[data-appearance="dark"] .admin-code-row[data-status="disabled"][data-used="true"] {
+  border-color: rgb(126 167 255 / 13%);
+  background: linear-gradient(180deg, rgb(126 167 255 / 6%), rgb(160 174 194 / 4%));
+  opacity: 0.7;
+}
+
+html[data-appearance="dark"] .admin-code-row[data-status="exhausted"] {
+  border-color: rgb(126 167 255 / 16%);
+  background: linear-gradient(180deg, rgb(126 167 255 / 6%), rgb(160 174 194 / 5%));
+  opacity: 0.72;
+}
+
 html[data-appearance="dark"] .admin-code-row[data-status="expired"] {
-  border-color: var(--line-soft);
-  background: rgb(255 255 255 / 4%);
-  opacity: 0.82;
+  border-color: rgb(255 183 131 / 14%);
+  background: linear-gradient(180deg, rgb(255 183 131 / 5%), rgb(160 174 194 / 3%));
+  opacity: 0.68;
 }
 
 html[data-appearance="dark"] .admin-code-copy-button strong,
@@ -1953,10 +1971,28 @@ html[data-appearance="dark"] .admin-user-role {
   color: rgb(180 238 229 / 92%);
 }
 
+html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="used"] {
+  border-color: rgb(126 167 255 / 18%);
+  background: rgb(126 167 255 / 9%);
+  color: rgb(195 211 255 / 86%);
+}
+
+html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="disabled"] {
+  border-color: rgb(160 174 194 / 13%);
+  background: rgb(160 174 194 / 6%);
+  color: rgb(178 188 202 / 72%);
+}
+
 html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="expired"] {
-  border-color: rgb(255 143 131 / 20%);
-  background: rgb(255 143 131 / 9%);
-  color: rgb(255 194 186 / 88%);
+  border-color: rgb(255 183 131 / 17%);
+  background: rgb(255 183 131 / 8%);
+  color: rgb(241 201 170 / 80%);
+}
+
+html[data-appearance="dark"] .admin-code-row .admin-code-status[data-status="exhausted"] {
+  border-color: rgb(126 167 255 / 14%);
+  background: rgb(126 167 255 / 7%);
+  color: rgb(184 197 224 / 76%);
 }
 
 html[data-appearance="dark"] .admin-user-avatar {
@@ -2047,15 +2083,33 @@ html[data-appearance="dark"] .message-bubble a {
   }
 
   html[data-appearance="system"] .admin-code-row[data-status="disabled"] {
-    opacity: 0.76;
+    border-color: rgb(160 174 194 / 12%);
+    background: rgb(255 255 255 / 3%);
+    opacity: 0.62;
   }
 
-  html[data-appearance="system"] .admin-code-row[data-status="disabled"][data-used="true"],
-  html[data-appearance="system"] .admin-code-row[data-status="exhausted"],
+  html[data-appearance="system"] .admin-code-row[data-status="used"],
+  html[data-appearance="system"] .admin-code-row[data-used="true"] {
+    border-color: rgb(126 167 255 / 18%);
+    background: linear-gradient(180deg, rgb(126 167 255 / 8%), rgb(99 214 197 / 5%));
+  }
+
+  html[data-appearance="system"] .admin-code-row[data-status="disabled"][data-used="true"] {
+    border-color: rgb(126 167 255 / 13%);
+    background: linear-gradient(180deg, rgb(126 167 255 / 6%), rgb(160 174 194 / 4%));
+    opacity: 0.7;
+  }
+
+  html[data-appearance="system"] .admin-code-row[data-status="exhausted"] {
+    border-color: rgb(126 167 255 / 16%);
+    background: linear-gradient(180deg, rgb(126 167 255 / 6%), rgb(160 174 194 / 5%));
+    opacity: 0.72;
+  }
+
   html[data-appearance="system"] .admin-code-row[data-status="expired"] {
-    border-color: var(--line-soft);
-    background: rgb(255 255 255 / 4%);
-    opacity: 0.82;
+    border-color: rgb(255 183 131 / 14%);
+    background: linear-gradient(180deg, rgb(255 183 131 / 5%), rgb(160 174 194 / 3%));
+    opacity: 0.68;
   }
 
   html[data-appearance="system"] .admin-code-copy-button strong,
@@ -2084,10 +2138,28 @@ html[data-appearance="dark"] .message-bubble a {
     color: rgb(180 238 229 / 92%);
   }
 
+  html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="used"] {
+    border-color: rgb(126 167 255 / 18%);
+    background: rgb(126 167 255 / 9%);
+    color: rgb(195 211 255 / 86%);
+  }
+
+  html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="disabled"] {
+    border-color: rgb(160 174 194 / 13%);
+    background: rgb(160 174 194 / 6%);
+    color: rgb(178 188 202 / 72%);
+  }
+
   html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="expired"] {
-    border-color: rgb(255 143 131 / 20%);
-    background: rgb(255 143 131 / 9%);
-    color: rgb(255 194 186 / 88%);
+    border-color: rgb(255 183 131 / 17%);
+    background: rgb(255 183 131 / 8%);
+    color: rgb(241 201 170 / 80%);
+  }
+
+  html[data-appearance="system"] .admin-code-row .admin-code-status[data-status="exhausted"] {
+    border-color: rgb(126 167 255 / 14%);
+    background: rgb(126 167 255 / 7%);
+    color: rgb(184 197 224 / 76%);
   }
 
   html[data-appearance="system"] .admin-user-avatar {
